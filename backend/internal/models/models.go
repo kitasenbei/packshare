@@ -38,7 +38,7 @@ func (p *Pack) BeforeDelete(tx *gorm.DB) error {
 type PackBeatmap struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	PackID    uint      `gorm:"not null;index" json:"pack_id"`
-	BeatmapID int64     `gorm:"not null" json:"beatmap_id"`
+	BeatmapID int64     `gorm:"not null" json:"beatmapset_id"`
 	Title     string    `gorm:"not null" json:"title"`
 	Artist    string    `json:"artist"`
 	Creator   string    `json:"creator"`

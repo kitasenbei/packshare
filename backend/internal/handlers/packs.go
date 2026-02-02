@@ -26,13 +26,13 @@ type CreatePackRequest struct {
 }
 
 type BeatmapRequest struct {
-	BeatmapID int64   `json:"beatmap_id"`
-	Title     string  `json:"title"`
-	Artist    string  `json:"artist"`
-	Creator   string  `json:"creator"`
-	BPM       float64 `json:"bpm"`
-	Keys      int     `json:"keys"`
-	Status    string  `json:"status"`
+	BeatmapsetID int64   `json:"beatmapset_id"`
+	Title        string  `json:"title"`
+	Artist       string  `json:"artist"`
+	Creator      string  `json:"creator"`
+	BPM          float64 `json:"bpm"`
+	Keys         int     `json:"keys"`
+	Status       string  `json:"status"`
 }
 
 func generateShareCode() string {
@@ -165,7 +165,7 @@ func (h *PackHandler) CreatePack(c *fiber.Ctx) error {
 	for i, bm := range req.Beatmaps {
 		beatmap := models.PackBeatmap{
 			PackID:    pack.ID,
-			BeatmapID: bm.BeatmapID,
+			BeatmapID: bm.BeatmapsetID,
 			Title:     bm.Title,
 			Artist:    bm.Artist,
 			Creator:   bm.Creator,
@@ -242,7 +242,7 @@ func (h *PackHandler) UpdatePack(c *fiber.Ctx) error {
 		for i, bm := range req.Beatmaps {
 			beatmap := models.PackBeatmap{
 				PackID:    pack.ID,
-				BeatmapID: bm.BeatmapID,
+				BeatmapID: bm.BeatmapsetID,
 				Title:     bm.Title,
 				Artist:    bm.Artist,
 				Creator:   bm.Creator,
