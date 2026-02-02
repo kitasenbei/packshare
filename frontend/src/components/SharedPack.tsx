@@ -85,7 +85,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
         keys: beatmap.keys,
         addedAt: new Date(),
         source: 'browse',
-        sourcePackId: pack.code,
+        sourcePackId: pack.share_code,
         sourcePackName: pack.name,
       };
       saveStash([...stash, newItem]);
@@ -113,7 +113,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
       keys: beatmap.keys,
       addedAt: new Date(),
       source: 'browse' as const,
-      sourcePackId: pack.code,
+      sourcePackId: pack.share_code,
       sourcePackName: pack.name,
     }));
 

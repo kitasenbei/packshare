@@ -99,11 +99,11 @@ export default function PackViewer({ packId }: PackViewerProps) {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/s/${pack.code}`);
+    navigator.clipboard.writeText(`${window.location.origin}/s/${pack.share_code}`);
   };
 
   const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/s/${pack.code}`;
+    const shareUrl = `${window.location.origin}/s/${pack.share_code}`;
     if (navigator.share) {
       try {
         await navigator.share({

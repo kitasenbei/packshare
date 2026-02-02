@@ -15,7 +15,8 @@ export interface PackBeatmap {
 
 export interface Pack {
   id: number;
-  code: string;
+  code?: string;  // alias for share_code
+  share_code: string;
   name: string;
   description?: string;
   user_id: number;

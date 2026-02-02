@@ -201,7 +201,7 @@ export default function PackCreator({ user }: PackCreatorProps) {
         })),
       });
 
-      const link = `${window.location.origin}/s/${pack.code}`;
+      const link = `${window.location.origin}/s/${pack.share_code}`;
       setGeneratedLink(link);
       setShareDialogOpen(true);
     } catch (err) {

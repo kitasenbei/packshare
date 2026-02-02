@@ -150,7 +150,7 @@ export default function MyPacks({ user }: MyPacksProps) {
     setSaving(true);
     setError('');
     try {
-      const updated = await updatePack(editingPack.code, {
+      const updated = await updatePack(editingPack.share_code, {
         name: editName.trim(),
         description: editDescription.trim() || undefined,
         beatmaps: editBeatmaps.map((b) => ({
@@ -164,7 +164,7 @@ export default function MyPacks({ user }: MyPacksProps) {
         })),
       });
       setPacks((prev) =>
-        prev.map((p) => (p.code === editingPack.code ? updated : p))
+        prev.map((p) => (p.share_code === editingPack.share_code ? updated : p))
       );
       handleCloseEdit();
     } catch (err) {
@@ -294,8 +294,8 @@ export default function MyPacks({ user }: MyPacksProps) {
 
     setDeleting(true);
     try {
-      await deletePack(packToDelete.code);
-      setPacks((prev) => prev.filter((p) => p.code !== packToDelete.code));
+      await deletePack(packToDelete.share_code);
+      setPacks((prev) => prev.filter((p) => p.share_code !== packToDelete.share_code));
       setDeleteConfirmOpen(false);
       setPackToDelete(null);
     } catch (err) {
@@ -563,12 +563,12 @@ export default function MyPacks({ user }: MyPacksProps) {
       {user && !packsLoading && (
         <Stack spacing={2}>
           {packs.map((pack) => {
-            const currentPage = getMapPage(pack.code);
+            const currentPage = getMapPage(pack.share_code);
             const pageCount = Math.ceil(pack.beatmaps.length / MAPS_PER_PAGE);
             const displayMaps = pack.beatmaps.slice((currentPage - 1) * MAPS_PER_PAGE, currentPage * MAPS_PER_PAGE);
 
             return (
-              <Paper key={pack.code} elevation={2} sx={{ overflow: 'hidden' }}>
+              <Paper key={pack.share_code} elevation={2} sx={{ overflow: 'hidden' }}>
                 {/* Pack Header */}
                 <Box
                   sx={{
@@ -589,14 +589,14 @@ export default function MyPacks({ user }: MyPacksProps) {
                     <Tooltip title="Copy link">
                       <IconButton
                         size="small"
-                        onClick={() => navigator.clipboard.writeText(`${window.location.origin}/s/${pack.code}`)}
+                        onClick={() => navigator.clipboard.writeText(`${window.location.origin}/s/${pack.share_code}`)}
                         sx={{ color: 'white' }}
                       >
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Open full page">
-                      <IconButton size="small" component={Link} to={`/pack/${pack.code}`} sx={{ color: 'white' }}>
+                      <IconButton size="small" component={Link} to={`/pack/${pack.share_code}`} sx={{ color: 'white' }}>
                         <OpenInNewIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -672,7 +672,7 @@ export default function MyPacks({ user }: MyPacksProps) {
                       size="small"
                       count={pageCount}
                       page={currentPage}
-                      onChange={(_, p) => setMapPage(pack.code, p)}
+                      onChange={(_, p) => setMapPage(pack.share_code, p)}
                       color="primary"
                     />
                   </Box>
