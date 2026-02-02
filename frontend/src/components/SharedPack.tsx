@@ -7,6 +7,7 @@ import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
 import type { StashBeatmap } from '../types/beatmap';
 import { getPack, type Pack } from '../api/packs';
+import { getStoredToken } from '../api/auth';
 
 const STASH_STORAGE_KEY = 'packshare_stash';
 
@@ -18,6 +19,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
   const [pack, setPack] = useState<Pack | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isLoggedIn = !!getStoredToken();
   const [stashedIds, setStashedIds] = useState<Set<number>>(() => {
     const saved = localStorage.getItem(STASH_STORAGE_KEY);
     if (saved) {
@@ -162,7 +164,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
     );
   }
 
-  const allInStash = pack.beatmaps.every(b => stashedIds.has(b.id));
+  const allInStash = isLoggedIn && pack.beatmaps.every(b => stashedIds.has(b.id));
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white', p: 4 }}>
@@ -189,22 +191,24 @@ export default function SharedPack({ packId }: SharedPackProps) {
             >
               Download All
             </Button>
-            <Button
-              variant="outlined"
-              startIcon={<LibraryAddIcon />}
-              onClick={handleSaveAllToStash}
-              disabled={allInStash}
-              sx={{
-                borderColor: allInStash ? 'rgba(255,255,255,0.2)' : '#ff66ab',
-                color: allInStash ? 'rgba(255,255,255,0.4)' : '#ff66ab',
-                '&:hover': {
-                  borderColor: '#ff4499',
-                  backgroundColor: 'rgba(255,102,171,0.1)',
-                },
-              }}
-            >
-              {allInStash ? 'All Saved' : 'Save All to Stash'}
-            </Button>
+            {isLoggedIn && (
+              <Button
+                variant="outlined"
+                startIcon={<LibraryAddIcon />}
+                onClick={handleSaveAllToStash}
+                disabled={allInStash}
+                sx={{
+                  borderColor: allInStash ? 'rgba(255,255,255,0.2)' : '#ff66ab',
+                  color: allInStash ? 'rgba(255,255,255,0.4)' : '#ff66ab',
+                  '&:hover': {
+                    borderColor: '#ff4499',
+                    backgroundColor: 'rgba(255,102,171,0.1)',
+                  },
+                }}
+              >
+                {allInStash ? 'All Saved' : 'Save All to Stash'}
+              </Button>
+            )}
           </Box>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: 0.6 }}>
@@ -231,7 +235,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
       {/* Map List */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {pack.beatmaps.map((beatmap) => {
-          const isInStash = stashedIds.has(beatmap.id);
+          const isInStash = isLoggedIn && stashedIds.has(beatmap.id);
           return (
             <Box
               key={beatmap.id}
@@ -287,17 +291,19 @@ export default function SharedPack({ packId }: SharedPackProps) {
                   {beatmap.star_rating && ` · ${beatmap.star_rating.toFixed(2)}*`}
                 </Typography>
               </Box>
-              <Tooltip title={isInStash ? 'Remove from stash' : 'Save to stash'}>
-                <IconButton
-                  onClick={() => handleSaveToStash(beatmap)}
-                  sx={{
-                    color: isInStash ? '#ff66ab' : 'rgba(255,255,255,0.5)',
-                    '&:hover': { color: '#ff66ab' },
-                  }}
-                >
-                  {isInStash ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
-                </IconButton>
-              </Tooltip>
+              {isLoggedIn && (
+                <Tooltip title={isInStash ? 'Remove from stash' : 'Save to stash'}>
+                  <IconButton
+                    onClick={() => handleSaveToStash(beatmap)}
+                    sx={{
+                      color: isInStash ? '#ff66ab' : 'rgba(255,255,255,0.5)',
+                      '&:hover': { color: '#ff66ab' },
+                    }}
+                  >
+                    {isInStash ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+              )}
               <Tooltip title="Open on osu!">
                 <IconButton onClick={() => handleOpenOsu(beatmap)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
                   <OpenInNewIcon fontSize="small" />
