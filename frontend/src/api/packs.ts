@@ -84,6 +84,7 @@ export interface BrowsePacksResult {
       avatar_url: string;
     };
     beatmap_count: number;
+    beatmapset_ids: number[];
     created_at: string;
   }[];
   total: number;

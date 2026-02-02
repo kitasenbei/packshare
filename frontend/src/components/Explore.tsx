@@ -192,6 +192,40 @@ export default function Explore() {
                           {pack.views.toLocaleString()}
                         </Typography>
                       </Box>
+                      {/* Stacked thumbnails */}
+                      {pack.beatmapset_ids && pack.beatmapset_ids.length > 0 && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                          <Box sx={{ display: 'flex', position: 'relative', height: 24 }}>
+                            {pack.beatmapset_ids.slice(0, 10).map((id, idx) => (
+                              <Box
+                                key={id}
+                                component="img"
+                                src={`https://assets.ppy.sh/beatmaps/${id}/covers/list.jpg`}
+                                sx={{
+                                  width: 32,
+                                  height: 24,
+                                  borderRadius: 0.5,
+                                  objectFit: 'cover',
+                                  position: 'absolute',
+                                  left: idx * 14,
+                                  border: '1px solid #fff',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ))}
+                          </Box>
+                          {pack.beatmapset_ids.length > 10 && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ ml: `${10 * 14 + 36}px`, fontWeight: 500 }}
+                            >
+                              ...
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
                     </Box>
                     {pack.description && (
                       <Typography

@@ -391,12 +391,18 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 
 	result := make([]fiber.Map, len(packs))
 	for i, pack := range packs {
+		// Extract beatmapset IDs for thumbnails
+		beatmapsetIDs := make([]int64, len(pack.Beatmaps))
+		for j, bm := range pack.Beatmaps {
+			beatmapsetIDs[j] = bm.BeatmapID
+		}
+
 		result[i] = fiber.Map{
-			"id":          pack.ID,
-			"share_code":  pack.ShareCode,
-			"name":        pack.Name,
-			"description": pack.Description,
-			"views":       pack.Views,
+			"id":            pack.ID,
+			"share_code":    pack.ShareCode,
+			"name":          pack.Name,
+			"description":   pack.Description,
+			"views":         pack.Views,
 			"user": fiber.Map{
 				"id":           pack.User.ID,
 				"osu_id":       pack.User.OsuID,
@@ -404,8 +410,9 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 				"country_code": pack.User.CountryCode,
 				"avatar_url":   pack.User.AvatarURL,
 			},
-			"beatmap_count": len(pack.Beatmaps),
-			"created_at":    pack.CreatedAt,
+			"beatmap_count":  len(pack.Beatmaps),
+			"beatmapset_ids": beatmapsetIDs,
+			"created_at":     pack.CreatedAt,
 		}
 	}
 
