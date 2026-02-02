@@ -10,6 +10,8 @@ import {
   Pagination,
   Stack,
   CircularProgress,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -31,6 +33,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   useEffect(() => {
     if (!packId) {
@@ -107,6 +110,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/s/${pack.share_code}`);
+    setSnackbar({ open: true, message: 'Link copied to clipboard!' });
   };
 
   const handleShare = async () => {
@@ -121,9 +125,11 @@ export default function PackViewer({ packId }: PackViewerProps) {
       } catch {
         // User cancelled or share failed, fall back to copy
         navigator.clipboard.writeText(shareUrl);
+        setSnackbar({ open: true, message: 'Link copied to clipboard!' });
       }
     } else {
       navigator.clipboard.writeText(shareUrl);
+      setSnackbar({ open: true, message: 'Link copied to clipboard!' });
     }
   };
 
@@ -324,6 +330,21 @@ export default function PackViewer({ packId }: PackViewerProps) {
           </Box>
         )}
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={2000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity="success"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
