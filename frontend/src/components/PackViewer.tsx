@@ -85,8 +85,15 @@ export default function PackViewer({ packId }: PackViewerProps) {
   );
 
   const handleDownloadAll = () => {
-    pack.beatmaps.forEach((beatmap) => {
-      window.open(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`, '_blank');
+    pack.beatmaps.forEach((beatmap, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = `https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, index * 500);
     });
   };
 
