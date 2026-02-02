@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -11,11 +11,14 @@ import {
   Avatar,
   Chip,
   Stack,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import ExploreIcon from '@mui/icons-material/Explore';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import SearchIcon from '@mui/icons-material/Search';
 import { browsePacks, type BrowsePacksResult } from '../api/packs';
 
 const PACKS_PER_PAGE = 12;
@@ -26,11 +29,13 @@ export default function Explore() {
   const [data, setData] = useState<BrowsePacksResult | null>(null);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<'recent' | 'popular' | 'views'>('recent');
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
 
-  useEffect(() => {
+  const fetchPacks = useCallback(() => {
     setLoading(true);
     setError(null);
-    browsePacks(page, PACKS_PER_PAGE, sort)
+    browsePacks(page, PACKS_PER_PAGE, sort, search)
       .then((result) => {
         setData(result);
         setLoading(false);
@@ -39,7 +44,22 @@ export default function Explore() {
         setError(err.message || 'Failed to load packs');
         setLoading(false);
       });
-  }, [page, sort]);
+  }, [page, sort, search]);
+
+  useEffect(() => {
+    fetchPacks();
+  }, [fetchPacks]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== search) {
+        setSearch(searchInput);
+        setPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
 
   const handleSortChange = (_: React.MouseEvent<HTMLElement>, newSort: 'recent' | 'popular' | 'views' | null) => {
     if (newSort) {
@@ -52,27 +72,48 @@ export default function Explore() {
 
   return (
     <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <ExploreIcon sx={{ color: '#ff66ab' }} />
-          <Typography variant="h5" fontWeight="bold">
-            Explore
-          </Typography>
-          {data && (
-            <Chip label={`${data.total} packs`} size="small" />
-          )}
-        </Box>
-        <ToggleButtonGroup
-          value={sort}
-          exclusive
-          onChange={handleSortChange}
-          size="small"
-        >
-          <ToggleButton value="recent">Recent</ToggleButton>
-          <ToggleButton value="popular">Popular</ToggleButton>
-          <ToggleButton value="views">Most Viewed</ToggleButton>
-        </ToggleButtonGroup>
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <ExploreIcon sx={{ color: '#ff66ab' }} />
+        <Typography variant="h5" fontWeight="bold">
+          Explore
+        </Typography>
+        {data && (
+          <Chip label={`${data.total} packs`} size="small" />
+        )}
       </Box>
+
+      {/* Search & Filters */}
+      <Paper sx={{ p: 2, mb: 3 }} elevation={1}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+          <TextField
+            placeholder="Search packs..."
+            size="small"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            sx={{ flex: 1, minWidth: 200 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <ToggleButtonGroup
+            value={sort}
+            exclusive
+            onChange={handleSortChange}
+            size="small"
+          >
+            <ToggleButton value="recent">Recent</ToggleButton>
+            <ToggleButton value="popular">Popular</ToggleButton>
+            <ToggleButton value="views">Most Viewed</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+      </Paper>
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -90,10 +131,10 @@ export default function Explore() {
         <Paper sx={{ p: 6, textAlign: 'center' }} elevation={2}>
           <ExploreIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            No packs yet
+            {search ? 'No packs found' : 'No packs yet'}
           </Typography>
           <Typography color="text.secondary">
-            Be the first to create a pack!
+            {search ? 'Try a different search term' : 'Be the first to create a pack!'}
           </Typography>
         </Paper>
       )}
@@ -135,7 +176,7 @@ export default function Explore() {
                     <Typography variant="h6" fontWeight="bold" noWrap>
                       {pack.name}
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, flexWrap: 'wrap' }}>
                       <Typography variant="body2" color="text.secondary">
                         by {pack.user.username}
                       </Typography>

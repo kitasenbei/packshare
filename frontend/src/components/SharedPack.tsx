@@ -246,18 +246,31 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 border: isInStash ? '1px solid rgba(255,102,171,0.3)' : '1px solid transparent',
               }}
             >
+              {/* Thumbnail */}
+              <Box
+                component="img"
+                src={`https://assets.ppy.sh/beatmaps/${beatmap.beatmapset_id}/covers/list.jpg`}
+                sx={{
+                  width: 50,
+                  height: 38,
+                  borderRadius: 0.5,
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
               {beatmap.keys && (
                 <Box
                   sx={{
-                    width: 40,
-                    height: 30,
+                    width: 36,
+                    height: 26,
                     bgcolor: '#ff66ab',
-                    borderRadius: 1,
+                    borderRadius: 0.5,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: 'bold',
                     flexShrink: 0,
                   }}
@@ -265,7 +278,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                   {beatmap.keys}K
                 </Box>
               )}
-              <Box sx={{ flex: 1 }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 500 }}>
                   {beatmap.artist} - {beatmap.title}
                 </Typography>

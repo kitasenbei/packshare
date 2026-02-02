@@ -346,6 +346,7 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 20)
 	sort := c.Query("sort", "recent") // recent, popular, views
+	search := c.Query("search", "")
 
 	if page < 1 {
 		page = 1
@@ -360,6 +361,12 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 		return db.Order("sort_order ASC")
 	}).Preload("User")
 
+	// Apply search filter
+	if search != "" {
+		searchPattern := "%" + strings.ToLower(search) + "%"
+		query = query.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)
+	}
+
 	// Apply sorting
 	switch sort {
 	case "popular":
@@ -370,9 +377,14 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 		query = query.Order("created_at DESC")
 	}
 
-	// Get total count
+	// Get total count (with search filter)
 	var total int64
-	h.db.Model(&models.Pack{}).Count(&total)
+	countQuery := h.db.Model(&models.Pack{})
+	if search != "" {
+		searchPattern := "%" + strings.ToLower(search) + "%"
+		countQuery = countQuery.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)
+	}
+	countQuery.Count(&total)
 
 	// Get paginated results
 	query.Offset(offset).Limit(limit).Find(&packs)

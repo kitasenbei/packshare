@@ -95,13 +95,17 @@ export interface BrowsePacksResult {
 export async function browsePacks(
   page = 1,
   limit = 20,
-  sort: 'recent' | 'popular' | 'views' = 'recent'
+  sort: 'recent' | 'popular' | 'views' = 'recent',
+  search = ''
 ): Promise<BrowsePacksResult> {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
     sort,
   });
+  if (search) {
+    params.set('search', search);
+  }
   const response = await fetch(`${API_BASE_URL}/api/packs?${params}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch packs: ${response.statusText}`);

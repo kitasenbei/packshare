@@ -241,19 +241,32 @@ export default function PackViewer({ packId }: PackViewerProps) {
                   '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
                 }}
               >
+                {/* Thumbnail */}
+                <Box
+                  component="img"
+                  src={`https://assets.ppy.sh/beatmaps/${beatmap.beatmapset_id}/covers/list.jpg`}
+                  sx={{
+                    width: 60,
+                    height: 45,
+                    borderRadius: 1,
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                  }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
                 {/* Key count badge */}
                 {beatmap.keys && (
                   <Box
                     sx={{
-                      width: 44,
-                      height: 32,
+                      width: 40,
+                      height: 28,
                       backgroundColor: '#ff66ab',
-                      borderRadius: 1,
+                      borderRadius: 0.5,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: 'white',
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: 'bold',
                       flexShrink: 0,
                     }}
