@@ -35,9 +35,23 @@ func parseToken(tokenString, secret string) (*UserClaims, error) {
 		return nil, jwt.ErrSignatureInvalid
 	}
 
+	osuIDVal, ok := claims["osu_id"]
+	if !ok {
+		return nil, jwt.ErrSignatureInvalid
+	}
+	osuIDFloat, ok := osuIDVal.(float64)
+	if !ok {
+		return nil, jwt.ErrSignatureInvalid
+	}
+
+	username := getStringClaim(claims, "username")
+	if username == "" {
+		return nil, jwt.ErrSignatureInvalid
+	}
+
 	userClaims := &UserClaims{
-		OsuID:       int64(claims["osu_id"].(float64)),
-		Username:    claims["username"].(string),
+		OsuID:       int64(osuIDFloat),
+		Username:    username,
 		CountryCode: getStringClaim(claims, "country_code"),
 		AvatarURL:   getStringClaim(claims, "avatar_url"),
 	}

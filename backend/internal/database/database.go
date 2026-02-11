@@ -1,6 +1,9 @@
 package database
 
 import (
+	"os"
+	"time"
+
 	"github.com/packshare/backend/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -8,14 +11,27 @@ import (
 )
 
 func Connect(databaseURL string) (*gorm.DB, error) {
+	logLevel := logger.Warn
+	if os.Getenv("ENVIRONMENT") == "" {
+		logLevel = logger.Info
+	}
+
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Auto migrate
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(1 * time.Minute)
+
 	if err := db.AutoMigrate(&models.User{}, &models.Pack{}, &models.PackBeatmap{}); err != nil {
 		return nil, err
 	}

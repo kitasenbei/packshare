@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -45,7 +46,7 @@ func createTestToken(secret string, osuID int64, username string) string {
 		"osu_id":       float64(osuID),
 		"username":     username,
 		"country_code": "US",
-		"avatar_url":   "https://a.ppy.sh/" + string(rune(osuID)),
+		"avatar_url":   fmt.Sprintf("https://a.ppy.sh/%d", osuID),
 		"exp":          float64(time.Now().Add(time.Hour).Unix()),
 	})
 	signed, _ := token.SignedString([]byte(secret))
@@ -119,11 +120,15 @@ func TestGetPack(t *testing.T) {
 		initialViews := before.Views
 
 		req := httptest.NewRequest("GET", "/api/packs/abc123", nil)
-		app.Test(req)
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
 
-		var after models.Pack
-		db.First(&after, pack.ID)
-		assert.Equal(t, initialViews+1, after.Views)
+		var result map[string]interface{}
+		json.NewDecoder(resp.Body).Decode(&result)
+
+		// Response returns views+1
+		assert.Equal(t, float64(initialViews+1), result["views"])
 	})
 }
 
@@ -136,8 +141,8 @@ func TestCreatePack(t *testing.T) {
 			"name":        "My New Pack",
 			"description": "A cool pack",
 			"beatmaps": []map[string]interface{}{
-				{"beatmap_id": 111, "title": "Song 1", "artist": "Artist 1", "creator": "Mapper", "bpm": 180, "keys": 7},
-				{"beatmap_id": 222, "title": "Song 2", "artist": "Artist 2", "creator": "Mapper", "bpm": 200, "keys": 4},
+				{"beatmapset_id": 111, "title": "Song 1", "artist": "Artist 1", "creator": "Mapper", "bpm": 180, "keys": 7},
+				{"beatmapset_id": 222, "title": "Song 2", "artist": "Artist 2", "creator": "Mapper", "bpm": 200, "keys": 4},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)
@@ -227,7 +232,7 @@ func TestUpdatePack(t *testing.T) {
 			"name":        "Updated Name",
 			"description": "Updated description",
 			"beatmaps": []map[string]interface{}{
-				{"beatmap_id": 333, "title": "New Song", "artist": "Artist", "creator": "Mapper", "bpm": 180, "keys": 7},
+				{"beatmapset_id": 333, "title": "New Song", "artist": "Artist", "creator": "Mapper", "bpm": 180, "keys": 7},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)
@@ -378,7 +383,7 @@ func TestPackShareCodeGeneration(t *testing.T) {
 			body := map[string]interface{}{
 				"name": "Pack " + string(rune(i)),
 				"beatmaps": []map[string]interface{}{
-					{"beatmap_id": i + 1, "title": "Song", "artist": "Artist", "creator": "Mapper", "bpm": 180, "keys": 7},
+					{"beatmapset_id": i + 1, "title": "Song", "artist": "Artist", "creator": "Mapper", "bpm": 180, "keys": 7},
 				},
 			}
 			jsonBody, _ := json.Marshal(body)
@@ -402,7 +407,7 @@ func TestPackShareCodeGeneration(t *testing.T) {
 		body := map[string]interface{}{
 			"name": "Length Test Pack",
 			"beatmaps": []map[string]interface{}{
-				{"beatmap_id": 999, "title": "Song", "artist": "Artist", "creator": "Mapper", "bpm": 180, "keys": 7},
+				{"beatmapset_id": 999, "title": "Song", "artist": "Artist", "creator": "Mapper", "bpm": 180, "keys": 7},
 			},
 		}
 		jsonBody, _ := json.Marshal(body)

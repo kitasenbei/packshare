@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type User struct {
@@ -28,11 +26,6 @@ type Pack struct {
 	Beatmaps    []PackBeatmap `gorm:"foreignKey:PackID" json:"beatmaps,omitempty"`
 	CreatedAt   time.Time     `json:"created_at"`
 	UpdatedAt   time.Time     `json:"updated_at"`
-}
-
-// BeforeDelete hook to cascade delete beatmaps
-func (p *Pack) BeforeDelete(tx *gorm.DB) error {
-	return tx.Where("pack_id = ?", p.ID).Delete(&PackBeatmap{}).Error
 }
 
 type PackBeatmap struct {

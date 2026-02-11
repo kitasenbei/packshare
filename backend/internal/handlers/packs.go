@@ -2,13 +2,23 @@ package handlers
 
 import (
 	"crypto/rand"
-	"encoding/base64"
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/packshare/backend/internal/middleware"
 	"github.com/packshare/backend/internal/models"
 	"gorm.io/gorm"
+)
+
+const (
+	maxBeatmapsPerPack = 500
+	maxNameLength      = 200
+	maxDescriptionLen  = 2000
+	maxFieldLength     = 500
+	maxShareCodeRetry  = 10
 )
 
 type PackHandler struct {
@@ -35,18 +45,31 @@ type BeatmapRequest struct {
 	Status       string  `json:"status"`
 }
 
-func generateShareCode() string {
-	b := make([]byte, 6)
-	rand.Read(b)
-	code := base64.URLEncoding.EncodeToString(b)
-	// Remove padding and special chars
-	code = strings.ReplaceAll(code, "=", "")
-	code = strings.ReplaceAll(code, "-", "")
-	code = strings.ReplaceAll(code, "_", "")
-	if len(code) > 8 {
-		code = code[:8]
+func generateShareCode() (string, error) {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
 	}
-	return code
+	return hex.EncodeToString(b), nil
+}
+
+func getUserClaims(c *fiber.Ctx) (*middleware.UserClaims, error) {
+	val := c.Locals("user")
+	if val == nil {
+		return nil, errors.New("no user in context")
+	}
+	claims, ok := val.(*middleware.UserClaims)
+	if !ok || claims == nil {
+		return nil, errors.New("invalid user claims")
+	}
+	return claims, nil
+}
+
+func truncate(s string, max int) string {
+	if len(s) > max {
+		return s[:max]
+	}
+	return s
 }
 
 func (h *PackHandler) getOrCreateUser(claims *middleware.UserClaims) (*models.User, error) {
@@ -64,6 +87,21 @@ func (h *PackHandler) getOrCreateUser(claims *middleware.UserClaims) (*models.Us
 		}
 	} else if err != nil {
 		return nil, err
+	} else {
+		// Update profile if changed
+		updates := map[string]interface{}{}
+		if user.Username != claims.Username {
+			updates["username"] = claims.Username
+		}
+		if user.CountryCode != claims.CountryCode {
+			updates["country_code"] = claims.CountryCode
+		}
+		if user.AvatarURL != claims.AvatarURL {
+			updates["avatar_url"] = claims.AvatarURL
+		}
+		if len(updates) > 0 {
+			h.db.Model(&user).Updates(updates)
+		}
 	}
 	return &user, nil
 }
@@ -87,15 +125,15 @@ func (h *PackHandler) GetPack(c *fiber.Ctx) error {
 		})
 	}
 
-	// Increment view count
-	h.db.Model(&pack).Update("views", gorm.Expr("views + 1"))
+	// Increment view count asynchronously, return current+1
+	go h.db.Model(&models.Pack{}).Where("id = ?", pack.ID).Update("views", gorm.Expr("views + 1"))
 
 	return c.JSON(fiber.Map{
 		"id":          pack.ID,
 		"share_code":  pack.ShareCode,
 		"name":        pack.Name,
 		"description": pack.Description,
-		"views":       pack.Views,
+		"views":       pack.Views + 1,
 		"user": fiber.Map{
 			"id":           pack.User.ID,
 			"osu_id":       pack.User.OsuID,
@@ -110,7 +148,10 @@ func (h *PackHandler) GetPack(c *fiber.Ctx) error {
 }
 
 func (h *PackHandler) CreatePack(c *fiber.Ctx) error {
-	claims := c.Locals("user").(*middleware.UserClaims)
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
 
 	var req CreatePackRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -119,15 +160,33 @@ func (h *PackHandler) CreatePack(c *fiber.Ctx) error {
 		})
 	}
 
-	if strings.TrimSpace(req.Name) == "" {
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "pack name is required",
+		})
+	}
+	if len(name) > maxNameLength {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("pack name must be under %d characters", maxNameLength),
+		})
+	}
+
+	description := strings.TrimSpace(req.Description)
+	if len(description) > maxDescriptionLen {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("description must be under %d characters", maxDescriptionLen),
 		})
 	}
 
 	if len(req.Beatmaps) == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "at least one beatmap is required",
+		})
+	}
+	if len(req.Beatmaps) > maxBeatmapsPerPack {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("maximum %d beatmaps per pack", maxBeatmapsPerPack),
 		})
 	}
 
@@ -138,43 +197,70 @@ func (h *PackHandler) CreatePack(c *fiber.Ctx) error {
 		})
 	}
 
-	// Generate unique share code
+	// Generate unique share code with retry limit
 	var shareCode string
-	for {
-		shareCode = generateShareCode()
+	for i := 0; i < maxShareCodeRetry; i++ {
+		code, err := generateShareCode()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "failed to generate share code",
+			})
+		}
 		var existing models.Pack
-		if h.db.Where("share_code = ?", shareCode).First(&existing).Error == gorm.ErrRecordNotFound {
+		if err := h.db.Where("share_code = ?", code).First(&existing).Error; err == gorm.ErrRecordNotFound {
+			shareCode = code
 			break
+		} else if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "database error",
+			})
 		}
 	}
-
-	pack := models.Pack{
-		ShareCode:   shareCode,
-		Name:        strings.TrimSpace(req.Name),
-		Description: strings.TrimSpace(req.Description),
-		UserID:      user.ID,
-	}
-
-	if err := h.db.Create(&pack).Error; err != nil {
+	if shareCode == "" {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to create pack",
+			"error": "failed to generate unique share code",
 		})
 	}
 
-	// Create beatmaps
-	for i, bm := range req.Beatmaps {
-		beatmap := models.PackBeatmap{
-			PackID:    pack.ID,
-			BeatmapID: bm.BeatmapsetID,
-			Title:     bm.Title,
-			Artist:    bm.Artist,
-			Creator:   bm.Creator,
-			BPM:       bm.BPM,
-			Keys:      bm.Keys,
-			Status:    bm.Status,
-			SortOrder: i,
+	// Use a transaction for pack + beatmaps
+	var pack models.Pack
+	txErr := h.db.Transaction(func(tx *gorm.DB) error {
+		pack = models.Pack{
+			ShareCode:   shareCode,
+			Name:        name,
+			Description: description,
+			UserID:      user.ID,
 		}
-		h.db.Create(&beatmap)
+
+		if err := tx.Create(&pack).Error; err != nil {
+			return err
+		}
+
+		beatmaps := make([]models.PackBeatmap, len(req.Beatmaps))
+		for i, bm := range req.Beatmaps {
+			beatmaps[i] = models.PackBeatmap{
+				PackID:    pack.ID,
+				BeatmapID: bm.BeatmapsetID,
+				Title:     truncate(bm.Title, maxFieldLength),
+				Artist:    truncate(bm.Artist, maxFieldLength),
+				Creator:   truncate(bm.Creator, maxFieldLength),
+				BPM:       bm.BPM,
+				Keys:      bm.Keys,
+				Status:    truncate(bm.Status, 50),
+				SortOrder: i,
+			}
+		}
+		if err := tx.Create(&beatmaps).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to create pack",
+		})
 	}
 
 	// Reload with beatmaps
@@ -191,11 +277,14 @@ func (h *PackHandler) CreatePack(c *fiber.Ctx) error {
 }
 
 func (h *PackHandler) UpdatePack(c *fiber.Ctx) error {
-	claims := c.Locals("user").(*middleware.UserClaims)
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
 	code := c.Params("code")
 
 	var pack models.Pack
-	err := h.db.Preload("User").Where("share_code = ?", code).First(&pack).Error
+	err = h.db.Preload("User").Where("share_code = ?", code).First(&pack).Error
 	if err == gorm.ErrRecordNotFound {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "pack not found",
@@ -207,7 +296,6 @@ func (h *PackHandler) UpdatePack(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check ownership
 	if pack.User.OsuID != claims.OsuID {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "you don't own this pack",
@@ -221,38 +309,70 @@ func (h *PackHandler) UpdatePack(c *fiber.Ctx) error {
 		})
 	}
 
-	// Update pack fields
+	// Validate name if provided
 	if req.Name != "" {
-		pack.Name = strings.TrimSpace(req.Name)
+		name := strings.TrimSpace(req.Name)
+		if len(name) > maxNameLength {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fmt.Sprintf("pack name must be under %d characters", maxNameLength),
+			})
+		}
+		pack.Name = name
 	}
-	pack.Description = strings.TrimSpace(req.Description)
 
-	if err := h.db.Save(&pack).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to update pack",
+	// Only update description if explicitly provided in the JSON
+	if req.Description != "" || c.Body() != nil {
+		desc := strings.TrimSpace(req.Description)
+		if len(desc) > maxDescriptionLen {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fmt.Sprintf("description must be under %d characters", maxDescriptionLen),
+			})
+		}
+		pack.Description = desc
+	}
+
+	if len(req.Beatmaps) > maxBeatmapsPerPack {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("maximum %d beatmaps per pack", maxBeatmapsPerPack),
 		})
 	}
 
-	// Update beatmaps if provided
-	if len(req.Beatmaps) > 0 {
-		// Delete old beatmaps
-		h.db.Where("pack_id = ?", pack.ID).Delete(&models.PackBeatmap{})
-
-		// Create new ones
-		for i, bm := range req.Beatmaps {
-			beatmap := models.PackBeatmap{
-				PackID:    pack.ID,
-				BeatmapID: bm.BeatmapsetID,
-				Title:     bm.Title,
-				Artist:    bm.Artist,
-				Creator:   bm.Creator,
-				BPM:       bm.BPM,
-				Keys:      bm.Keys,
-				Status:    bm.Status,
-				SortOrder: i,
-			}
-			h.db.Create(&beatmap)
+	txErr := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&pack).Error; err != nil {
+			return err
 		}
+
+		if len(req.Beatmaps) > 0 {
+			if err := tx.Where("pack_id = ?", pack.ID).Delete(&models.PackBeatmap{}).Error; err != nil {
+				return err
+			}
+
+			beatmaps := make([]models.PackBeatmap, len(req.Beatmaps))
+			for i, bm := range req.Beatmaps {
+				beatmaps[i] = models.PackBeatmap{
+					PackID:    pack.ID,
+					BeatmapID: bm.BeatmapsetID,
+					Title:     truncate(bm.Title, maxFieldLength),
+					Artist:    truncate(bm.Artist, maxFieldLength),
+					Creator:   truncate(bm.Creator, maxFieldLength),
+					BPM:       bm.BPM,
+					Keys:      bm.Keys,
+					Status:    truncate(bm.Status, 50),
+					SortOrder: i,
+				}
+			}
+			if err := tx.Create(&beatmaps).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to update pack",
+		})
 	}
 
 	// Reload
@@ -269,11 +389,14 @@ func (h *PackHandler) UpdatePack(c *fiber.Ctx) error {
 }
 
 func (h *PackHandler) DeletePack(c *fiber.Ctx) error {
-	claims := c.Locals("user").(*middleware.UserClaims)
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
 	code := c.Params("code")
 
 	var pack models.Pack
-	err := h.db.Preload("User").Where("share_code = ?", code).First(&pack).Error
+	err = h.db.Preload("User").Where("share_code = ?", code).First(&pack).Error
 	if err == gorm.ErrRecordNotFound {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "pack not found",
@@ -285,18 +408,20 @@ func (h *PackHandler) DeletePack(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check ownership
 	if pack.User.OsuID != claims.OsuID {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "you don't own this pack",
 		})
 	}
 
-	// Delete beatmaps first (cascade)
-	h.db.Where("pack_id = ?", pack.ID).Delete(&models.PackBeatmap{})
+	txErr := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("pack_id = ?", pack.ID).Delete(&models.PackBeatmap{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&pack).Error
+	})
 
-	// Delete pack
-	if err := h.db.Delete(&pack).Error; err != nil {
+	if txErr != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to delete pack",
 		})
@@ -306,12 +431,14 @@ func (h *PackHandler) DeletePack(c *fiber.Ctx) error {
 }
 
 func (h *PackHandler) GetMyPacks(c *fiber.Ctx) error {
-	claims := c.Locals("user").(*middleware.UserClaims)
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
 
 	var user models.User
-	err := h.db.Where("osu_id = ?", claims.OsuID).First(&user).Error
+	err = h.db.Where("osu_id = ?", claims.OsuID).First(&user).Error
 	if err == gorm.ErrRecordNotFound {
-		// User has no packs yet
 		return c.JSON([]fiber.Map{})
 	}
 	if err != nil {
@@ -320,10 +447,25 @@ func (h *PackHandler) GetMyPacks(c *fiber.Ctx) error {
 		})
 	}
 
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 50)
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 50
+	}
+	offset := (page - 1) * limit
+
 	var packs []models.Pack
-	h.db.Preload("Beatmaps", func(db *gorm.DB) *gorm.DB {
+	if err := h.db.Preload("Beatmaps", func(db *gorm.DB) *gorm.DB {
 		return db.Order("sort_order ASC")
-	}).Where("user_id = ?", user.ID).Order("created_at DESC").Find(&packs)
+	}).Where("user_id = ?", user.ID).Order("created_at DESC").
+		Offset(offset).Limit(limit).Find(&packs).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "database error",
+		})
+	}
 
 	result := make([]fiber.Map, len(packs))
 	for i, pack := range packs {
@@ -345,7 +487,7 @@ func (h *PackHandler) GetMyPacks(c *fiber.Ctx) error {
 func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 20)
-	sort := c.Query("sort", "recent") // recent, popular, views
+	sort := c.Query("sort", "recent")
 	search := c.Query("search", "")
 
 	if page < 1 {
@@ -361,37 +503,40 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 		return db.Order("sort_order ASC")
 	}).Preload("User")
 
-	// Apply search filter
 	if search != "" {
 		searchPattern := "%" + strings.ToLower(search) + "%"
 		query = query.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)
 	}
 
-	// Apply sorting
 	switch sort {
 	case "popular":
 		query = query.Order("views DESC, created_at DESC")
 	case "views":
 		query = query.Order("views DESC")
-	default: // recent
+	default:
 		query = query.Order("created_at DESC")
 	}
 
-	// Get total count (with search filter)
 	var total int64
 	countQuery := h.db.Model(&models.Pack{})
 	if search != "" {
 		searchPattern := "%" + strings.ToLower(search) + "%"
 		countQuery = countQuery.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)
 	}
-	countQuery.Count(&total)
+	if err := countQuery.Count(&total).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "database error",
+		})
+	}
 
-	// Get paginated results
-	query.Offset(offset).Limit(limit).Find(&packs)
+	if err := query.Offset(offset).Limit(limit).Find(&packs).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "database error",
+		})
+	}
 
 	result := make([]fiber.Map, len(packs))
 	for i, pack := range packs {
-		// Extract beatmapset IDs for thumbnails
 		beatmapsetIDs := make([]int64, len(pack.Beatmaps))
 		for j, bm := range pack.Beatmaps {
 			beatmapsetIDs[j] = bm.BeatmapID

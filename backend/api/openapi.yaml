@@ -1,0 +1,639 @@
+openapi: 3.0.3
+info:
+  title: PackShare API
+  description: |
+    PackShare is a platform for sharing osu!mania beatmap packs.
+
+    ## Authentication
+    Protected endpoints require a Bearer JWT token obtained from the auth service (`/auth/login`).
+    The JWT contains osu! user data (osu_id, username, country_code, avatar_url).
+
+    ## Auth Flow
+    1. Redirect user to `GET /auth/login`
+    2. User authorizes via osu! OAuth
+    3. Callback redirects to frontend with `?token=<jwt>`
+    4. Use token in `Authorization: Bearer <jwt>` header
+  version: 1.0.0
+  contact:
+    name: PackShare
+
+servers:
+  - url: https://d3imer994mgg77.cloudfront.net
+    description: Staging
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Packs
+    description: Beatmap pack operations
+  - name: Auth
+    description: Authentication via osu! OAuth
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/packs:
+    get:
+      tags: [Packs]
+      summary: Browse public packs
+      operationId: browsePacks
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 50
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, popular, views]
+            default: recent
+        - name: search
+          in: query
+          description: Search by pack name or description (case-insensitive)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of packs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrowsePacksResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Packs]
+      summary: Create a new pack
+      operationId: createPack
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePackRequest"
+      responses:
+        "201":
+          description: Pack created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pack"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/packs/{code}:
+    get:
+      tags: [Packs]
+      summary: Get a pack by share code
+      operationId: getPack
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Pack share code (8-char hex string)
+          schema:
+            type: string
+            example: a1b2c3d4
+      responses:
+        "200":
+          description: Pack details with beatmaps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      tags: [Packs]
+      summary: Update a pack
+      description: Only the pack owner can update. Send beatmaps array to replace all beatmaps.
+      operationId: updatePack
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePackRequest"
+      responses:
+        "200":
+          description: Pack updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pack"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags: [Packs]
+      summary: Delete a pack
+      description: Only the pack owner can delete.
+      operationId: deletePack
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Pack deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/my-packs:
+    get:
+      tags: [Packs]
+      summary: Get current user's packs
+      operationId: getMyPacks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: List of user's packs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pack"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/login:
+    get:
+      tags: [Auth]
+      summary: Initiate osu! OAuth login
+      description: Redirects the user to osu! OAuth authorization page. After authorization, the user is redirected back with a JWT token.
+      operationId: authLogin
+      responses:
+        "302":
+          description: Redirect to osu! OAuth
+
+  /auth/callback:
+    get:
+      tags: [Auth]
+      summary: OAuth callback
+      description: Handles the osu! OAuth callback. Exchanges the authorization code for a token, fetches user info, creates a JWT, and redirects to the frontend with `?token=<jwt>`.
+      operationId: authCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to frontend with token
+
+  /auth/verify:
+    get:
+      tags: [Auth]
+      summary: Verify a JWT token
+      operationId: authVerify
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: "#/components/schemas/User"
+        "401":
+          description: Token is invalid or expired
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Invalid or expired token
+
+  /auth/beatmapset/{beatmapset_id}:
+    get:
+      tags: [Auth]
+      summary: Fetch beatmapset info from osu! API
+      description: Returns beatmapset metadata with mania-only difficulties.
+      operationId: getBeatmapset
+      parameters:
+        - name: beatmapset_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Beatmapset info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BeatmapsetInfo"
+        "404":
+          description: Beatmapset not found
+
+  /auth/health:
+    get:
+      tags: [Health]
+      summary: Auth service health check
+      operationId: authHealthCheck
+      responses:
+        "200":
+          description: Auth service is healthy
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT obtained from /auth/login flow
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        osu_id:
+          type: integer
+          example: 12345678
+        username:
+          type: string
+          example: peppy
+        country_code:
+          type: string
+          example: AU
+        avatar_url:
+          type: string
+          example: https://a.ppy.sh/12345678
+
+    PackBeatmap:
+      type: object
+      properties:
+        id:
+          type: integer
+        pack_id:
+          type: integer
+        beatmapset_id:
+          type: integer
+          example: 1234567
+        title:
+          type: string
+          example: "Freedom Dive"
+        artist:
+          type: string
+          example: "xi"
+        creator:
+          type: string
+          example: "Loctav"
+        bpm:
+          type: number
+          format: float
+          example: 222.22
+        keys:
+          type: integer
+          example: 7
+        status:
+          type: string
+          example: ranked
+        sort_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Pack:
+      type: object
+      properties:
+        id:
+          type: integer
+        share_code:
+          type: string
+          example: a1b2c3d4
+        name:
+          type: string
+          example: "My 7K Pack"
+        description:
+          type: string
+          example: "A collection of 7K ranked maps"
+        views:
+          type: integer
+        beatmaps:
+          type: array
+          items:
+            $ref: "#/components/schemas/PackBeatmap"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PackDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        share_code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        views:
+          type: integer
+        user:
+          $ref: "#/components/schemas/User"
+        beatmaps:
+          type: array
+          items:
+            $ref: "#/components/schemas/PackBeatmap"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    BrowsePackItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        share_code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        views:
+          type: integer
+        user:
+          $ref: "#/components/schemas/User"
+        beatmap_count:
+          type: integer
+        beatmapset_ids:
+          type: array
+          items:
+            type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    BrowsePacksResponse:
+      type: object
+      properties:
+        packs:
+          type: array
+          items:
+            $ref: "#/components/schemas/BrowsePackItem"
+        total:
+          type: integer
+          description: Total number of matching packs
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    CreatePackRequest:
+      type: object
+      required: [name, beatmaps]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          example: "My 7K Pack"
+        description:
+          type: string
+          maxLength: 2000
+        beatmaps:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: "#/components/schemas/BeatmapInput"
+
+    UpdatePackRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          description: Only updated if non-empty
+        description:
+          type: string
+          maxLength: 2000
+        beatmaps:
+          type: array
+          maxItems: 500
+          description: If provided, replaces all existing beatmaps
+          items:
+            $ref: "#/components/schemas/BeatmapInput"
+
+    BeatmapInput:
+      type: object
+      properties:
+        beatmapset_id:
+          type: integer
+          example: 1234567
+        title:
+          type: string
+          example: "Freedom Dive"
+        artist:
+          type: string
+          example: "xi"
+        creator:
+          type: string
+          example: "Loctav"
+        bpm:
+          type: number
+          format: float
+          example: 222.22
+        keys:
+          type: integer
+          example: 7
+        status:
+          type: string
+          example: ranked
+
+    BeatmapsetInfo:
+      type: object
+      properties:
+        beatmapset_id:
+          type: integer
+        artist:
+          type: string
+        title:
+          type: string
+        creator:
+          type: string
+        covers:
+          type: object
+          properties:
+            cover:
+              type: string
+            card:
+              type: string
+            list:
+              type: string
+        beatmaps:
+          type: array
+          items:
+            type: object
+            properties:
+              beatmap_id:
+                type: integer
+              difficulty_name:
+                type: string
+              star_rating:
+                type: number
+              keys:
+                type: integer
+              bpm:
+                type: number
+              length_seconds:
+                type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "pack name is required"
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "missing authorization token"
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "you don't own this pack"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "pack not found"
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "database error"

@@ -2,6 +2,10 @@ package main
 
 import (
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -11,19 +15,15 @@ import (
 )
 
 func main() {
-	// Load .env file (optional)
 	godotenv.Load()
 
-	// Load config
 	cfg := config.Load()
 
-	// Connect to database
 	db, err := database.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Create Fiber app
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
@@ -36,10 +36,22 @@ func main() {
 		},
 	})
 
-	// Setup routes
 	routes.Setup(app, db, cfg)
 
-	// Start server
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-quit
+		log.Println("Shutting down server...")
+		if err := app.ShutdownWithTimeout(10 * time.Second); err != nil {
+			log.Fatalf("Server forced to shutdown: %v", err)
+		}
+	}()
+
 	log.Printf("Server starting on port %s", cfg.Port)
-	log.Fatal(app.Listen(":" + cfg.Port))
+	if err := app.Listen(":" + cfg.Port); err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
 }

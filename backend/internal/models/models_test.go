@@ -169,7 +169,7 @@ func TestPackBeatmapModel(t *testing.T) {
 		assert.Equal(t, "Third", found.Beatmaps[2].Title)
 	})
 
-	t.Run("delete pack cascades to beatmaps", func(t *testing.T) {
+	t.Run("delete pack and beatmaps", func(t *testing.T) {
 		cascadePack := Pack{ShareCode: "cascade", Name: "Cascade Pack", UserID: user.ID}
 		db.Create(&cascadePack)
 		db.Create(&PackBeatmap{PackID: cascadePack.ID, BeatmapID: 999, Title: "Will be deleted"})
@@ -178,6 +178,8 @@ func TestPackBeatmapModel(t *testing.T) {
 		db.Model(&PackBeatmap{}).Where("pack_id = ?", cascadePack.ID).Count(&countBefore)
 		assert.Equal(t, int64(1), countBefore)
 
+		// Handler deletes beatmaps explicitly before pack
+		db.Where("pack_id = ?", cascadePack.ID).Delete(&PackBeatmap{})
 		db.Delete(&cascadePack)
 
 		var countAfter int64
