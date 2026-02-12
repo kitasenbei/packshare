@@ -8,6 +8,7 @@ import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
 import type { StashBeatmap } from '../types/beatmap';
 import { getPack, type Pack } from '../api/packs';
 import { getStoredToken } from '../api/auth';
+import BeatmapRow from './BeatmapRow';
 
 const STASH_STORAGE_KEY = 'packshare_stash';
 
@@ -237,84 +238,48 @@ export default function SharedPack({ packId }: SharedPackProps) {
         {pack.beatmaps.map((beatmap) => {
           const isInStash = isLoggedIn && stashedIds.has(beatmap.id);
           return (
-            <Box
+            <BeatmapRow
               key={beatmap.id}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                p: 1.5,
-                borderRadius: 1,
-                backgroundColor: isInStash ? 'rgba(255,102,171,0.08)' : 'rgba(255,255,255,0.03)',
-                '&:hover': { backgroundColor: isInStash ? 'rgba(255,102,171,0.12)' : 'rgba(255,255,255,0.06)' },
-                border: isInStash ? '1px solid rgba(255,102,171,0.3)' : '1px solid transparent',
-              }}
-            >
-              {/* Thumbnail */}
-              <Box
-                component="img"
-                src={`https://assets.ppy.sh/beatmaps/${beatmap.beatmapset_id}/covers/list.jpg`}
-                sx={{
-                  width: 50,
-                  height: 38,
-                  borderRadius: 0.5,
-                  objectFit: 'cover',
-                  flexShrink: 0,
-                }}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-              {beatmap.keys && (
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 26,
-                    bgcolor: '#ff66ab',
-                    borderRadius: 0.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: 11,
-                    fontWeight: 'bold',
-                    flexShrink: 0,
-                  }}
-                >
-                  {beatmap.keys}K
-                </Box>
-              )}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontWeight: 500 }}>
-                  {beatmap.artist} - {beatmap.title}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                  mapped by {beatmap.creator}
-                  {beatmap.star_rating && ` · ${beatmap.star_rating.toFixed(2)}*`}
-                </Typography>
-              </Box>
-              {isLoggedIn && (
-                <Tooltip title={isInStash ? 'Remove from stash' : 'Save to stash'}>
-                  <IconButton
-                    onClick={() => handleSaveToStash(beatmap)}
-                    sx={{
-                      color: isInStash ? '#ff66ab' : 'rgba(255,255,255,0.5)',
-                      '&:hover': { color: '#ff66ab' },
-                    }}
-                  >
-                    {isInStash ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
-                  </IconButton>
-                </Tooltip>
-              )}
-              <Tooltip title="Open on osu!">
-                <IconButton onClick={() => handleOpenOsu(beatmap)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                  <OpenInNewIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Download">
-                <IconButton onClick={() => handleDownloadSingle(beatmap)} sx={{ color: '#66ff99' }}>
-                  <DownloadIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
+              title={beatmap.title}
+              artist={beatmap.artist}
+              keys={beatmap.keys}
+              creator={beatmap.creator}
+              creatorPrefix="mapped by"
+              starRating={beatmap.star_rating}
+              beatmapsetId={beatmap.beatmapset_id}
+              showThumbnail
+              thumbnailSize={{ width: 50, height: 38 }}
+              variant="dark"
+              density="compact"
+              stashHighlight={isInStash}
+              actions={
+                <>
+                  {isLoggedIn && (
+                    <Tooltip title={isInStash ? 'Remove from stash' : 'Save to stash'}>
+                      <IconButton
+                        onClick={() => handleSaveToStash(beatmap)}
+                        sx={{
+                          color: isInStash ? '#ff66ab' : 'rgba(255,255,255,0.5)',
+                          '&:hover': { color: '#ff66ab' },
+                        }}
+                      >
+                        {isInStash ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title="Open on osu!">
+                    <IconButton onClick={() => handleOpenOsu(beatmap)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                      <OpenInNewIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Download">
+                    <IconButton onClick={() => handleDownloadSingle(beatmap)} sx={{ color: '#66ff99' }}>
+                      <DownloadIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              }
+            />
           );
         })}
       </Box>

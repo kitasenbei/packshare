@@ -14,13 +14,14 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       // Proxy API requests in development
+      // VITE_PROXY_TARGET points to staging; client-side URLs stay empty (relative)
       proxy: {
         '/api': {
-          target: env.VITE_API_URL || 'http://localhost:8080',
+          target: env.VITE_PROXY_TARGET || 'http://localhost:8080',
           changeOrigin: true,
         },
         '/auth': {
-          target: env.VITE_AUTH_URL || 'http://localhost:8001',
+          target: env.VITE_PROXY_TARGET || 'http://localhost:8001',
           changeOrigin: true,
         },
       },

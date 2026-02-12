@@ -6,7 +6,6 @@ import {
   Button,
   IconButton,
   Tooltip,
-  Divider,
   Pagination,
   Stack,
   CircularProgress,
@@ -20,6 +19,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getPack, type Pack } from '../api/packs';
+import BeatmapRow from './BeatmapRow';
 
 const MAPS_PER_PAGE = 10;
 
@@ -236,63 +236,18 @@ export default function PackViewer({ packId }: PackViewerProps) {
         </Box>
         <Box>
           {displayMaps.map((beatmap, index) => (
-            <Box key={beatmap.id}>
-              {index > 0 && <Divider />}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  p: 2,
-                  gap: 2,
-                  '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
-                }}
-              >
-                {/* Thumbnail */}
-                <Box
-                  component="img"
-                  src={`https://assets.ppy.sh/beatmaps/${beatmap.beatmapset_id}/covers/list.jpg`}
-                  sx={{
-                    width: 60,
-                    height: 45,
-                    borderRadius: 1,
-                    objectFit: 'cover',
-                    flexShrink: 0,
-                  }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-                {/* Key count badge */}
-                {beatmap.keys && (
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 28,
-                      backgroundColor: '#ff66ab',
-                      borderRadius: 0.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: 12,
-                      fontWeight: 'bold',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {beatmap.keys}K
-                  </Box>
-                )}
-
-                {/* Map info */}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography fontWeight="medium" noWrap>
-                    {beatmap.artist} - {beatmap.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" noWrap>
-                    mapped by {beatmap.creator}
-                    {beatmap.star_rating && ` · ${beatmap.star_rating.toFixed(2)}*`}
-                  </Typography>
-                </Box>
-
-                {/* Actions */}
+            <BeatmapRow
+              key={beatmap.id}
+              title={beatmap.title}
+              artist={beatmap.artist}
+              keys={beatmap.keys}
+              creator={beatmap.creator}
+              creatorPrefix="mapped by"
+              starRating={beatmap.star_rating}
+              beatmapsetId={beatmap.beatmapset_id}
+              showThumbnail
+              showDivider={index > 0}
+              actions={
                 <Stack direction="row" spacing={0.5}>
                   <Tooltip title="Open on osu!">
                     <IconButton
@@ -313,8 +268,8 @@ export default function PackViewer({ packId }: PackViewerProps) {
                     </IconButton>
                   </Tooltip>
                 </Stack>
-              </Box>
-            </Box>
+              }
+            />
           ))}
         </Box>
 

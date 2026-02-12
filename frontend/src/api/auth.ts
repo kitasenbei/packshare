@@ -17,7 +17,7 @@ export interface AuthState {
 
 // Get the login URL - redirects to osu! OAuth
 export function getLoginUrl(): string {
-  return `${AUTH_BASE_URL}/auth/login`;
+  return `${AUTH_BASE_URL}/auth/login?redirect=${encodeURIComponent(window.location.origin)}`;
 }
 
 // Check URL for token after OAuth callback

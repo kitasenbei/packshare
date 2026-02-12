@@ -39,9 +39,9 @@ def health_check():
 
 
 @app.get("/auth/login")
-async def login(request: Request):
+async def login(request: Request, redirect: Optional[str] = Query(None)):
     """Initiate osu! OAuth flow"""
-    origin = request.headers.get("referer", "") or Config.DEFAULT_REDIRECT
+    origin = redirect or request.headers.get("referer", "") or Config.DEFAULT_REDIRECT
     state = base64.urlsafe_b64encode(origin.encode()).decode()
     return RedirectResponse(url=OsuAPI.get_auth_url(state=state), status_code=302)
 

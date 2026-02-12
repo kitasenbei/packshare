@@ -33,11 +33,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import FolderIcon from '@mui/icons-material/Folder';
 import type { StashBeatmap } from '../types/beatmap';
 import type { User, BeatmapsetInfo } from '../api/auth';
 import { getBeatmapset } from '../api/auth';
 import { getMyPacks, updatePack, deletePack, type Pack, type PackBeatmap } from '../api/packs';
+import BeatmapRow from './BeatmapRow';
 
 const STASH_STORAGE_KEY = 'packshare_stash';
 const MAPS_PER_PAGE = 5;
@@ -421,93 +421,50 @@ export default function MyPacks({ user }: MyPacksProps) {
               {/* Stash list */}
               <Box sx={{ px: 2 }}>
                 {displayStash.map((beatmap, i) => (
-                  <Box key={beatmap.id}>
-                    {i > 0 && <Divider />}
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        py: 1.5,
-                        gap: 1.5,
-                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
-                      }}
-                    >
-                      {beatmap.keys && (
-                        <Box
-                          sx={{
-                            width: 36,
-                            height: 26,
-                            backgroundColor: '#ff66ab',
-                            borderRadius: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            fontSize: 11,
-                            fontWeight: 'bold',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {beatmap.keys}K
-                        </Box>
-                      )}
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" fontWeight="medium" noWrap>
-                          {beatmap.artist} - {beatmap.title}
-                        </Typography>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="caption" color="text.secondary" noWrap>
-                            {beatmap.creator}
-                          </Typography>
-                          {beatmap.bpm && (
-                            <Typography variant="caption" color="text.secondary">
-                              · {beatmap.bpm} BPM
-                            </Typography>
-                          )}
-                          <Chip
-                            label={sourceLabels[beatmap.source]?.label || beatmap.source}
+                  <BeatmapRow
+                    key={beatmap.id}
+                    title={beatmap.title}
+                    artist={beatmap.artist}
+                    keys={beatmap.keys}
+                    creator={beatmap.creator}
+                    bpm={beatmap.bpm}
+                    density="compact"
+                    showDivider={i > 0}
+                    sourceChip={{
+                      label: sourceLabels[beatmap.source]?.label || beatmap.source,
+                      color: sourceLabels[beatmap.source]?.color || '#666',
+                    }}
+                    sourceTooltip={beatmap.sourcePackName ? `From: ${beatmap.sourcePackName}` : undefined}
+                    actions={
+                      <>
+                        <Tooltip title="Download">
+                          <IconButton
                             size="small"
-                            sx={{
-                              height: 18,
-                              fontSize: 10,
-                              backgroundColor: sourceLabels[beatmap.source]?.color || '#666',
-                              color: 'white',
-                            }}
-                          />
-                          {beatmap.sourcePackName && (
-                            <Tooltip title={`From: ${beatmap.sourcePackName}`}>
-                              <FolderIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                            </Tooltip>
-                          )}
-                        </Stack>
-                      </Box>
-                      <Tooltip title="Download">
-                        <IconButton
-                          size="small"
-                          onClick={() => window.open(`https://api.nerinyan.moe/d/${beatmap.id}`, '_blank')}
-                        >
-                          <DownloadIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Open on osu!">
-                        <IconButton
-                          size="small"
-                          onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.id}`, '_blank')}
-                        >
-                          <OpenInNewIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Remove from stash">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRemoveFromStash(beatmap.id)}
-                          sx={{ color: '#ff6b6b' }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </Box>
+                            onClick={() => window.open(`https://api.nerinyan.moe/d/${beatmap.id}`, '_blank')}
+                          >
+                            <DownloadIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Open on osu!">
+                          <IconButton
+                            size="small"
+                            onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.id}`, '_blank')}
+                          >
+                            <OpenInNewIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Remove from stash">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveFromStash(beatmap.id)}
+                            sx={{ color: '#ff6b6b' }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    }
+                  />
                 ))}
               </Box>
 
@@ -616,42 +573,16 @@ export default function MyPacks({ user }: MyPacksProps) {
                 {/* Beatmaps List */}
                 <Box sx={{ p: 1 }}>
                   {displayMaps.map((beatmap, i) => (
-                    <Box key={beatmap.id}>
-                      {i > 0 && <Divider />}
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          p: 1,
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 40,
-                            height: 30,
-                            bgcolor: '#ff66ab',
-                            borderRadius: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            fontSize: 12,
-                            fontWeight: 'bold',
-                            mr: 1.5,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {beatmap.keys || '?'}K
-                        </Box>
-                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                          <Typography variant="body2" fontWeight="medium" noWrap>
-                            {beatmap.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" noWrap>
-                            {beatmap.artist} // {beatmap.creator}
-                          </Typography>
-                        </Box>
+                    <BeatmapRow
+                      key={beatmap.id}
+                      title={beatmap.title}
+                      artist={beatmap.artist}
+                      keys={beatmap.keys || undefined}
+                      creator={beatmap.creator}
+                      titleOnly
+                      density="compact"
+                      showDivider={i > 0}
+                      actions={
                         <Tooltip title="Download">
                           <IconButton
                             size="small"
@@ -660,8 +591,8 @@ export default function MyPacks({ user }: MyPacksProps) {
                             <DownloadIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                      </Box>
-                    </Box>
+                      }
+                    />
                   ))}
                 </Box>
 
@@ -768,46 +699,21 @@ export default function MyPacks({ user }: MyPacksProps) {
             {/* Beatmap list */}
             <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
               {editBeatmaps.map((beatmap, index) => (
-                <Box key={beatmap.id}>
-                  {index > 0 && <Divider />}
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      py: 1,
-                      gap: 1.5,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 26,
-                        backgroundColor: '#ff66ab',
-                        borderRadius: 0.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: 11,
-                        fontWeight: 'bold',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {beatmap.keys || '?'}K
-                    </Box>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight="medium" noWrap>
-                        {beatmap.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" noWrap>
-                        {beatmap.artist} // {beatmap.creator}
-                      </Typography>
-                    </Box>
+                <BeatmapRow
+                  key={beatmap.id}
+                  title={beatmap.title}
+                  artist={beatmap.artist}
+                  keys={beatmap.keys || undefined}
+                  creator={beatmap.creator}
+                  titleOnly
+                  density="compact"
+                  showDivider={index > 0}
+                  actions={
                     <IconButton size="small" onClick={() => handleRemoveEditBeatmap(beatmap.id)}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
-                  </Box>
-                </Box>
+                  }
+                />
               ))}
             </Box>
           </Stack>

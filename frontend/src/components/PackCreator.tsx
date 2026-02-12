@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogActions,
   InputAdornment,
-  Divider,
   Tooltip,
   Stack,
   CircularProgress,
@@ -31,6 +30,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DownloadIcon from '@mui/icons-material/Download';
 import { type User, getBeatmapset, type BeatmapsetInfo } from '../api/auth';
 import { createPack } from '../api/packs';
+import BeatmapRow from './BeatmapRow';
 
 interface PackCreatorProps {
   user?: User | null;
@@ -410,51 +410,17 @@ export default function PackCreator({ user }: PackCreatorProps) {
         ) : (
           <Box>
             {beatmaps.map((beatmap, index) => (
-              <Box key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}>
-                {index > 0 && <Divider />}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    p: 2,
-                    gap: 2,
-                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
-                  }}
-                >
-                  {/* Key badge */}
-                  {beatmap.keys && (
-                    <Box
-                      sx={{
-                        width: 44,
-                        height: 32,
-                        backgroundColor: '#ff66ab',
-                        borderRadius: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: 13,
-                        fontWeight: 'bold',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {beatmap.keys}K
-                    </Box>
-                  )}
-
-                  {/* Map info */}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography fontWeight="medium" noWrap>
-                      {beatmap.artist} - {beatmap.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      mapped by {beatmap.creator}
-                      {beatmap.difficulty_name && ` [${beatmap.difficulty_name}]`}
-                      {beatmap.star_rating && ` · ${beatmap.star_rating.toFixed(2)}*`}
-                    </Typography>
-                  </Box>
-
-                  {/* Actions */}
+              <BeatmapRow
+                key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}
+                title={beatmap.title}
+                artist={beatmap.artist}
+                keys={beatmap.keys}
+                creator={beatmap.creator}
+                creatorPrefix="mapped by"
+                difficultyName={beatmap.difficulty_name}
+                starRating={beatmap.star_rating}
+                showDivider={index > 0}
+                actions={
                   <Stack direction="row" spacing={0.5}>
                     <Tooltip title="Open on osu!">
                       <IconButton
@@ -484,8 +450,8 @@ export default function PackCreator({ user }: PackCreatorProps) {
                       </IconButton>
                     </Tooltip>
                   </Stack>
-                </Box>
-              </Box>
+                }
+              />
             ))}
           </Box>
         )}

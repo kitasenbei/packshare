@@ -19,7 +19,6 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Checkbox,
   Snackbar,
   Alert,
   TextField,
@@ -35,6 +34,7 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import CloseIcon from '@mui/icons-material/Close';
 import LinkIcon from '@mui/icons-material/Link';
 import type { StashBeatmap } from '../types/beatmap';
+import BeatmapRow from './BeatmapRow';
 
 const STORAGE_KEY = 'packshare_tournaments';
 const STASH_STORAGE_KEY = 'packshare_stash';
@@ -569,85 +569,50 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                 {slotMaps.map((map, i) => {
                   const globalIndex = maps.findIndex(m => m === map);
                   return (
-                    <Box
+                    <BeatmapRow
                       key={i}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        p: 1.5,
-                        borderRadius: 1,
-                        backgroundColor: 'rgba(255,255,255,0.03)',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.06)' },
-                      }}
-                    >
-                      {/* Slot badge */}
-                      <Box
-                        sx={{
-                          backgroundColor: slotColors[map.slot] || '#666',
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: 1,
-                          fontWeight: 'bold',
-                          fontSize: 14,
-                          minWidth: 48,
-                          textAlign: 'center',
-                        }}
-                      >
-                        {map.slot}{map.num}
-                      </Box>
-                      {/* Mod badge */}
-                      {map.mod !== 'NM' && (
-                        <Chip
-                          label={map.mod}
-                          size="small"
-                          sx={{
-                            backgroundColor: modColors[map.mod] || '#666',
-                            color: 'white',
-                            fontWeight: 'bold',
-                            fontSize: 11,
-                            height: 22,
-                          }}
-                        />
-                      )}
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontWeight: 500 }}>
-                          {map.artist} - {map.title}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                          [{map.diff}] mapped by {map.mapper}
-                        </Typography>
-                      </Box>
-                      <Typography sx={{ color: '#f5c842', fontWeight: 'bold', mr: 2 }}>
-                        ★ {map.star.toFixed(2)}
-                      </Typography>
-                      <Tooltip title="Open on osu!">
-                        <IconButton
-                          sx={{ color: 'rgba(255,255,255,0.5)' }}
-                          onClick={() => map.beatmapId && window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapId}`, '_blank')}
-                        >
-                          <OpenInNewIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Download">
-                        <IconButton
-                          sx={{ color: '#66ff99' }}
-                          onClick={() => map.beatmapId && window.open(`https://api.nerinyan.moe/d/${map.beatmapId}`, '_blank')}
-                        >
-                          <DownloadIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      {tournamentData.isUserCreated && (
-                        <Tooltip title="Remove from mappool">
-                          <IconButton
-                            sx={{ color: '#ff6b6b' }}
-                            onClick={() => handleRemoveMap(globalIndex)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Box>
+                      title={map.title}
+                      artist={map.artist}
+                      creator={map.mapper}
+                      creatorPrefix="mapped by"
+                      difficultyName={map.diff}
+                      starRating={map.star}
+                      starRatingSeparate
+                      variant="dark"
+                      density="compact"
+                      slotBadge={{ label: `${map.slot}${map.num}`, color: slotColors[map.slot] || '#666' }}
+                      modChip={map.mod !== 'NM' ? { label: map.mod, color: modColors[map.mod] || '#666' } : undefined}
+                      actions={
+                        <>
+                          <Tooltip title="Open on osu!">
+                            <IconButton
+                              sx={{ color: 'rgba(255,255,255,0.5)' }}
+                              onClick={() => map.beatmapId && window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapId}`, '_blank')}
+                            >
+                              <OpenInNewIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Download">
+                            <IconButton
+                              sx={{ color: '#66ff99' }}
+                              onClick={() => map.beatmapId && window.open(`https://api.nerinyan.moe/d/${map.beatmapId}`, '_blank')}
+                            >
+                              <DownloadIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          {tournamentData.isUserCreated && (
+                            <Tooltip title="Remove from mappool">
+                              <IconButton
+                                sx={{ color: '#ff6b6b' }}
+                                onClick={() => handleRemoveMap(globalIndex)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </>
+                      }
+                    />
                   );
                 })}
               </Stack>
@@ -787,61 +752,31 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                 const isSelected = selectedStashIds.has(beatmap.id);
                 const alreadyInPool = maps.some(m => m.beatmapId === beatmap.id);
                 return (
-                  <Box key={beatmap.id}>
-                    {i > 0 && <Divider />}
-                    <Box
-                      onClick={() => !alreadyInPool && handleToggleStashItem(beatmap.id)}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        py: 1.5,
-                        px: 1,
-                        gap: 1.5,
-                        cursor: alreadyInPool ? 'not-allowed' : 'pointer',
-                        backgroundColor: isSelected ? 'rgba(255,102,171,0.1)' : 'transparent',
-                        opacity: alreadyInPool ? 0.5 : 1,
-                        '&:hover': {
-                          backgroundColor: alreadyInPool ? 'transparent' : isSelected ? 'rgba(255,102,171,0.15)' : 'rgba(0,0,0,0.04)',
-                        },
-                      }}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        disabled={alreadyInPool}
-                        sx={{ '&.Mui-checked': { color: '#ff66ab' } }}
-                      />
-                      {beatmap.keys && (
-                        <Box
-                          sx={{
-                            width: 36,
-                            height: 26,
-                            backgroundColor: '#ff66ab',
-                            borderRadius: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            fontSize: 11,
-                            fontWeight: 'bold',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {beatmap.keys}K
-                        </Box>
-                      )}
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" fontWeight="medium" noWrap>
-                          {beatmap.artist} - {beatmap.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                          {beatmap.creator} {beatmap.bpm && `· ${beatmap.bpm} BPM`}
-                        </Typography>
-                      </Box>
-                      {alreadyInPool && (
-                        <Chip label="Already in pool" size="small" sx={{ fontSize: 10 }} />
-                      )}
-                    </Box>
-                  </Box>
+                  <BeatmapRow
+                    key={beatmap.id}
+                    title={beatmap.title}
+                    artist={beatmap.artist}
+                    keys={beatmap.keys}
+                    creator={beatmap.creator}
+                    bpm={beatmap.bpm}
+                    density="compact"
+                    showDivider={i > 0}
+                    checkbox={{
+                      checked: isSelected,
+                      disabled: alreadyInPool,
+                      onChange: () => handleToggleStashItem(beatmap.id),
+                    }}
+                    statusChip={alreadyInPool ? { label: 'Already in pool' } : undefined}
+                    onClick={!alreadyInPool ? () => handleToggleStashItem(beatmap.id) : undefined}
+                    sx={{
+                      cursor: alreadyInPool ? 'not-allowed' : 'pointer',
+                      backgroundColor: isSelected ? 'rgba(255,102,171,0.1)' : 'transparent',
+                      opacity: alreadyInPool ? 0.5 : 1,
+                      '&:hover': {
+                        backgroundColor: alreadyInPool ? 'transparent' : isSelected ? 'rgba(255,102,171,0.15)' : 'rgba(0,0,0,0.04)',
+                      },
+                    }}
+                  />
                 );
               })}
             </Box>
