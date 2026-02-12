@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Box, Typography, Button, IconButton, Tooltip, Snackbar, Alert, CircularProgress } from '@mui/material';
+import { Link } from 'react-router-dom';
 import DownloadIcon from '@mui/icons-material/Download';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import type { StashBeatmap } from '../types/beatmap';
 import { getPack, type Pack } from '../api/packs';
 import { getStoredToken } from '../api/auth';
@@ -34,6 +36,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
     }
     return new Set();
   });
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   useEffect(() => {
@@ -48,6 +51,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
     getPack(packId)
       .then((data) => {
         setPack(data);
+        setSelectedIds(new Set(data.beatmaps.map(b => b.id)));
         setLoading(false);
       })
       .catch((err) => {
@@ -126,10 +130,21 @@ export default function SharedPack({ packId }: SharedPackProps) {
     setSnackbar({ open: true, message: `Added ${newMaps.length} maps to stash!` });
   };
 
-  const handleDownloadAll = () => {
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDownloadSelected = () => {
     if (!pack) return;
-    // Download with delays to avoid popup blocker
-    pack.beatmaps.forEach((beatmap, index) => {
+    const toDownload = selectedIds.size > 0
+      ? pack.beatmaps.filter(b => selectedIds.has(b.id))
+      : pack.beatmaps;
+    toDownload.forEach((beatmap, index) => {
       setTimeout(() => {
         const link = document.createElement('a');
         link.href = `https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`;
@@ -137,9 +152,9 @@ export default function SharedPack({ packId }: SharedPackProps) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      }, index * 500); // 500ms delay between each download
+      }, index * 500);
     });
-    setSnackbar({ open: true, message: `Starting ${pack.beatmaps.length} downloads...` });
+    setSnackbar({ open: true, message: `Starting ${toDownload.length} downloads...` });
   };
 
 
@@ -179,17 +194,45 @@ export default function SharedPack({ packId }: SharedPackProps) {
               {pack.description}
             </Typography>
           )}
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', mb: 2 }}>
-            by {pack.user?.username || 'Unknown'} · {pack.beatmaps.length} maps
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            {pack.user ? (
+              <Link
+                to={`/explore?user_id=${pack.user.id}&username=${encodeURIComponent(pack.user.username)}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
+              >
+                {pack.user.avatar_url && (
+                  <Box
+                    component="img"
+                    src={pack.user.avatar_url}
+                    alt={pack.user.username}
+                    sx={{ width: 24, height: 24, borderRadius: '50%' }}
+                  />
+                )}
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#ff66ab' } }}>
+                  by {pack.user.username}
+                </Typography>
+              </Link>
+            ) : (
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                by Unknown
+              </Typography>
+            )}
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+              · {pack.beatmaps.length} maps
+            </Typography>
+          </Box>
           <Box sx={{ display: 'flex', gap: 1.5 }}>
             <Button
               variant="contained"
               startIcon={<DownloadIcon />}
-              onClick={handleDownloadAll}
+              onClick={handleDownloadSelected}
               sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
             >
-              Download All
+              {selectedIds.size === 0
+                ? 'Download Whole Pack'
+                : selectedIds.size < pack.beatmaps.length
+                  ? `Download (${selectedIds.size})`
+                  : 'Download All'}
             </Button>
             {isLoggedIn && (
               <Button
@@ -233,6 +276,21 @@ export default function SharedPack({ packId }: SharedPackProps) {
       </Box>
 
       {/* Map List */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+        <Button
+          size="small"
+          onClick={() => {
+            setSelectedIds((prev) =>
+              prev.size === pack.beatmaps.length
+                ? new Set()
+                : new Set(pack.beatmaps.map(b => b.id)),
+            );
+          }}
+          sx={{ color: '#ff66ab' }}
+        >
+          {selectedIds.size === pack.beatmaps.length ? 'Deselect all' : 'Select all'}
+        </Button>
+      </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {pack.beatmaps.map((beatmap) => {
           const isInStash = isLoggedIn && stashedIds.has(beatmap.id);
@@ -249,6 +307,8 @@ export default function SharedPack({ packId }: SharedPackProps) {
               variant="dark"
               density="compact"
               stashHighlight={isInStash}
+              onClick={() => handleToggleSelect(beatmap.id)}
+              sx={selectedIds.has(beatmap.id) ? { backgroundColor: 'rgba(100,180,255,0.12)' } : undefined}
               actions={
                 <>
                   {isLoggedIn && (
@@ -265,22 +325,38 @@ export default function SharedPack({ packId }: SharedPackProps) {
                     </Tooltip>
                   )}
                   <OsuButton onClick={() => handleOpenOsu(beatmap)} variant="dark" />
-                  <DownloadButton
-                    downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
-                    downloadName={`${beatmap.artist} - ${beatmap.title}`}
-                    variant="dark"
-                    stashData={{
-                      id: beatmap.id,
-                      beatmapsetId: beatmap.beatmapset_id,
-                      title: beatmap.title,
-                      artist: beatmap.artist,
-                      creator: beatmap.creator,
-                      keys: beatmap.keys,
-                      source: 'download',
-                      sourcePackId: pack!.share_code,
-                      sourcePackName: pack!.name,
-                    }}
-                  />
+                  {selectedIds.has(beatmap.id) ? (
+                    <Button
+                      size="small"
+                      startIcon={<CheckCircleIcon fontSize="small" />}
+                      onClick={(e) => { e.stopPropagation(); handleToggleSelect(beatmap.id); }}
+                      sx={{
+                        color: '#64b4ff',
+                        '&:hover': { color: '#64b4ff' },
+                        textTransform: 'none',
+                        minWidth: 'auto',
+                      }}
+                    >
+                      Selected
+                    </Button>
+                  ) : (
+                    <DownloadButton
+                      downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                      downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                      variant="dark"
+                      stashData={{
+                        id: beatmap.id,
+                        beatmapsetId: beatmap.beatmapset_id,
+                        title: beatmap.title,
+                        artist: beatmap.artist,
+                        creator: beatmap.creator,
+                        keys: beatmap.keys,
+                        source: 'download',
+                        sourcePackId: pack!.share_code,
+                        sourcePackName: pack!.name,
+                      }}
+                    />
+                  )}
                 </>
               }
             />

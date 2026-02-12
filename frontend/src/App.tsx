@@ -433,8 +433,8 @@ function App() {
                 linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.02) 75%),
                 linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.02) 75%)
               `,
-              backgroundSize: '20px 20px',
-              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+              backgroundSize: '40px 40px',
+              backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px',
             }}>
               <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Routes>

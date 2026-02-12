@@ -52,6 +52,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	api := app.Group("/api")
 
 	// Public routes
+	api.Get("/users", packHandler.ListUsers)
 	api.Get("/packs", packHandler.BrowsePacks)
 	api.Get("/packs/:code", packHandler.GetPack)
 

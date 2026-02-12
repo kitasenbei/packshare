@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
+  Autocomplete,
+  Avatar,
   Box,
   Paper,
   Typography,
@@ -15,12 +17,16 @@ import {
 } from '@mui/material';
 import ExploreIcon from '@mui/icons-material/Explore';
 import SearchIcon from '@mui/icons-material/Search';
-import { browsePacks, type BrowsePacksResult } from '../api/packs';
+import PersonIcon from '@mui/icons-material/Person';
+import { useSearchParams } from 'react-router-dom';
+import { browsePacks, getUsers, type BrowsePacksResult, type UserInfo } from '../api/packs';
 import PackCard from './PackCard';
 
 const PACKS_PER_PAGE = 12;
 
 export default function Explore() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterUserId = searchParams.get('user_id') ? Number(searchParams.get('user_id')) : undefined;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<BrowsePacksResult | null>(null);
@@ -28,11 +34,18 @@ export default function Explore() {
   const [sort, setSort] = useState<'recent' | 'popular' | 'views'>('recent');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [users, setUsers] = useState<UserInfo[]>([]);
+
+  useEffect(() => {
+    getUsers().then(setUsers).catch(() => {});
+  }, []);
+
+  const selectedUser = users.find((u) => u.id === filterUserId) ?? null;
 
   const fetchPacks = useCallback(() => {
     setLoading(true);
     setError(null);
-    browsePacks(page, PACKS_PER_PAGE, sort, search)
+    browsePacks(page, PACKS_PER_PAGE, sort, search, filterUserId)
       .then((result) => {
         setData(result);
         setLoading(false);
@@ -41,7 +54,7 @@ export default function Explore() {
         setError(err.message || 'Failed to load packs');
         setLoading(false);
       });
-  }, [page, sort, search]);
+  }, [page, sort, search, filterUserId]);
 
   useEffect(() => {
     fetchPacks();
@@ -72,8 +85,15 @@ export default function Explore() {
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
         <ExploreIcon sx={{ color: '#ff66ab' }} />
+        {selectedUser && (
+          <Avatar
+            src={selectedUser.avatar_url}
+            alt={selectedUser.username}
+            sx={{ width: 32, height: 32 }}
+          />
+        )}
         <Typography variant="h5" fontWeight="bold">
-          Explore
+          {selectedUser ? `Packs by ${selectedUser.username}` : 'Explore'}
         </Typography>
         {data && (
           <Chip label={`${data.total} packs`} size="small" />
@@ -98,6 +118,49 @@ export default function Explore() {
                 ),
               },
             }}
+          />
+          <Autocomplete
+            options={users}
+            value={selectedUser}
+            onChange={(_, user) => {
+              if (user) {
+                setSearchParams({ user_id: user.id.toString() });
+              } else {
+                setSearchParams({});
+              }
+              setPage(1);
+            }}
+            getOptionLabel={(option) => option.username}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Avatar src={option.avatar_url} alt={option.username} sx={{ width: 24, height: 24 }} />
+                <span>{option.username}</span>
+                <Chip label={option.pack_count} size="small" sx={{ ml: 'auto' }} />
+              </Box>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Filter by user..."
+                size="small"
+                slotProps={{
+                  input: {
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                        <InputAdornment position="start">
+                          <PersonIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                        {params.InputProps.startAdornment}
+                      </>
+                    ),
+                  },
+                }}
+              />
+            )}
+            sx={{ minWidth: 200 }}
+            size="small"
           />
           <ToggleButtonGroup
             value={sort}

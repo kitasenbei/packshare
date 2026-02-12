@@ -25,6 +25,7 @@ export interface Pack {
   updated_at: string;
   beatmaps: PackBeatmap[];
   user?: {
+    id: number;
     username: string;
     avatar_url: string;
   };
@@ -92,12 +93,30 @@ export interface BrowsePacksResult {
   limit: number;
 }
 
+export interface UserInfo {
+  id: number;
+  username: string;
+  avatar_url: string;
+  country_code: string;
+  pack_count: number;
+}
+
+// Get all users with pack counts
+export async function getUsers(): Promise<UserInfo[]> {
+  const response = await fetch(`${API_BASE_URL}/api/users`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch users: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // Browse public packs
 export async function browsePacks(
   page = 1,
   limit = 20,
   sort: 'recent' | 'popular' | 'views' = 'recent',
-  search = ''
+  search = '',
+  userId?: number,
 ): Promise<BrowsePacksResult> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -106,6 +125,9 @@ export async function browsePacks(
   });
   if (search) {
     params.set('search', search);
+  }
+  if (userId) {
+    params.set('user_id', userId.toString());
   }
   const response = await fetch(`${API_BASE_URL}/api/packs?${params}`);
   if (!response.ok) {

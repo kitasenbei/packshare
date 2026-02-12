@@ -130,16 +130,21 @@ export default function BeatmapRow({
         {/* Square thumbnail */}
         {hasBgThumb && (
           <Box
-            component="img"
-            src={thumbUrl}
-            alt=""
             sx={{
-              aspectRatio: '1',
+              width: preset.height,
+              height: preset.height,
               borderRadius: 1,
-              objectFit: 'cover',
+              overflow: 'hidden',
               flexShrink: 0,
             }}
-          />
+          >
+            <Box
+              component="img"
+              src={thumbUrl}
+              alt=""
+              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </Box>
         )}
 
         {/* Content (centered vertically when thumbnail stretches the row) */}

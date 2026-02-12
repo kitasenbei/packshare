@@ -254,13 +254,13 @@ export default function Home({ user }: HomeProps) {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <VisibilityIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                           <Typography variant="caption" color="text.secondary">
-                            {pack.views.toLocaleString()}
+                            {pack.views.toLocaleString()} views
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <MusicNoteIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                           <Typography variant="caption" color="text.secondary">
-                            {pack.beatmap_count}
+                            {pack.beatmap_count} beatmaps
                           </Typography>
                         </Box>
                       </Box>

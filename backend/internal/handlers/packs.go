@@ -484,11 +484,39 @@ func (h *PackHandler) GetMyPacks(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
+func (h *PackHandler) ListUsers(c *fiber.Ctx) error {
+	type userResult struct {
+		ID          uint   `json:"id"`
+		Username    string `json:"username"`
+		AvatarURL   string `json:"avatar_url"`
+		CountryCode string `json:"country_code"`
+		PackCount   int64  `json:"pack_count"`
+	}
+
+	var users []userResult
+	err := h.db.Model(&models.User{}).
+		Select("users.id, users.username, users.avatar_url, users.country_code, COUNT(packs.id) as pack_count").
+		Joins("LEFT JOIN packs ON packs.user_id = users.id").
+		Group("users.id").
+		Having("COUNT(packs.id) > 0").
+		Order("pack_count DESC").
+		Find(&users).Error
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "database error",
+		})
+	}
+
+	return c.JSON(users)
+}
+
 func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 20)
 	sort := c.Query("sort", "recent")
 	search := c.Query("search", "")
+	userID := c.QueryInt("user_id", 0)
 
 	if page < 1 {
 		page = 1
@@ -502,6 +530,10 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 	query := h.db.Preload("Beatmaps", func(db *gorm.DB) *gorm.DB {
 		return db.Order("sort_order ASC")
 	}).Preload("User")
+
+	if userID > 0 {
+		query = query.Where("user_id = ?", userID)
+	}
 
 	if search != "" {
 		searchPattern := "%" + strings.ToLower(search) + "%"
@@ -519,6 +551,9 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 
 	var total int64
 	countQuery := h.db.Model(&models.Pack{})
+	if userID > 0 {
+		countQuery = countQuery.Where("user_id = ?", userID)
+	}
 	if search != "" {
 		searchPattern := "%" + strings.ToLower(search) + "%"
 		countQuery = countQuery.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)

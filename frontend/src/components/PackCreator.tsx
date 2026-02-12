@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Paper,
@@ -15,16 +15,17 @@ import {
   Tooltip,
   Stack,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Stepper,
+  Step,
+  StepLabel,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import { type User, getBeatmapset, type BeatmapsetInfo } from '../api/auth';
 import { createPack } from '../api/packs';
 import BeatmapRow from './BeatmapRow';
@@ -47,8 +48,11 @@ interface PackBeatmap {
   difficulty_name?: string;
 }
 
+const STEPS = ['Details', 'Beatmaps', 'Review'];
+
 export default function PackCreator({ user }: PackCreatorProps) {
   const navigate = useNavigate();
+  const [step, setStep] = useState(0);
   const [packName, setPackName] = useState('');
   const [packDescription, setPackDescription] = useState('');
   const [beatmapInput, setBeatmapInput] = useState('');
@@ -60,10 +64,9 @@ export default function PackCreator({ user }: PackCreatorProps) {
   const [generatedLink, setGeneratedLink] = useState('');
   const [copied, setCopied] = useState(false);
 
-  // For difficulty selection dialog
-  const [selectDialogOpen, setSelectDialogOpen] = useState(false);
+  // For inline difficulty selection
   const [pendingBeatmapset, setPendingBeatmapset] = useState<BeatmapsetInfo | null>(null);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<number | 'all'>('all');
+  const [selectedDiffs, setSelectedDiffs] = useState<Set<number>>(new Set());
 
   const extractBeatmapId = (input: string): string | null => {
     if (/^\d+$/.test(input.trim())) {
@@ -107,8 +110,7 @@ export default function PackCreator({ user }: PackCreatorProps) {
     // If multiple difficulties, show selection dialog
     if (beatmapset.beatmaps.length > 1) {
       setPendingBeatmapset(beatmapset);
-      setSelectedDifficulty('all');
-      setSelectDialogOpen(true);
+      setSelectedDiffs(new Set(beatmapset.beatmaps.map((d) => d.beatmap_id)));
     } else {
       // Single difficulty, add directly
       const diff = beatmapset.beatmaps[0];
@@ -127,12 +129,21 @@ export default function PackCreator({ user }: PackCreatorProps) {
     setLoading(false);
   };
 
-  const handleConfirmDifficulty = () => {
-    if (!pendingBeatmapset) return;
+  const handleToggleDiff = (id: number) => {
+    setSelectedDiffs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-    if (selectedDifficulty === 'all') {
-      // Add all difficulties
-      const newBeatmaps = pendingBeatmapset.beatmaps.map((diff) => ({
+  const handleConfirmDifficulty = () => {
+    if (!pendingBeatmapset || selectedDiffs.size === 0) return;
+
+    const newBeatmaps = pendingBeatmapset.beatmaps
+      .filter((d) => selectedDiffs.has(d.beatmap_id))
+      .map((diff) => ({
         beatmapset_id: pendingBeatmapset.beatmapset_id,
         beatmap_id: diff.beatmap_id,
         title: pendingBeatmapset.title,
@@ -142,26 +153,9 @@ export default function PackCreator({ user }: PackCreatorProps) {
         star_rating: diff.star_rating,
         difficulty_name: diff.difficulty_name,
       }));
-      setBeatmaps((prev) => [...prev, ...newBeatmaps]);
-    } else {
-      // Add selected difficulty
-      const diff = pendingBeatmapset.beatmaps.find((b) => b.beatmap_id === selectedDifficulty);
-      if (diff) {
-        setBeatmaps((prev) => [...prev, {
-          beatmapset_id: pendingBeatmapset.beatmapset_id,
-          beatmap_id: diff.beatmap_id,
-          title: pendingBeatmapset.title,
-          artist: pendingBeatmapset.artist,
-          creator: pendingBeatmapset.creator,
-          keys: diff.keys,
-          star_rating: diff.star_rating,
-          difficulty_name: diff.difficulty_name,
-        }]);
-      }
-    }
+    setBeatmaps((prev) => [...prev, ...newBeatmaps]);
 
     setBeatmapInput('');
-    setSelectDialogOpen(false);
     setPendingBeatmapset(null);
   };
 
@@ -222,94 +216,101 @@ export default function PackCreator({ user }: PackCreatorProps) {
     }
   };
 
-  return (
-    <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
-      {/* Back button */}
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate(-1)}
-        sx={{ mb: 2, color: 'text.secondary' }}
+  const canAdvance = (s: number) => {
+    if (s === 0) return packName.trim().length > 0;
+    if (s === 1) return beatmaps.length > 0;
+    return true;
+  };
+
+  useEffect(() => {
+    const handleCtrlEnter = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (step < 2 && canAdvance(step)) {
+          setError('');
+          setStep((s) => s + 1);
+        } else if (step === 2 && !creating && user) {
+          handleGenerateLink();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleCtrlEnter);
+    return () => window.removeEventListener('keydown', handleCtrlEnter);
+  });
+
+  const renderStepDetails = () => (
+    <Paper elevation={2} sx={{ overflow: 'hidden' }}>
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+          color: 'white',
+          p: 3,
+        }}
       >
-        Back
-      </Button>
+        <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
+          Pack Details
+        </Typography>
 
-      {/* Not logged in warning */}
-      {!user && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          You need to sign in to create and save packs.
-        </Alert>
-      )}
+        <Stack spacing={2}>
+          <TextField
+            placeholder="Pack name..."
+            fullWidth
+            value={packName}
+            onChange={(e) => setPackName(e.target.value)}
+            variant="standard"
+            slotProps={{
+              input: {
+                disableUnderline: true,
+                sx: {
+                  fontSize: 24,
+                  fontWeight: 'bold',
+                  color: 'white',
+                  '&::placeholder': { color: 'rgba(255,255,255,0.5)' },
+                },
+              },
+            }}
+            sx={{
+              '& .MuiInput-root': {
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                borderRadius: 1,
+                px: 2,
+                py: 1,
+              },
+            }}
+          />
+          <TextField
+            placeholder="Description (optional)..."
+            fullWidth
+            multiline
+            rows={2}
+            value={packDescription}
+            onChange={(e) => setPackDescription(e.target.value)}
+            variant="standard"
+            slotProps={{
+              input: {
+                disableUnderline: true,
+                sx: {
+                  color: 'white',
+                  '&::placeholder': { color: 'rgba(255,255,255,0.5)' },
+                },
+              },
+            }}
+            sx={{
+              '& .MuiInput-root': {
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                borderRadius: 1,
+                px: 2,
+                py: 1,
+              },
+            }}
+          />
+        </Stack>
+      </Box>
+    </Paper>
+  );
 
-      {/* Header */}
-      <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
-        <Box
-          sx={{
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-            color: 'white',
-            p: 3,
-          }}
-        >
-          <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
-            Create New Pack
-          </Typography>
-
-          <Stack spacing={2}>
-            <TextField
-              placeholder="Pack name..."
-              fullWidth
-              value={packName}
-              onChange={(e) => setPackName(e.target.value)}
-              variant="standard"
-              slotProps={{
-                input: {
-                  disableUnderline: true,
-                  sx: {
-                    fontSize: 24,
-                    fontWeight: 'bold',
-                    color: 'white',
-                    '&::placeholder': { color: 'rgba(255,255,255,0.5)' },
-                  },
-                },
-              }}
-              sx={{
-                '& .MuiInput-root': {
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  borderRadius: 1,
-                  px: 2,
-                  py: 1,
-                },
-              }}
-            />
-            <TextField
-              placeholder="Description (optional)..."
-              fullWidth
-              multiline
-              rows={2}
-              value={packDescription}
-              onChange={(e) => setPackDescription(e.target.value)}
-              variant="standard"
-              slotProps={{
-                input: {
-                  disableUnderline: true,
-                  sx: {
-                    color: 'white',
-                    '&::placeholder': { color: 'rgba(255,255,255,0.5)' },
-                  },
-                },
-              }}
-              sx={{
-                '& .MuiInput-root': {
-                  backgroundColor: 'rgba(255,255,255,0.05)',
-                  borderRadius: 1,
-                  px: 2,
-                  py: 1,
-                },
-              }}
-            />
-          </Stack>
-        </Box>
-      </Paper>
-
+  const renderStepBeatmaps = () => (
+    <>
       {/* Add Beatmap Section */}
       <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
         <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee' }}>
@@ -361,6 +362,68 @@ export default function PackCreator({ user }: PackCreatorProps) {
         </Box>
       </Paper>
 
+      {/* Inline Difficulty Selection */}
+      {pendingBeatmapset && (
+        <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
+          <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold">
+                Select Difficulties
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {pendingBeatmapset.artist} - {pendingBeatmapset.title}
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              onClick={() => {
+                const allIds = pendingBeatmapset.beatmaps.map((d) => d.beatmap_id);
+                setSelectedDiffs((prev) =>
+                  prev.size === allIds.length ? new Set() : new Set(allIds),
+                );
+              }}
+              sx={{ color: '#ff66ab' }}
+            >
+              {selectedDiffs.size === pendingBeatmapset.beatmaps.length ? 'Deselect all' : 'Select all'}
+            </Button>
+          </Box>
+          <Box sx={{ p: 2 }}>
+            {pendingBeatmapset.beatmaps.map((diff) => (
+              <BeatmapRow
+                key={diff.beatmap_id}
+                beatmapsetId={pendingBeatmapset.beatmapset_id}
+                title={pendingBeatmapset.title}
+                artist={pendingBeatmapset.artist}
+                keys={diff.keys}
+                creator={pendingBeatmapset.creator}
+                creatorPrefix="mapped by"
+                difficultyName={diff.difficulty_name}
+                starRating={diff.star_rating}
+                density="compact"
+                onClick={() => handleToggleDiff(diff.beatmap_id)}
+                checkbox={{
+                  checked: selectedDiffs.has(diff.beatmap_id),
+                  onChange: () => handleToggleDiff(diff.beatmap_id),
+                }}
+              />
+            ))}
+          </Box>
+          <Box sx={{ p: 2, pt: 0, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button onClick={() => setPendingBeatmapset(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleConfirmDifficulty}
+              disabled={selectedDiffs.size === 0}
+              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+            >
+              Add {selectedDiffs.size > 0 ? `(${selectedDiffs.size})` : ''}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
       {/* Beatmap List */}
       <Paper elevation={2} sx={{ overflow: 'hidden' }}>
         <Box
@@ -381,20 +444,6 @@ export default function PackCreator({ user }: PackCreatorProps) {
               {beatmaps.length} {beatmaps.length === 1 ? 'map' : 'maps'} added
             </Typography>
           </Box>
-          {beatmaps.length > 0 && (
-            <Button
-              variant="contained"
-              startIcon={<ShareIcon />}
-              onClick={handleGenerateLink}
-              disabled={creating || !user}
-              sx={{
-                backgroundColor: '#ff66ab',
-                '&:hover': { backgroundColor: '#ff4499' },
-              }}
-            >
-              {creating ? 'Creating...' : 'Create & Share'}
-            </Button>
-          )}
         </Box>
 
         {beatmaps.length === 0 ? (
@@ -408,10 +457,11 @@ export default function PackCreator({ user }: PackCreatorProps) {
             </Typography>
           </Box>
         ) : (
-          <Box>
+          <Box sx={{ p: 2 }}>
             {beatmaps.map((beatmap, index) => (
               <BeatmapRow
                 key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}
+                beatmapsetId={beatmap.beatmapset_id}
                 title={beatmap.title}
                 artist={beatmap.artist}
                 keys={beatmap.keys}
@@ -443,67 +493,166 @@ export default function PackCreator({ user }: PackCreatorProps) {
           </Box>
         )}
       </Paper>
+    </>
+  );
 
-      {/* Floating Create Button (when maps exist) */}
-      {beatmaps.length > 0 && (
-        <Box sx={{ position: 'fixed', bottom: 100, right: 32 }}>
+  const renderStepReview = () => (
+    <>
+      {/* Pack Info Summary */}
+      <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
+        <Box
+          sx={{
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+            color: 'white',
+            p: 3,
+          }}
+        >
+          <Typography variant="h5" fontWeight="bold">
+            {packName}
+          </Typography>
+          {packDescription && (
+            <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+              {packDescription}
+            </Typography>
+          )}
+        </Box>
+      </Paper>
+
+      {/* Read-only Beatmap List */}
+      <Paper elevation={2} sx={{ overflow: 'hidden' }}>
+        <Box
+          sx={{
+            p: 2,
+            backgroundColor: '#1a1a2e',
+            color: 'white',
+          }}
+        >
+          <Typography variant="h6" fontWeight="bold">
+            Beatmaps
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.7 }}>
+            {beatmaps.length} {beatmaps.length === 1 ? 'map' : 'maps'}
+          </Typography>
+        </Box>
+
+        <Box sx={{ p: 2 }}>
+          {beatmaps.map((beatmap, index) => (
+            <BeatmapRow
+              key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}
+              beatmapsetId={beatmap.beatmapset_id}
+              title={beatmap.title}
+              artist={beatmap.artist}
+              keys={beatmap.keys}
+              creator={beatmap.creator}
+              creatorPrefix="mapped by"
+              difficultyName={beatmap.difficulty_name}
+              starRating={beatmap.star_rating}
+            />
+          ))}
+        </Box>
+      </Paper>
+
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+    </>
+  );
+
+  return (
+    <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
+      {/* Back button */}
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate(-1)}
+        sx={{ mb: 2, color: 'text.secondary' }}
+      >
+        Back
+      </Button>
+
+      {/* Not logged in warning */}
+      {!user && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          You need to sign in to create and save packs.
+        </Alert>
+      )}
+
+      {/* Header */}
+      <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
+        <Box
+          sx={{
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+            color: 'white',
+            p: 3,
+          }}
+        >
+          <Typography variant="h4" fontWeight="bold">
+            Create New Pack
+          </Typography>
+        </Box>
+      </Paper>
+
+      {/* Stepper */}
+      <Stepper
+        activeStep={step}
+        sx={{
+          mb: 3,
+          '& .MuiStepIcon-root.Mui-active': { color: '#ff66ab' },
+          '& .MuiStepIcon-root.Mui-completed': { color: '#ff66ab' },
+        }}
+      >
+        {STEPS.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      {/* Step Content */}
+      {step === 0 && renderStepDetails()}
+      {step === 1 && renderStepBeatmaps()}
+      {step === 2 && renderStepReview()}
+
+      {/* Navigation Buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+        <Button
+          startIcon={<NavigateBeforeIcon />}
+          onClick={() => { setError(''); setStep((s) => s - 1); }}
+          disabled={step === 0}
+          sx={{ color: 'text.secondary' }}
+        >
+          Back
+        </Button>
+
+        {step < 2 ? (
           <Button
             variant="contained"
-            size="large"
+            endIcon={<NavigateNextIcon />}
+            onClick={() => { setError(''); setStep((s) => s + 1); }}
+            disabled={!canAdvance(step)}
+            sx={{
+              backgroundColor: '#ff66ab',
+              '&:hover': { backgroundColor: '#ff4499' },
+            }}
+          >
+            Next
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
             startIcon={<ShareIcon />}
             onClick={handleGenerateLink}
             disabled={creating || !user}
             sx={{
               backgroundColor: '#ff66ab',
               '&:hover': { backgroundColor: '#ff4499' },
-              boxShadow: 4,
-              px: 3,
-              py: 1.5,
             }}
           >
             {creating ? 'Creating...' : 'Create & Share'}
           </Button>
-        </Box>
-      )}
-
-      {/* Difficulty Selection Dialog */}
-      <Dialog open={selectDialogOpen} onClose={() => setSelectDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Select Difficulty</DialogTitle>
-        <DialogContent>
-          {pendingBeatmapset && (
-            <>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {pendingBeatmapset.artist} - {pendingBeatmapset.title}
-              </Typography>
-              <FormControl fullWidth>
-                <InputLabel>Difficulty</InputLabel>
-                <Select
-                  value={selectedDifficulty}
-                  label="Difficulty"
-                  onChange={(e) => setSelectedDifficulty(e.target.value as number | 'all')}
-                >
-                  <MenuItem value="all">All difficulties ({pendingBeatmapset.beatmaps.length})</MenuItem>
-                  {pendingBeatmapset.beatmaps.map((diff) => (
-                    <MenuItem key={diff.beatmap_id} value={diff.beatmap_id}>
-                      [{diff.keys}K] {diff.difficulty_name} - {diff.star_rating.toFixed(2)}*
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSelectDialogOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleConfirmDifficulty}
-            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
-          >
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+        )}
+      </Box>
 
       {/* Share Dialog */}
       <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
