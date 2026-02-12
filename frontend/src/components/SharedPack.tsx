@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Typography, Button, IconButton, Tooltip, Snackbar, Alert, CircularProgress } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
@@ -9,6 +8,8 @@ import type { StashBeatmap } from '../types/beatmap';
 import { getPack, type Pack } from '../api/packs';
 import { getStoredToken } from '../api/auth';
 import BeatmapRow from './BeatmapRow';
+import DownloadButton from './DownloadButton';
+import OsuButton from './OsuButton';
 
 const STASH_STORAGE_KEY = 'packshare_stash';
 
@@ -82,6 +83,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
     } else {
       const newItem: StashBeatmap = {
         id: beatmap.id,
+        beatmapsetId: beatmap.beatmapset_id,
         title: beatmap.title,
         artist: beatmap.artist,
         creator: beatmap.creator,
@@ -140,9 +142,6 @@ export default function SharedPack({ packId }: SharedPackProps) {
     setSnackbar({ open: true, message: `Starting ${pack.beatmaps.length} downloads...` });
   };
 
-  const handleDownloadSingle = (beatmap: Pack['beatmaps'][0]) => {
-    window.open(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`, '_blank');
-  };
 
   const handleOpenOsu = (beatmap: Pack['beatmaps'][0]) => {
     window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}`, '_blank');
@@ -247,8 +246,6 @@ export default function SharedPack({ packId }: SharedPackProps) {
               creatorPrefix="mapped by"
               starRating={beatmap.star_rating}
               beatmapsetId={beatmap.beatmapset_id}
-              showThumbnail
-              thumbnailSize={{ width: 50, height: 38 }}
               variant="dark"
               density="compact"
               stashHighlight={isInStash}
@@ -267,16 +264,23 @@ export default function SharedPack({ packId }: SharedPackProps) {
                       </IconButton>
                     </Tooltip>
                   )}
-                  <Tooltip title="Open on osu!">
-                    <IconButton onClick={() => handleOpenOsu(beatmap)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                      <OpenInNewIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Download">
-                    <IconButton onClick={() => handleDownloadSingle(beatmap)} sx={{ color: '#66ff99' }}>
-                      <DownloadIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <OsuButton onClick={() => handleOpenOsu(beatmap)} variant="dark" />
+                  <DownloadButton
+                    downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                    downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                    variant="dark"
+                    stashData={{
+                      id: beatmap.id,
+                      beatmapsetId: beatmap.beatmapset_id,
+                      title: beatmap.title,
+                      artist: beatmap.artist,
+                      creator: beatmap.creator,
+                      keys: beatmap.keys,
+                      source: 'download',
+                      sourcePackId: pack!.share_code,
+                      sourcePackName: pack!.name,
+                    }}
+                  />
                 </>
               }
             />

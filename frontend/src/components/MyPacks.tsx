@@ -27,7 +27,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import AddIcon from '@mui/icons-material/Add';
-import DownloadIcon from '@mui/icons-material/Download';
 import LinkIcon from '@mui/icons-material/Link';
 import CloseIcon from '@mui/icons-material/Close';
 import InventoryIcon from '@mui/icons-material/Inventory';
@@ -38,6 +37,9 @@ import type { User, BeatmapsetInfo } from '../api/auth';
 import { getBeatmapset } from '../api/auth';
 import { getMyPacks, updatePack, deletePack, type Pack, type PackBeatmap } from '../api/packs';
 import BeatmapRow from './BeatmapRow';
+import DownloadButton from './DownloadButton';
+import OsuButton from './OsuButton';
+import RemoveButton from './RemoveButton';
 
 const STASH_STORAGE_KEY = 'packshare_stash';
 const MAPS_PER_PAGE = 5;
@@ -311,6 +313,12 @@ export default function MyPacks({ user }: MyPacksProps) {
     localStorage.setItem(STASH_STORAGE_KEY, JSON.stringify(newStash));
   };
 
+  const handleClearStash = () => {
+    setStash([]);
+    localStorage.removeItem(STASH_STORAGE_KEY);
+    setStashPage(1);
+  };
+
   const filteredStash = stash.filter((b) => {
     if (stashFilter === 'all') return true;
     if (stashFilter === '4K') return b.keys === 4;
@@ -376,6 +384,22 @@ export default function MyPacks({ user }: MyPacksProps) {
               {stash.length} maps saved · Your collection from packs, downloads, and uploads
             </Typography>
           </Box>
+          {stash.length > 0 && (
+            <Button
+              size="small"
+              startIcon={<DeleteIcon />}
+              onClick={(e) => { e.stopPropagation(); handleClearStash(); }}
+              sx={{
+                textTransform: 'none',
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.6)',
+                mr: 1,
+                '&:hover': { color: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)' },
+              }}
+            >
+              Clear
+            </Button>
+          )}
           <IconButton size="small" sx={{ color: 'white' }}>
             {stashExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
           </IconButton>
@@ -420,7 +444,7 @@ export default function MyPacks({ user }: MyPacksProps) {
 
               {/* Stash list */}
               <Box sx={{ px: 2 }}>
-                {displayStash.map((beatmap, i) => (
+                {displayStash.map((beatmap) => (
                   <BeatmapRow
                     key={beatmap.id}
                     title={beatmap.title}
@@ -428,40 +452,21 @@ export default function MyPacks({ user }: MyPacksProps) {
                     keys={beatmap.keys}
                     creator={beatmap.creator}
                     bpm={beatmap.bpm}
+                    beatmapsetId={beatmap.beatmapsetId}
                     density="compact"
-                    showDivider={i > 0}
-                    sourceChip={{
+                                        sourceChip={{
                       label: sourceLabels[beatmap.source]?.label || beatmap.source,
                       color: sourceLabels[beatmap.source]?.color || '#666',
                     }}
                     sourceTooltip={beatmap.sourcePackName ? `From: ${beatmap.sourcePackName}` : undefined}
                     actions={
                       <>
-                        <Tooltip title="Download">
-                          <IconButton
-                            size="small"
-                            onClick={() => window.open(`https://api.nerinyan.moe/d/${beatmap.id}`, '_blank')}
-                          >
-                            <DownloadIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Open on osu!">
-                          <IconButton
-                            size="small"
-                            onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.id}`, '_blank')}
-                          >
-                            <OpenInNewIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Remove from stash">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleRemoveFromStash(beatmap.id)}
-                            sx={{ color: '#ff6b6b' }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapsetId || beatmap.id}`, '_blank')} />
+                        <DownloadButton
+                          downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapsetId || beatmap.id}`}
+                          downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                        />
+                        <RemoveButton onClick={() => handleRemoveFromStash(beatmap.id)} />
                       </>
                     }
                   />
@@ -572,25 +577,32 @@ export default function MyPacks({ user }: MyPacksProps) {
 
                 {/* Beatmaps List */}
                 <Box sx={{ p: 1 }}>
-                  {displayMaps.map((beatmap, i) => (
+                  {displayMaps.map((beatmap) => (
                     <BeatmapRow
                       key={beatmap.id}
                       title={beatmap.title}
                       artist={beatmap.artist}
                       keys={beatmap.keys || undefined}
                       creator={beatmap.creator}
+                      beatmapsetId={beatmap.beatmapset_id}
                       titleOnly
                       density="compact"
-                      showDivider={i > 0}
-                      actions={
-                        <Tooltip title="Download">
-                          <IconButton
-                            size="small"
-                            onClick={() => window.open(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`, '_blank')}
-                          >
-                            <DownloadIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                                            actions={
+                        <DownloadButton
+                          downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                          downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                          stashData={{
+                            id: beatmap.id,
+                            beatmapsetId: beatmap.beatmapset_id,
+                            title: beatmap.title,
+                            artist: beatmap.artist,
+                            creator: beatmap.creator,
+                            keys: beatmap.keys || undefined,
+                            source: 'download',
+                            sourcePackId: pack.share_code,
+                            sourcePackName: pack.name,
+                          }}
+                        />
                       }
                     />
                   ))}
@@ -698,20 +710,18 @@ export default function MyPacks({ user }: MyPacksProps) {
 
             {/* Beatmap list */}
             <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
-              {editBeatmaps.map((beatmap, index) => (
+              {editBeatmaps.map((beatmap) => (
                 <BeatmapRow
                   key={beatmap.id}
                   title={beatmap.title}
                   artist={beatmap.artist}
                   keys={beatmap.keys || undefined}
                   creator={beatmap.creator}
+                  beatmapsetId={beatmap.beatmapset_id}
                   titleOnly
                   density="compact"
-                  showDivider={index > 0}
-                  actions={
-                    <IconButton size="small" onClick={() => handleRemoveEditBeatmap(beatmap.id)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                                    actions={
+                    <RemoveButton onClick={() => handleRemoveEditBeatmap(beatmap.id)} />
                   }
                 />
               ))}

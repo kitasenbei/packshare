@@ -21,6 +21,7 @@ import PackCreator from './components/PackCreator';
 import PackViewer from './components/PackViewer';
 import SharedPack from './components/SharedPack';
 import MyPacks from './components/MyPacks';
+import Home from './components/Home';
 import Explore from './components/Explore';
 import Tournaments from './components/Tournaments';
 import TournamentMappool from './components/TournamentMappool';
@@ -437,7 +438,7 @@ function App() {
             }}>
               <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Routes>
-                  <Route path="/" element={<MyPacks user={user} />} />
+                  <Route path="/" element={<Home user={user} />} />
                   <Route path="/create" element={<PackCreator user={user} />} />
                   <Route path="/my-packs" element={<MyPacks user={user} />} />
                   <Route path="/explore" element={<Explore />} />

@@ -24,6 +24,7 @@ export interface Mappack {
 
 export interface StashBeatmap {
   id: number;
+  beatmapsetId?: number;
   title: string;
   artist: string;
   creator: string;

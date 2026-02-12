@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Box, Typography, Chip, Checkbox, Tooltip, Stack } from '@mui/material';
+import { Box, Typography, Chip, Checkbox, Stack } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 
 export interface BeatmapRowProps {
@@ -19,10 +19,8 @@ export interface BeatmapRowProps {
   bpm?: number; // "· {bpm} BPM"
   difficultyName?: string; // "[diff]" in subtitle
 
-  // Thumbnail
+  // Thumbnail background
   beatmapsetId?: number;
-  showThumbnail?: boolean;
-  thumbnailSize?: { width: number; height: number };
 
   // Tournament badges (replace keys badge)
   slotBadge?: { label: string; color: string };
@@ -40,8 +38,6 @@ export interface BeatmapRowProps {
   stashHighlight?: boolean; // Pink border (SharedPack)
   variant?: 'light' | 'dark'; // Theme, defaults to 'light'
   density?: 'compact' | 'normal'; // Padding preset, defaults to 'normal'
-  showDivider?: boolean;
-
   // Composable actions (trailing slot)
   actions?: ReactNode;
 
@@ -51,8 +47,8 @@ export interface BeatmapRowProps {
 }
 
 const densityPresets = {
-  normal: { p: 2, py: 2, px: 2, gap: 2 },
-  compact: { p: undefined, py: 1.5, px: 1, gap: 1.5 },
+  normal: { gap: 1.5, height: 56 },
+  compact: { gap: 1, height: 48 },
 };
 
 export default function BeatmapRow({
@@ -67,8 +63,6 @@ export default function BeatmapRow({
   bpm,
   difficultyName,
   beatmapsetId,
-  showThumbnail,
-  thumbnailSize,
   slotBadge,
   modChip,
   sourceChip,
@@ -78,7 +72,6 @@ export default function BeatmapRow({
   stashHighlight,
   variant = 'light',
   density = 'normal',
-  showDivider,
   actions,
   onClick,
   sx,
@@ -87,12 +80,6 @@ export default function BeatmapRow({
   const isLight = variant === 'light';
   const subtitleColor = isLight ? 'text.secondary' : 'rgba(255,255,255,0.5)';
   const hoverBg = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.06)';
-
-  // Build padding style
-  const paddingStyle =
-    density === 'normal'
-      ? { p: preset.p }
-      : { py: preset.py, px: preset.px };
 
   // Build subtitle parts
   const subtitleParts: ReactNode[] = [];
@@ -118,175 +105,176 @@ export default function BeatmapRow({
     subtitleParts.push(` · ${bpm} BPM`);
   }
 
+  const hasBgThumb = beatmapsetId != null;
+  const thumbUrl = hasBgThumb ? `https://assets.ppy.sh/beatmaps/${beatmapsetId}/covers/cover.jpg` : '';
+
   return (
     <>
-      {showDivider && <Box sx={{ borderBottom: '1px solid', borderColor: isLight ? 'divider' : 'rgba(255,255,255,0.08)' }} />}
       <Box
         onClick={onClick}
         sx={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'stretch',
+          height: preset.height,
           gap: preset.gap,
-          ...paddingStyle,
-          borderRadius: variant === 'dark' ? 1 : 0,
-          backgroundColor: stashHighlight
-            ? 'rgba(255,102,171,0.08)'
-            : variant === 'dark'
-              ? 'rgba(255,255,255,0.03)'
-              : undefined,
+          mb: 1,
+          borderRadius: 1,
           '&:hover': {
             backgroundColor: stashHighlight ? 'rgba(255,102,171,0.12)' : hoverBg,
           },
-          border: stashHighlight ? '1px solid rgba(255,102,171,0.3)' : stashHighlight === false ? '1px solid transparent' : undefined,
+          border: stashHighlight ? '1px solid rgba(255,102,171,0.3)' : undefined,
           cursor: onClick ? 'pointer' : undefined,
           ...sx,
         }}
       >
-        {/* Checkbox */}
-        {checkbox && (
-          <Checkbox
-            checked={checkbox.checked}
-            disabled={checkbox.disabled}
-            onClick={(e) => e.stopPropagation()}
-            onChange={checkbox.onChange}
-            sx={{ '&.Mui-checked': { color: '#ff66ab' } }}
-          />
-        )}
-
-        {/* Thumbnail */}
-        {showThumbnail && beatmapsetId && (
+        {/* Square thumbnail */}
+        {hasBgThumb && (
           <Box
             component="img"
-            src={`https://assets.ppy.sh/beatmaps/${beatmapsetId}/covers/list.jpg`}
+            src={thumbUrl}
+            alt=""
             sx={{
-              width: thumbnailSize?.width ?? (density === 'compact' ? 50 : 60),
-              height: thumbnailSize?.height ?? (density === 'compact' ? 38 : 45),
-              borderRadius: density === 'compact' ? 0.5 : 1,
+              aspectRatio: '1',
+              borderRadius: 1,
               objectFit: 'cover',
               flexShrink: 0,
             }}
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
           />
         )}
 
-        {/* Slot badge (tournament) */}
-        {slotBadge && (
-          <Box
-            sx={{
-              backgroundColor: slotBadge.color,
-              px: 1.5,
-              py: 0.5,
-              borderRadius: 1,
-              fontWeight: 'bold',
-              fontSize: 14,
-              minWidth: 48,
-              textAlign: 'center',
-              flexShrink: 0,
-            }}
-          >
-            {slotBadge.label}
-          </Box>
-        )}
+        {/* Content (centered vertically when thumbnail stretches the row) */}
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: preset.gap, minWidth: 0 }}>
+          {/* Checkbox */}
+          {checkbox && (
+            <Checkbox
+              checked={checkbox.checked}
+              disabled={checkbox.disabled}
+              onClick={(e) => e.stopPropagation()}
+              onChange={checkbox.onChange}
+              sx={{ '&.Mui-checked': { color: '#ff66ab' } }}
+            />
+          )}
 
-        {/* Mod chip (tournament) */}
-        {modChip && (
-          <Chip
-            label={modChip.label}
-            size="small"
-            sx={{
-              backgroundColor: modChip.color,
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: 11,
-              height: 22,
-            }}
-          />
-        )}
-
-        {/* Map info */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
-            <Typography
-              variant={density === 'compact' ? 'body2' : undefined}
-              sx={{ fontWeight: 500 }}
-              noWrap
+          {/* Slot badge (tournament) */}
+          {slotBadge && (
+            <Box
+              sx={{
+                backgroundColor: slotBadge.color,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 1,
+                fontWeight: 'bold',
+                fontSize: 14,
+                minWidth: 48,
+                textAlign: 'center',
+                flexShrink: 0,
+              }}
             >
-              {titleOnly ? title : `${artist} - ${title}`}
-            </Typography>
-            {keys != null && (
-              <Chip
-                label={`${keys}K`}
-                size="small"
-                sx={{
-                  height: 20,
-                  fontSize: 11,
-                  fontWeight: 'bold',
-                  backgroundColor: '#ff66ab',
-                  color: 'white',
-                  flexShrink: 0,
-                }}
-              />
-            )}
-          </Stack>
+              {slotBadge.label}
+            </Box>
+          )}
 
-          {/* Subtitle */}
-          {(subtitleParts.length > 0 || sourceChip) && (
-            density === 'compact' && sourceChip ? (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="caption" color={subtitleColor} noWrap>
-                  {subtitleParts}
-                </Typography>
-                <Chip
-                  label={sourceChip.label}
-                  size="small"
-                  sx={{
-                    height: 18,
-                    fontSize: 10,
-                    backgroundColor: sourceChip.color,
-                    color: 'white',
-                  }}
-                />
-                {sourceTooltip && (
-                  <Tooltip title={sourceTooltip}>
-                    <FolderIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                  </Tooltip>
-                )}
-              </Stack>
-            ) : (
+          {/* Mod chip (tournament) */}
+          {modChip && (
+            <Chip
+              label={modChip.label}
+              size="small"
+              sx={{
+                backgroundColor: modChip.color,
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: 11,
+                height: 22,
+              }}
+            />
+          )}
+
+          {/* Map info */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
               <Typography
-                variant={density === 'compact' ? 'caption' : 'body2'}
-                sx={{ color: subtitleColor }}
+                variant={density === 'compact' ? 'body2' : undefined}
+                sx={{ fontWeight: 500 }}
                 noWrap
               >
-                {subtitleParts}
+                {titleOnly ? title : `${artist} - ${title}`}
               </Typography>
-            )
-          )}
+              {keys != null && (
+                <Chip
+                  label={`${keys}K`}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: 11,
+                    fontWeight: 'bold',
+                    backgroundColor: '#ff66ab',
+                    color: 'white',
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+            </Stack>
 
-          {/* Title-only subtitle (artist // creator) */}
-          {titleOnly && (
-            <Typography variant="caption" color={subtitleColor} noWrap>
-              {artist} // {creator}
+            {/* Subtitle */}
+            {(subtitleParts.length > 0 || sourceChip) && (
+              density === 'compact' && sourceChip ? (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="caption" color={subtitleColor} noWrap>
+                    {subtitleParts}
+                  </Typography>
+                  <Chip
+                    label={sourceChip.label}
+                    size="small"
+                    sx={{
+                      height: 18,
+                      fontSize: 10,
+                      backgroundColor: sourceChip.color,
+                      color: 'white',
+                    }}
+                  />
+                  {sourceTooltip && (
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
+                      <FolderIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                      <Typography variant="caption" color="text.disabled" noWrap>
+                        {sourceTooltip}
+                      </Typography>
+                    </Stack>
+                  )}
+                </Stack>
+              ) : (
+                <Typography
+                  variant={density === 'compact' ? 'caption' : 'body2'}
+                  sx={{ color: subtitleColor }}
+                  noWrap
+                >
+                  {subtitleParts}
+                </Typography>
+              )
+            )}
+
+            {/* Title-only subtitle (artist // creator) */}
+            {titleOnly && (
+              <Typography variant="caption" color={subtitleColor} noWrap>
+                {artist} // {creator}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Separate star rating (tournament style) */}
+          {starRatingSeparate && starRating != null && (
+            <Typography sx={{ color: '#f5c842', fontWeight: 'bold', mr: 2 }}>
+              ★ {starRating.toFixed(2)}
             </Typography>
           )}
+
+          {/* Status chip */}
+          {statusChip && (
+            <Chip label={statusChip.label} size="small" sx={{ fontSize: 10 }} />
+          )}
+
+          {/* Actions slot */}
+          {actions}
         </Box>
-
-        {/* Separate star rating (tournament style) */}
-        {starRatingSeparate && starRating != null && (
-          <Typography sx={{ color: '#f5c842', fontWeight: 'bold', mr: 2 }}>
-            ★ {starRating.toFixed(2)}
-          </Typography>
-        )}
-
-        {/* Status chip */}
-        {statusChip && (
-          <Chip label={statusChip.label} size="small" sx={{ fontSize: 10 }} />
-        )}
-
-        {/* Actions slot */}
-        {actions}
       </Box>
     </>
   );

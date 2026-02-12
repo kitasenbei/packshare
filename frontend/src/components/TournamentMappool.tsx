@@ -4,7 +4,6 @@ import {
   Typography,
   Button,
   IconButton,
-  Tooltip,
   Stack,
   Avatar,
   Tabs,
@@ -26,15 +25,16 @@ import {
   CircularProgress,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import CloseIcon from '@mui/icons-material/Close';
 import LinkIcon from '@mui/icons-material/Link';
 import type { StashBeatmap } from '../types/beatmap';
 import BeatmapRow from './BeatmapRow';
+import DownloadButton from './DownloadButton';
+import OsuButton from './OsuButton';
+import RemoveButton from './RemoveButton';
 
 const STORAGE_KEY = 'packshare_tournaments';
 const STASH_STORAGE_KEY = 'packshare_stash';
@@ -575,6 +575,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                       artist={map.artist}
                       creator={map.mapper}
                       creatorPrefix="mapped by"
+                      beatmapsetId={map.beatmapId}
                       difficultyName={map.diff}
                       starRating={map.star}
                       starRatingSeparate
@@ -584,31 +585,22 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                       modChip={map.mod !== 'NM' ? { label: map.mod, color: modColors[map.mod] || '#666' } : undefined}
                       actions={
                         <>
-                          <Tooltip title="Open on osu!">
-                            <IconButton
-                              sx={{ color: 'rgba(255,255,255,0.5)' }}
-                              onClick={() => map.beatmapId && window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapId}`, '_blank')}
-                            >
-                              <OpenInNewIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Download">
-                            <IconButton
-                              sx={{ color: '#66ff99' }}
-                              onClick={() => map.beatmapId && window.open(`https://api.nerinyan.moe/d/${map.beatmapId}`, '_blank')}
-                            >
-                              <DownloadIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          <OsuButton onClick={() => map.beatmapId && window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapId}`, '_blank')} variant="dark" />
+                          <DownloadButton
+                            downloadUrl={`https://api.nerinyan.moe/d/${map.beatmapId}`}
+                            downloadName={`${map.artist} - ${map.title}`}
+                            variant="dark"
+                            stashData={map.beatmapId ? {
+                              id: map.beatmapId,
+                              beatmapsetId: map.beatmapId,
+                              title: map.title,
+                              artist: map.artist,
+                              creator: map.mapper,
+                              source: 'download',
+                            } : undefined}
+                          />
                           {tournamentData.isUserCreated && (
-                            <Tooltip title="Remove from mappool">
-                              <IconButton
-                                sx={{ color: '#ff6b6b' }}
-                                onClick={() => handleRemoveMap(globalIndex)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
+                            <RemoveButton onClick={() => handleRemoveMap(globalIndex)} />
                           )}
                         </>
                       }
@@ -748,7 +740,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
             </Box>
           ) : (
             <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-              {stash.map((beatmap, i) => {
+              {stash.map((beatmap) => {
                 const isSelected = selectedStashIds.has(beatmap.id);
                 const alreadyInPool = maps.some(m => m.beatmapId === beatmap.id);
                 return (
@@ -759,8 +751,8 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                     keys={beatmap.keys}
                     creator={beatmap.creator}
                     bpm={beatmap.bpm}
+                    beatmapsetId={beatmap.id}
                     density="compact"
-                    showDivider={i > 0}
                     checkbox={{
                       checked: isSelected,
                       disabled: alreadyInPool,

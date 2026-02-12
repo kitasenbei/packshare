@@ -14,12 +14,13 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import DownloadIcon from '@mui/icons-material/Download';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getPack, type Pack } from '../api/packs';
 import BeatmapRow from './BeatmapRow';
+import DownloadButton from './DownloadButton';
+import OsuButton from './OsuButton';
 
 const MAPS_PER_PAGE = 10;
 
@@ -100,9 +101,6 @@ export default function PackViewer({ packId }: PackViewerProps) {
     });
   };
 
-  const handleDownloadSingle = (beatmap: Pack['beatmaps'][0]) => {
-    window.open(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`, '_blank');
-  };
 
   const handleOpenOsu = (beatmap: Pack['beatmaps'][0]) => {
     window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}`, '_blank');
@@ -234,8 +232,8 @@ export default function PackViewer({ packId }: PackViewerProps) {
             Beatmaps
           </Typography>
         </Box>
-        <Box>
-          {displayMaps.map((beatmap, index) => (
+        <Box sx={{ p: 1 }}>
+          {displayMaps.map((beatmap) => (
             <BeatmapRow
               key={beatmap.id}
               title={beatmap.title}
@@ -245,28 +243,24 @@ export default function PackViewer({ packId }: PackViewerProps) {
               creatorPrefix="mapped by"
               starRating={beatmap.star_rating}
               beatmapsetId={beatmap.beatmapset_id}
-              showThumbnail
-              showDivider={index > 0}
               actions={
                 <Stack direction="row" spacing={0.5}>
-                  <Tooltip title="Open on osu!">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOpenOsu(beatmap)}
-                      sx={{ color: 'text.secondary' }}
-                    >
-                      <OpenInNewIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Download">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDownloadSingle(beatmap)}
-                      sx={{ color: '#4caf50' }}
-                    >
-                      <DownloadIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <OsuButton onClick={() => handleOpenOsu(beatmap)} />
+                  <DownloadButton
+                    downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                    downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                    stashData={{
+                      id: beatmap.id,
+                      beatmapsetId: beatmap.beatmapset_id,
+                      title: beatmap.title,
+                      artist: beatmap.artist,
+                      creator: beatmap.creator,
+                      keys: beatmap.keys,
+                      source: 'download',
+                      sourcePackId: pack.share_code,
+                      sourcePackName: pack.name,
+                    }}
+                  />
                 </Stack>
               }
             />

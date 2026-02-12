@@ -21,16 +21,16 @@ import {
   MenuItem,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import DeleteIcon from '@mui/icons-material/Delete';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import DownloadIcon from '@mui/icons-material/Download';
 import { type User, getBeatmapset, type BeatmapsetInfo } from '../api/auth';
 import { createPack } from '../api/packs';
 import BeatmapRow from './BeatmapRow';
+import DownloadButton from './DownloadButton';
+import OsuButton from './OsuButton';
+import RemoveButton from './RemoveButton';
 
 interface PackCreatorProps {
   user?: User | null;
@@ -419,36 +419,23 @@ export default function PackCreator({ user }: PackCreatorProps) {
                 creatorPrefix="mapped by"
                 difficultyName={beatmap.difficulty_name}
                 starRating={beatmap.star_rating}
-                showDivider={index > 0}
                 actions={
                   <Stack direction="row" spacing={0.5}>
-                    <Tooltip title="Open on osu!">
-                      <IconButton
-                        size="small"
-                        onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}`, '_blank')}
-                        sx={{ color: 'text.secondary' }}
-                      >
-                        <OpenInNewIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Download">
-                      <IconButton
-                        size="small"
-                        onClick={() => window.open(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`, '_blank')}
-                        sx={{ color: '#4caf50' }}
-                      >
-                        <DownloadIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Remove">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemoveBeatmap(index)}
-                        sx={{ color: '#ff6b6b' }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}`, '_blank')} />
+                    <DownloadButton
+                      downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                      downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                      stashData={{
+                        id: beatmap.beatmapset_id,
+                        beatmapsetId: beatmap.beatmapset_id,
+                        title: beatmap.title,
+                        artist: beatmap.artist,
+                        creator: beatmap.creator,
+                        keys: beatmap.keys,
+                        source: 'download',
+                      }}
+                    />
+                    <RemoveButton onClick={() => handleRemoveBeatmap(index)} />
                   </Stack>
                 }
               />
