@@ -8,18 +8,15 @@ import {
   Pagination,
   ToggleButtonGroup,
   ToggleButton,
-  Avatar,
   Chip,
   Stack,
   TextField,
   InputAdornment,
 } from '@mui/material';
-import { Link } from 'react-router-dom';
 import ExploreIcon from '@mui/icons-material/Explore';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import SearchIcon from '@mui/icons-material/Search';
 import { browsePacks, type BrowsePacksResult } from '../api/packs';
+import PackCard from './PackCard';
 
 const PACKS_PER_PAGE = 12;
 
@@ -143,110 +140,7 @@ export default function Explore() {
         <>
           <Stack spacing={2}>
             {data.packs.map((pack) => (
-              <Paper
-                key={pack.id}
-                component={Link}
-                to={`/pack/${pack.share_code}`}
-                elevation={2}
-                sx={{
-                  display: 'block',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  overflow: 'hidden',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: 4,
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    p: 2.5,
-                    display: 'flex',
-                    gap: 2,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Avatar
-                    src={pack.user.avatar_url}
-                    sx={{ width: 48, height: 48 }}
-                  />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="h6" fontWeight="bold" noWrap>
-                      {pack.name}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, flexWrap: 'wrap' }}>
-                      <Typography variant="body2" color="text.secondary">
-                        by {pack.user.username}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <MusicNoteIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {pack.beatmap_count} maps
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <VisibilityIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {pack.views.toLocaleString()}
-                        </Typography>
-                      </Box>
-                      {/* Stacked thumbnails */}
-                      {pack.beatmapset_ids && pack.beatmapset_ids.length > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                          <Box sx={{ display: 'flex', position: 'relative', height: 24 }}>
-                            {pack.beatmapset_ids.slice(0, 10).map((id, idx) => (
-                              <Box
-                                key={id}
-                                component="img"
-                                src={`https://assets.ppy.sh/beatmaps/${id}/covers/list.jpg`}
-                                sx={{
-                                  width: 32,
-                                  height: 24,
-                                  borderRadius: 0.5,
-                                  objectFit: 'cover',
-                                  position: 'absolute',
-                                  left: idx * 14,
-                                  border: '1px solid #fff',
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                                }}
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                              />
-                            ))}
-                          </Box>
-                          {pack.beatmapset_ids.length > 10 && (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{ ml: `${10 * 14 + 36}px`, fontWeight: 500 }}
-                            >
-                              ...
-                            </Typography>
-                          )}
-                        </Box>
-                      )}
-                    </Box>
-                    {pack.description && (
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          mt: 1,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {pack.description}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                    {new Date(pack.created_at).toLocaleDateString()}
-                  </Typography>
-                </Box>
-              </Paper>
+              <PackCard key={pack.id} pack={pack} />
             ))}
           </Stack>
 

@@ -35,6 +35,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!packId) {
@@ -88,8 +89,22 @@ export default function PackViewer({ packId }: PackViewerProps) {
     currentPage * MAPS_PER_PAGE
   );
 
-  const handleDownloadAll = () => {
-    pack.beatmaps.forEach((beatmap, index) => {
+  const hasSelection = selectedIds.size > 0;
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDownload = () => {
+    const targets = hasSelection
+      ? pack.beatmaps.filter((b) => selectedIds.has(b.id))
+      : pack.beatmaps;
+    targets.forEach((beatmap, index) => {
       setTimeout(() => {
         const link = document.createElement('a');
         link.href = `https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`;
@@ -99,6 +114,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
         document.body.removeChild(link);
       }, index * 500);
     });
+    setSelectedIds(new Set());
   };
 
 
@@ -186,14 +202,14 @@ export default function PackViewer({ packId }: PackViewerProps) {
                 <Button
                   variant="contained"
                   startIcon={<DownloadIcon />}
-                  onClick={handleDownloadAll}
+                  onClick={handleDownload}
                   sx={{
-                    backgroundColor: '#ff66ab',
-                    '&:hover': { backgroundColor: '#ff4499' },
+                    backgroundColor: hasSelection ? '#64b5f6' : '#ff66ab',
+                    '&:hover': { backgroundColor: hasSelection ? '#42a5f5' : '#ff4499' },
                     px: 3,
                   }}
                 >
-                  Download All
+                  {hasSelection ? `Download Selected (${selectedIds.size})` : 'Download All'}
                 </Button>
                 <Tooltip title="Copy share link">
                   <IconButton
@@ -227,44 +243,62 @@ export default function PackViewer({ packId }: PackViewerProps) {
 
       {/* Beatmaps List */}
       <Paper elevation={2} sx={{ overflow: 'hidden' }}>
-        <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee' }}>
+        <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="subtitle1" fontWeight="bold">
             Beatmaps
           </Typography>
+          {hasSelection && (
+            <Button
+              size="small"
+              onClick={() => setSelectedIds(new Set())}
+              sx={{ color: '#64b5f6', textTransform: 'none', fontSize: 13 }}
+            >
+              Deselect All
+            </Button>
+          )}
         </Box>
         <Box sx={{ p: 1 }}>
-          {displayMaps.map((beatmap) => (
-            <BeatmapRow
-              key={beatmap.id}
-              title={beatmap.title}
-              artist={beatmap.artist}
-              keys={beatmap.keys}
-              creator={beatmap.creator}
-              creatorPrefix="mapped by"
-              starRating={beatmap.star_rating}
-              beatmapsetId={beatmap.beatmapset_id}
-              actions={
-                <Stack direction="row" spacing={0.5}>
-                  <OsuButton onClick={() => handleOpenOsu(beatmap)} />
-                  <DownloadButton
-                    downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
-                    downloadName={`${beatmap.artist} - ${beatmap.title}`}
-                    stashData={{
-                      id: beatmap.id,
-                      beatmapsetId: beatmap.beatmapset_id,
-                      title: beatmap.title,
-                      artist: beatmap.artist,
-                      creator: beatmap.creator,
-                      keys: beatmap.keys,
-                      source: 'download',
-                      sourcePackId: pack.share_code,
-                      sourcePackName: pack.name,
-                    }}
-                  />
-                </Stack>
-              }
-            />
-          ))}
+          {displayMaps.map((beatmap) => {
+            const isSelected = selectedIds.has(beatmap.id);
+            return (
+              <BeatmapRow
+                key={beatmap.id}
+                title={beatmap.title}
+                artist={beatmap.artist}
+                keys={beatmap.keys}
+                creator={beatmap.creator}
+                creatorPrefix="mapped by"
+                starRating={beatmap.star_rating}
+                beatmapsetId={beatmap.beatmapset_id}
+                onClick={() => toggleSelect(beatmap.id)}
+                sx={isSelected ? {
+                  backgroundColor: 'rgba(100,181,246,0.15)',
+                  border: '1px solid rgba(100,181,246,0.4)',
+                  '&:hover': { backgroundColor: 'rgba(100,181,246,0.22)' },
+                } : undefined}
+                actions={
+                  <Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()}>
+                    <OsuButton onClick={() => handleOpenOsu(beatmap)} />
+                    <DownloadButton
+                      downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                      downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                      stashData={{
+                        id: beatmap.id,
+                        beatmapsetId: beatmap.beatmapset_id,
+                        title: beatmap.title,
+                        artist: beatmap.artist,
+                        creator: beatmap.creator,
+                        keys: beatmap.keys,
+                        source: 'download',
+                        sourcePackId: pack.share_code,
+                        sourcePackName: pack.name,
+                      }}
+                    />
+                  </Stack>
+                }
+              />
+            );
+          })}
         </Box>
 
         {/* Pagination */}

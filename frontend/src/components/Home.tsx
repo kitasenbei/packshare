@@ -19,6 +19,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import type { User } from '../api/auth';
 import { getLoginUrl } from '../api/auth';
 import { getMyPacks, browsePacks, type Pack, type BrowsePacksResult } from '../api/packs';
+import PackCard from './PackCard';
 
 interface HomeProps {
   user?: User | null;
@@ -291,71 +292,7 @@ export default function Home({ user }: HomeProps) {
               </Box>
               <Stack spacing={1.5}>
                 {recentPacks.packs.map((pack) => (
-                  <Paper
-                    key={pack.id}
-                    component={Link}
-                    to={`/pack/${pack.share_code}`}
-                    elevation={1}
-                    sx={{
-                      display: 'block',
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      transition: 'transform 0.15s, box-shadow 0.15s',
-                      '&:hover': { transform: 'translateY(-1px)', boxShadow: 3 },
-                    }}
-                  >
-                    <Box sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-                      <Avatar src={pack.user.avatar_url} sx={{ width: 40, height: 40 }} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body1" fontWeight="bold" noWrap>
-                          {pack.name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.25 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {pack.user.username}
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <MusicNoteIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                            <Typography variant="caption" color="text.secondary">
-                              {pack.beatmap_count} maps
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <VisibilityIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                            <Typography variant="caption" color="text.secondary">
-                              {pack.views.toLocaleString()}
-                            </Typography>
-                          </Box>
-                          {/* Stacked thumbnails */}
-                          {pack.beatmapset_ids && pack.beatmapset_ids.length > 0 && (
-                            <Box sx={{ display: 'flex', position: 'relative', height: 20, ml: 0.5 }}>
-                              {pack.beatmapset_ids.slice(0, 6).map((id, idx) => (
-                                <Box
-                                  key={id}
-                                  component="img"
-                                  src={`https://assets.ppy.sh/beatmaps/${id}/covers/list.jpg`}
-                                  sx={{
-                                    width: 28,
-                                    height: 20,
-                                    borderRadius: 0.5,
-                                    objectFit: 'cover',
-                                    position: 'absolute',
-                                    left: idx * 12,
-                                    border: '1px solid #fff',
-                                    boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                                  }}
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                />
-                              ))}
-                            </Box>
-                          )}
-                        </Box>
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                        {new Date(pack.created_at).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  </Paper>
+                  <PackCard key={pack.id} pack={pack} compact />
                 ))}
               </Stack>
             </Box>
