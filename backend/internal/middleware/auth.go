@@ -8,10 +8,25 @@ import (
 )
 
 type UserClaims struct {
-	OsuID       int64  `json:"osu_id"`
-	Username    string `json:"username"`
-	CountryCode string `json:"country_code"`
-	AvatarURL   string `json:"avatar_url"`
+	OsuID       int64    `json:"osu_id"`
+	Username    string   `json:"username"`
+	CountryCode string   `json:"country_code"`
+	AvatarURL   string   `json:"avatar_url"`
+	KeyName     string   `json:"key_name,omitempty"`
+	Permissions []string `json:"permissions,omitempty"`
+}
+
+// HasPermission returns true for OAuth sessions (KeyName == "") or if the key has the given permission.
+func (c *UserClaims) HasPermission(perm string) bool {
+	if c.KeyName == "" {
+		return true
+	}
+	for _, p := range c.Permissions {
+		if p == perm {
+			return true
+		}
+	}
+	return false
 }
 
 func parseToken(tokenString, secret string) (*UserClaims, error) {
@@ -54,6 +69,12 @@ func parseToken(tokenString, secret string) (*UserClaims, error) {
 		Username:    username,
 		CountryCode: getStringClaim(claims, "country_code"),
 		AvatarURL:   getStringClaim(claims, "avatar_url"),
+		KeyName:     getStringClaim(claims, "key_name"),
+	}
+
+	// Parse permissions from comma-separated string
+	if permsStr := getStringClaim(claims, "permissions"); permsStr != "" {
+		userClaims.Permissions = strings.Split(permsStr, ",")
 	}
 
 	return userClaims, nil
@@ -96,6 +117,34 @@ func AuthMiddleware(secret string) fiber.Handler {
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid or expired token",
+			})
+		}
+
+		c.Locals("user", claims)
+		return c.Next()
+	}
+}
+
+// OAuthOnlyMiddleware requires a valid JWT token from an OAuth session (not a key session)
+func OAuthOnlyMiddleware(secret string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		tokenString := extractToken(c)
+		if tokenString == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "missing authorization token",
+			})
+		}
+
+		claims, err := parseToken(tokenString, secret)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "invalid or expired token",
+			})
+		}
+
+		if claims.KeyName != "" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "this endpoint requires OAuth authentication, not an access key",
 			})
 		}
 

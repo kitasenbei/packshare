@@ -47,19 +47,27 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 
 	// Handlers
 	packHandler := handlers.NewPackHandler(db)
+	keyHandler := handlers.NewAccessKeyHandler(db, cfg.JWTSecret)
 
 	// API routes
-	api := app.Group("/api")
+	apiGroup := app.Group("/api")
 
 	// Public routes
-	api.Get("/users", packHandler.ListUsers)
-	api.Get("/packs", packHandler.BrowsePacks)
-	api.Get("/packs/:code", packHandler.GetPack)
+	apiGroup.Get("/users", packHandler.ListUsers)
+	apiGroup.Get("/packs", packHandler.BrowsePacks)
+	apiGroup.Get("/packs/:code", packHandler.GetPack)
+	apiGroup.Post("/auth/key", keyHandler.KeyLogin)
 
-	// Protected routes
-	protected := api.Group("", middleware.AuthMiddleware(cfg.JWTSecret))
+	// Protected routes (OAuth or key auth)
+	protected := apiGroup.Group("", middleware.AuthMiddleware(cfg.JWTSecret))
 	protected.Post("/packs", packHandler.CreatePack)
 	protected.Put("/packs/:code", packHandler.UpdatePack)
 	protected.Delete("/packs/:code", packHandler.DeletePack)
 	protected.Get("/my-packs", packHandler.GetMyPacks)
+
+	// OAuth-only routes (key management)
+	oauthOnly := apiGroup.Group("", middleware.OAuthOnlyMiddleware(cfg.JWTSecret))
+	oauthOnly.Post("/keys", keyHandler.CreateKey)
+	oauthOnly.Get("/keys", keyHandler.ListKeys)
+	oauthOnly.Delete("/keys/:id", keyHandler.RevokeKey)
 }

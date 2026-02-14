@@ -32,7 +32,7 @@ func Connect(databaseURL string) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 	sqlDB.SetConnMaxIdleTime(1 * time.Minute)
 
-	if err := db.AutoMigrate(&models.User{}, &models.Pack{}, &models.PackBeatmap{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Pack{}, &models.PackBeatmap{}, &models.AccessKey{}); err != nil {
 		return nil, err
 	}
 

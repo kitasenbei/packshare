@@ -1,7 +1,12 @@
-import { AUTH_BASE_URL } from './config';
+import { AUTH_BASE_URL, API_BASE_URL } from './config';
 
 const TOKEN_KEY = 'packshare_token';
 const USER_KEY = 'packshare_user';
+const AUTH_MODE_KEY = 'packshare_auth_mode';
+const KEY_NAME_KEY = 'packshare_key_name';
+const PERMISSIONS_KEY = 'packshare_permissions';
+
+export type AuthMode = 'oauth' | 'key';
 
 export interface User {
   osu_id: number;
@@ -13,6 +18,9 @@ export interface User {
 export interface AuthState {
   token: string | null;
   user: User | null;
+  authMode: AuthMode;
+  keyName: string | null;
+  permissions: string[];
 }
 
 // Get the login URL - redirects to osu! OAuth
@@ -51,10 +59,13 @@ export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-// Remove token
+// Remove token and all session data
 export function removeToken(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(AUTH_MODE_KEY);
+  localStorage.removeItem(KEY_NAME_KEY);
+  localStorage.removeItem(PERMISSIONS_KEY);
 }
 
 // Store user data
@@ -73,6 +84,45 @@ export function getStoredUser(): User | null {
     }
   }
   return null;
+}
+
+// Save key session metadata
+function saveKeySession(keyName: string, permissions: string[]): void {
+  localStorage.setItem(AUTH_MODE_KEY, 'key');
+  localStorage.setItem(KEY_NAME_KEY, keyName);
+  localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(permissions));
+}
+
+// Save OAuth session metadata
+function saveOAuthSession(): void {
+  localStorage.setItem(AUTH_MODE_KEY, 'oauth');
+  localStorage.removeItem(KEY_NAME_KEY);
+  localStorage.removeItem(PERMISSIONS_KEY);
+}
+
+// Auth mode helpers
+export function isKeySession(): boolean {
+  return localStorage.getItem(AUTH_MODE_KEY) === 'key';
+}
+
+export function getAuthMode(): AuthMode {
+  return (localStorage.getItem(AUTH_MODE_KEY) as AuthMode) || 'oauth';
+}
+
+export function getKeyName(): string | null {
+  return localStorage.getItem(KEY_NAME_KEY);
+}
+
+export function getPermissions(): string[] {
+  const data = localStorage.getItem(PERMISSIONS_KEY);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 // Verify token and get user data
@@ -96,6 +146,32 @@ export async function verifyToken(token: string): Promise<User | null> {
   }
 }
 
+// Login with access key
+export async function loginWithKey(key: string): Promise<AuthState> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/key`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Invalid access key');
+  }
+
+  const data = await response.json();
+  const user: User = data.user;
+  const token: string = data.token;
+  const keyName: string = data.key_name;
+  const permissions: string[] = data.permissions;
+
+  saveToken(token);
+  saveUser(user);
+  saveKeySession(keyName, permissions);
+
+  return { token, user, authMode: 'key', keyName, permissions };
+}
+
 // Initialize auth state from storage or URL
 export async function initAuth(): Promise<AuthState> {
   // Check for token in URL (OAuth callback)
@@ -105,25 +181,43 @@ export async function initAuth(): Promise<AuthState> {
     if (user) {
       saveToken(urlToken);
       saveUser(user);
-      return { token: urlToken, user };
+      saveOAuthSession();
+      return { token: urlToken, user, authMode: 'oauth', keyName: null, permissions: [] };
     }
   }
 
   // Check for stored token
   const storedToken = getStoredToken();
   if (storedToken) {
-    // Verify stored token is still valid
-    const user = await verifyToken(storedToken);
-    if (user) {
-      saveUser(user);
-      return { token: storedToken, user };
-    } else {
-      // Token expired or invalid
+    const authMode = getAuthMode();
+
+    if (authMode === 'key') {
+      // For key sessions, we trust the stored user data (no /auth/verify for key JWTs)
+      const user = getStoredUser();
+      if (user) {
+        return {
+          token: storedToken,
+          user,
+          authMode: 'key',
+          keyName: getKeyName(),
+          permissions: getPermissions(),
+        };
+      }
+      // Stored data corrupt, clear everything
       removeToken();
+    } else {
+      // Verify OAuth token
+      const user = await verifyToken(storedToken);
+      if (user) {
+        saveUser(user);
+        return { token: storedToken, user, authMode: 'oauth', keyName: null, permissions: [] };
+      } else {
+        removeToken();
+      }
     }
   }
 
-  return { token: null, user: null };
+  return { token: null, user: null, authMode: 'oauth', keyName: null, permissions: [] };
 }
 
 // Logout

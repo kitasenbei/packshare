@@ -41,3 +41,15 @@ type PackBeatmap struct {
 	SortOrder int       `gorm:"default:0" json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type AccessKey struct {
+	ID          uint       `gorm:"primaryKey" json:"id"`
+	UserID      uint       `gorm:"not null;index" json:"user_id"`
+	User        User       `gorm:"foreignKey:UserID" json:"-"`
+	KeyHash     string     `gorm:"uniqueIndex;not null" json:"-"`
+	Name        string     `gorm:"not null" json:"name"`
+	Permissions string     `gorm:"not null" json:"permissions"` // comma-separated: "create,edit,delete"
+	ExpiresAt   *time.Time `json:"expires_at"`
+	LastUsedAt  *time.Time `json:"last_used_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
