@@ -207,7 +207,7 @@ export default function Tournaments() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setDialogOpen(true)}
-          sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+          sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
         >
           Create Tournament
         </Button>
@@ -244,7 +244,7 @@ export default function Tournaments() {
             <Button
               variant="contained"
               onClick={() => setDialogOpen(true)}
-              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+              sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
             >
               Get Started
             </Button>
@@ -311,7 +311,7 @@ export default function Tournaments() {
               </Box>
               <Chip
                 label={tournament.currentStage}
-                sx={{ backgroundColor: '#ff66ab', color: 'white', fontWeight: 'bold' }}
+                sx={{ backgroundColor: 'primary.main', color: 'white', fontWeight: 'bold' }}
               />
             </Box>
 
@@ -325,7 +325,7 @@ export default function Tournaments() {
                     size="small"
                     variant={stage === tournament.currentStage ? 'filled' : 'outlined'}
                     sx={stage === tournament.currentStage ? {
-                      backgroundColor: '#ff66ab',
+                      backgroundColor: 'primary.main',
                       color: 'white',
                     } : {}}
                   />
@@ -347,7 +347,7 @@ export default function Tournaments() {
           { icon: <CalendarTodayIcon />, title: 'All Stages', desc: 'Qualifiers to Grand Finals' },
         ].map((feature) => (
           <Paper key={feature.title} sx={{ p: 2, flex: 1, textAlign: 'center' }}>
-            <Box sx={{ color: '#ff66ab', mb: 1 }}>{feature.icon}</Box>
+            <Box sx={{ color: 'primary.main', mb: 1 }}>{feature.icon}</Box>
             <Typography fontWeight="bold">{feature.title}</Typography>
             <Typography variant="body2" color="text.secondary">{feature.desc}</Typography>
           </Paper>
@@ -422,7 +422,7 @@ export default function Tournaments() {
                     }}
                     color={selectedStages.includes(stage) ? 'primary' : 'default'}
                     variant={selectedStages.includes(stage) ? 'filled' : 'outlined'}
-                    sx={selectedStages.includes(stage) ? { backgroundColor: '#ff66ab' } : {}}
+                    sx={selectedStages.includes(stage) ? { backgroundColor: 'primary.main' } : {}}
                   />
                 ))}
               </Stack>
@@ -445,10 +445,10 @@ export default function Tournaments() {
                     p: 2,
                     cursor: 'pointer',
                     border: '2px solid',
-                    borderColor: selectedAddOns.includes(addon.id) ? '#ff66ab' : 'transparent',
+                    borderColor: selectedAddOns.includes(addon.id) ? 'primary.main' : 'transparent',
                     backgroundColor: selectedAddOns.includes(addon.id) ? 'rgba(255,102,171,0.05)' : '#f5f5f5',
                     transition: 'all 0.2s',
-                    '&:hover': { borderColor: '#ff66ab' },
+                    '&:hover': { borderColor: 'primary.main' },
                   }}
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -456,14 +456,14 @@ export default function Tournaments() {
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Typography fontWeight="bold">{addon.name}</Typography>
                         {addon.popular && (
-                          <Chip label="Popular" size="small" sx={{ backgroundColor: '#ff66ab', color: 'white', fontSize: 10, height: 20 }} />
+                          <Chip label="Popular" size="small" sx={{ backgroundColor: 'primary.main', color: 'white', fontSize: 10, height: 20 }} />
                         )}
                       </Stack>
                       <Typography variant="body2" color="text.secondary">
                         {addon.description}
                       </Typography>
                     </Box>
-                    <Typography fontWeight="bold" sx={{ color: '#ff66ab', ml: 2 }}>
+                    <Typography fontWeight="bold" sx={{ color: 'primary.main', ml: 2 }}>
                       +${addon.price}
                     </Typography>
                   </Box>
@@ -511,7 +511,7 @@ export default function Tournaments() {
                   )}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, pt: 2, borderTop: '1px solid #ddd' }}>
                     <Typography fontWeight="bold">Total</Typography>
-                    <Typography fontWeight="bold" sx={{ color: '#ff66ab', fontSize: 20 }}>${totalPrice}.00</Typography>
+                    <Typography fontWeight="bold" sx={{ color: 'primary.main', fontSize: 20 }}>${totalPrice}.00</Typography>
                   </Box>
                 </Stack>
               </Paper>
@@ -559,7 +559,7 @@ export default function Tournaments() {
                 variant="contained"
                 onClick={handleNext}
                 disabled={activeStep === 0 && !tournamentName.trim()}
-                sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
               >
                 {activeStep === steps.length - 1 ? `Pay $${totalPrice}` : activeStep === 2 ? (selectedAddOns.length > 0 ? `Continue with ${selectedAddOns.length} extra${selectedAddOns.length > 1 ? 's' : ''}` : 'Skip Extras') : 'Next'}
               </Button>
@@ -571,7 +571,7 @@ export default function Tournaments() {
                 variant="contained"
                 component={Link}
                 to={`/t/${createdId}`}
-                sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
               >
                 View Tournament
               </Button>

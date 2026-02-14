@@ -156,7 +156,7 @@ export default function BeatmapRow({
               disabled={checkbox.disabled}
               onClick={(e) => e.stopPropagation()}
               onChange={checkbox.onChange}
-              sx={{ '&.Mui-checked': { color: '#ff66ab' } }}
+              sx={{ '&.Mui-checked': { color: 'primary.main' } }}
             />
           )}
 
@@ -212,7 +212,7 @@ export default function BeatmapRow({
                     height: 20,
                     fontSize: 11,
                     fontWeight: 'bold',
-                    backgroundColor: '#ff66ab',
+                    backgroundColor: 'primary.main',
                     color: 'white',
                     flexShrink: 0,
                   }}

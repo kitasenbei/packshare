@@ -13,8 +13,7 @@ import { getStoredToken } from '../api/auth';
 import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
 import OsuButton from './OsuButton';
-
-const STASH_STORAGE_KEY = 'packshare_stash';
+import { STASH_STORAGE_KEY } from '../utils/stash';
 
 interface SharedPackProps {
   packId?: string;
@@ -117,6 +116,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
 
     const newItems: StashBeatmap[] = newMaps.map(beatmap => ({
       id: beatmap.id,
+      beatmapsetId: beatmap.beatmapset_id,
       title: beatmap.title,
       artist: beatmap.artist,
       creator: beatmap.creator,
@@ -166,7 +166,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white', p: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <CircularProgress sx={{ color: '#ff66ab' }} />
+        <CircularProgress sx={{ color: 'primary.main' }} />
       </Box>
     );
   }
@@ -209,7 +209,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                     sx={{ width: 24, height: 24, borderRadius: '50%' }}
                   />
                 )}
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#ff66ab' } }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'primary.main' } }}>
                   by {pack.user.username}
                 </Typography>
               </Link>
@@ -227,7 +227,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
               variant="contained"
               startIcon={<DownloadIcon />}
               onClick={handleDownloadSelected}
-              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+              sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
             >
               {selectedIds.size === 0
                 ? 'Download Whole Pack'
@@ -242,10 +242,10 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 onClick={handleSaveAllToStash}
                 disabled={allInStash}
                 sx={{
-                  borderColor: allInStash ? 'rgba(255,255,255,0.2)' : '#ff66ab',
-                  color: allInStash ? 'rgba(255,255,255,0.4)' : '#ff66ab',
+                  borderColor: allInStash ? 'rgba(255,255,255,0.2)' : 'primary.main',
+                  color: allInStash ? 'rgba(255,255,255,0.4)' : 'primary.main',
                   '&:hover': {
-                    borderColor: '#ff4499',
+                    borderColor: 'primary.dark',
                     backgroundColor: 'rgba(255,102,171,0.1)',
                   },
                 }}
@@ -263,7 +263,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
               <Box
                 component="span"
                 sx={{
-                  backgroundColor: '#ff66ab',
+                  backgroundColor: 'primary.main',
                   px: 0.5,
                   py: 0.15,
                   borderRadius: 0.5,
@@ -284,7 +284,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
               sx={{
                 color: 'rgba(255,255,255,0.5)',
                 border: '1px solid rgba(255,255,255,0.2)',
-                '&:hover': { color: '#ff66ab', borderColor: '#ff66ab' },
+                '&:hover': { color: 'primary.main', borderColor: 'primary.main' },
               }}
               size="small"
             >
@@ -305,7 +305,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 : new Set(pack.beatmaps.map(b => b.id)),
             );
           }}
-          sx={{ color: '#ff66ab' }}
+          sx={{ color: 'primary.main' }}
         >
           {selectedIds.size === pack.beatmaps.length ? 'Deselect all' : 'Select all'}
         </Button>
@@ -335,8 +335,8 @@ export default function SharedPack({ packId }: SharedPackProps) {
                       <IconButton
                         onClick={() => handleSaveToStash(beatmap)}
                         sx={{
-                          color: isInStash ? '#ff66ab' : 'rgba(255,255,255,0.5)',
-                          '&:hover': { color: '#ff66ab' },
+                          color: isInStash ? 'primary.main' : 'rgba(255,255,255,0.5)',
+                          '&:hover': { color: 'primary.main' },
                         }}
                       >
                         {isInStash ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
@@ -393,7 +393,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity="success"
-          sx={{ backgroundColor: '#1a1a2e', color: 'white', border: '1px solid #ff66ab' }}
+          sx={{ backgroundColor: '#1a1a2e', color: 'white', border: 1, borderColor: 'primary.main' }}
         >
           {snackbar.message}
         </Alert>

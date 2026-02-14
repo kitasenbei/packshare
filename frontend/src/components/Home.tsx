@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Stack,
   Chip,
+  Alert,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
@@ -30,12 +31,13 @@ export default function Home({ user }: HomeProps) {
   const [popularPacks, setPopularPacks] = useState<BrowsePacksResult | null>(null);
   const [myPacks, setMyPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const fetches: Promise<unknown>[] = [
-      browsePacks(1, 6, 'recent').catch(() => null),
-      browsePacks(1, 3, 'popular').catch(() => null),
+      browsePacks(1, 6, 'recent'),
+      browsePacks(1, 3, 'popular'),
     ];
     if (user) {
       fetches.push(getMyPacks().catch(() => [] as Pack[]));
@@ -45,6 +47,10 @@ export default function Home({ user }: HomeProps) {
       setRecentPacks(recent as BrowsePacksResult | null);
       setPopularPacks(popular as BrowsePacksResult | null);
       if (packs) setMyPacks(packs as Pack[]);
+      setLoading(false);
+    }).catch((err) => {
+      if (cancelled) return;
+      setError(err.message || 'Failed to load packs');
       setLoading(false);
     });
     return () => { cancelled = true; };
@@ -63,7 +69,7 @@ export default function Home({ user }: HomeProps) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
               src={user.avatar_url}
-              sx={{ width: 48, height: 48, border: '3px solid #ff66ab' }}
+              sx={{ width: 48, height: 48, border: 3, borderColor: 'primary.main' }}
             />
             <Box>
               <Typography variant="h5" fontWeight="bold">
@@ -88,7 +94,7 @@ export default function Home({ user }: HomeProps) {
               to="/create"
               variant="contained"
               startIcon={<AddIcon />}
-              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+              sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
             >
               New Pack
             </Button>
@@ -97,7 +103,7 @@ export default function Home({ user }: HomeProps) {
               to="/my-packs"
               variant="outlined"
               startIcon={<FolderIcon />}
-              sx={{ borderColor: '#ff66ab', color: '#ff66ab', '&:hover': { borderColor: '#ff4499' } }}
+              sx={{ borderColor: 'primary.main', color: 'primary.main', '&:hover': { borderColor: 'primary.dark' } }}
             >
               My Packs
             </Button>
@@ -120,7 +126,7 @@ export default function Home({ user }: HomeProps) {
                 <Box
                   component="span"
                   sx={{
-                    backgroundColor: '#ff66ab',
+                    backgroundColor: 'primary.main',
                     px: 0.75,
                     py: 0.25,
                     borderRadius: 0.5,
@@ -152,8 +158,8 @@ export default function Home({ user }: HomeProps) {
                   />
                 }
                 sx={{
-                  backgroundColor: '#ff66ab',
-                  '&:hover': { backgroundColor: '#ff4499' },
+                  backgroundColor: 'primary.main',
+                  '&:hover': { backgroundColor: 'primary.dark' },
                   px: 3,
                 }}
               >
@@ -166,7 +172,7 @@ export default function Home({ user }: HomeProps) {
                 sx={{
                   borderColor: 'rgba(255,255,255,0.3)',
                   color: 'white',
-                  '&:hover': { borderColor: '#ff66ab' },
+                  '&:hover': { borderColor: 'primary.main' },
                 }}
               >
                 Browse Packs
@@ -176,9 +182,13 @@ export default function Home({ user }: HomeProps) {
         </Paper>
       )}
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+      )}
+
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress sx={{ color: '#ff66ab' }} />
+          <CircularProgress sx={{ color: 'primary.main' }} />
         </Box>
       )}
 
@@ -188,7 +198,7 @@ export default function Home({ user }: HomeProps) {
           {popularPacks && popularPacks.packs.length > 0 && (
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <TrendingUpIcon sx={{ color: '#ff66ab', fontSize: 20 }} />
+                <TrendingUpIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                 <Typography variant="subtitle1" fontWeight="bold">
                   Popular
                 </Typography>
@@ -276,7 +286,7 @@ export default function Home({ user }: HomeProps) {
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ExploreIcon sx={{ color: '#ff66ab', fontSize: 20 }} />
+                  <ExploreIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                   <Typography variant="subtitle1" fontWeight="bold">
                     Recent
                   </Typography>
@@ -285,7 +295,7 @@ export default function Home({ user }: HomeProps) {
                   component={Link}
                   to="/explore"
                   size="small"
-                  sx={{ color: '#ff66ab' }}
+                  sx={{ color: 'primary.main' }}
                 >
                   View All
                 </Button>
@@ -313,7 +323,7 @@ export default function Home({ user }: HomeProps) {
                 to="/create"
                 variant="contained"
                 startIcon={<AddIcon />}
-                sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
               >
                 Create Pack
               </Button>

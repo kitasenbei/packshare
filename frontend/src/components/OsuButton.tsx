@@ -17,7 +17,7 @@ export default function OsuButton({ onClick, variant = 'light' }: OsuButtonProps
         textTransform: 'none',
         fontSize: 12,
         fontWeight: 600,
-        color: isDark ? '#ff99bb' : '#ff66ab',
+        color: isDark ? 'primary.light' : 'primary.main',
         backgroundColor: isDark ? 'rgba(255,102,171,0.08)' : 'rgba(255,102,171,0.06)',
         minWidth: 'auto',
         px: 1,

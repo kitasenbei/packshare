@@ -60,7 +60,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
   if (loading) {
     return (
       <Box sx={{ maxWidth: 900, margin: '0 auto', display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress sx={{ color: '#ff66ab' }} />
+        <CircularProgress sx={{ color: 'primary.main' }} />
       </Box>
     );
   }
@@ -204,8 +204,8 @@ export default function PackViewer({ packId }: PackViewerProps) {
                   startIcon={<DownloadIcon />}
                   onClick={handleDownload}
                   sx={{
-                    backgroundColor: hasSelection ? '#64b5f6' : '#ff66ab',
-                    '&:hover': { backgroundColor: hasSelection ? '#42a5f5' : '#ff4499' },
+                    backgroundColor: hasSelection ? '#64b5f6' : 'primary.main',
+                    '&:hover': { backgroundColor: hasSelection ? '#42a5f5' : 'primary.dark' },
                     px: 3,
                   }}
                 >

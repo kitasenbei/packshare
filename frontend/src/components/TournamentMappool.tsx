@@ -35,9 +35,9 @@ import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
 import OsuButton from './OsuButton';
 import RemoveButton from './RemoveButton';
+import { STASH_STORAGE_KEY } from '../utils/stash';
 
 const STORAGE_KEY = 'packshare_tournaments';
-const STASH_STORAGE_KEY = 'packshare_stash';
 const MAPPOOL_STORAGE_KEY = 'packshare_mappools';
 
 // Slot colors (map categories)
@@ -49,7 +49,7 @@ const slotColors: Record<string, string> = {
   JACK: '#d94a4a',    // Jack
   SPEED: '#4ad9d9',   // Speed
   STAM: '#d9a44a',    // Stamina
-  SV: '#ff66ab',      // Slider Velocity
+  SV: 'primary.main',      // Slider Velocity
   TB: '#ff4444',      // Tiebreaker
 };
 
@@ -449,7 +449,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                 sx={{
                   width: 80,
                   height: 80,
-                  border: '3px solid #ff66ab',
+                  border: 3, borderColor: 'primary.main',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
                 }}
               />
@@ -470,7 +470,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                   <Box
                     component="span"
                     sx={{
-                      backgroundColor: '#ff66ab',
+                      backgroundColor: 'primary.main',
                       px: 0.5,
                       py: 0.15,
                       borderRadius: 0.5,
@@ -502,7 +502,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                 mt: 3,
                 '& .MuiTab-root': { color: 'rgba(255,255,255,0.6)', textTransform: 'none', fontWeight: 'bold', fontSize: 16 },
                 '& .Mui-selected': { color: 'white' },
-                '& .MuiTabs-indicator': { backgroundColor: '#ff66ab', height: 3 },
+                '& .MuiTabs-indicator': { backgroundColor: 'primary.main', height: 3 },
               }}
             >
               {stages.map((s) => (
@@ -519,7 +519,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
           <Button
             variant="contained"
             startIcon={<DownloadIcon />}
-            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
           >
             Download All ({maps.length} maps)
           </Button>
@@ -530,9 +530,9 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
             startIcon={<AddIcon />}
             onClick={handleOpenAddDialog}
             sx={{
-              borderColor: '#ff66ab',
-              color: '#ff66ab',
-              '&:hover': { borderColor: '#ff4499', backgroundColor: 'rgba(255,102,171,0.1)' },
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': { borderColor: 'primary.dark', backgroundColor: 'rgba(255,102,171,0.1)' },
             }}
           >
             Add Maps
@@ -617,7 +617,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
       <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Stack direction="row" spacing={1} alignItems="center">
-            <InventoryIcon sx={{ color: '#ff66ab' }} />
+            <InventoryIcon sx={{ color: 'primary.main' }} />
             <span>Add Maps</span>
           </Stack>
           <IconButton size="small" onClick={() => setAddDialogOpen(false)}>
@@ -715,8 +715,8 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                 disabled={urlLoading || !urlInput.trim()}
                 sx={{
                   minWidth: 80,
-                  backgroundColor: '#ff66ab',
-                  '&:hover': { backgroundColor: '#ff4499' }
+                  backgroundColor: 'primary.main',
+                  '&:hover': { backgroundColor: 'primary.dark' }
                 }}
               >
                 {urlLoading ? <CircularProgress size={20} color="inherit" /> : 'Add'}
@@ -783,7 +783,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
             variant="contained"
             onClick={handleAddSelectedMaps}
             disabled={selectedStashIds.size === 0}
-            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
           >
             Add to {selectedSlot} ({selectedMod})
           </Button>
@@ -800,7 +800,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity="success"
-          sx={{ backgroundColor: '#1a1a2e', color: 'white', border: '1px solid #ff66ab' }}
+          sx={{ backgroundColor: '#1a1a2e', color: 'white', border: 1, borderColor: 'primary.main' }}
         >
           {snackbar.message}
         </Alert>

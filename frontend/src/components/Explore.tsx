@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Autocomplete,
   Avatar,
@@ -42,23 +42,25 @@ export default function Explore() {
 
   const selectedUser = users.find((u) => u.id === filterUserId) ?? null;
 
-  const fetchPacks = useCallback(() => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
     browsePacks(page, PACKS_PER_PAGE, sort, search, filterUserId)
       .then((result) => {
-        setData(result);
-        setLoading(false);
+        if (!cancelled) {
+          setData(result);
+          setLoading(false);
+        }
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load packs');
-        setLoading(false);
+        if (!cancelled) {
+          setError(err.message || 'Failed to load packs');
+          setLoading(false);
+        }
       });
+    return () => { cancelled = true; };
   }, [page, sort, search, filterUserId]);
-
-  useEffect(() => {
-    fetchPacks();
-  }, [fetchPacks]);
 
   // Debounced search
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function Explore() {
     <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-        <ExploreIcon sx={{ color: '#ff66ab' }} />
+        <ExploreIcon sx={{ color: 'primary.main' }} />
         {selectedUser && (
           <Avatar
             src={selectedUser.avatar_url}
@@ -177,7 +179,7 @@ export default function Explore() {
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress sx={{ color: '#ff66ab' }} />
+          <CircularProgress sx={{ color: 'primary.main' }} />
         </Box>
       )}
 

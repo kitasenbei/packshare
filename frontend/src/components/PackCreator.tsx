@@ -356,8 +356,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
               disabled={!beatmapInput.trim() || loading}
               sx={{
                 minWidth: 100,
-                backgroundColor: '#ff66ab',
-                '&:hover': { backgroundColor: '#ff4499' },
+                backgroundColor: 'primary.main',
+                '&:hover': { backgroundColor: 'primary.dark' },
               }}
             >
               {loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Add'}
@@ -394,7 +394,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
                   prev.size === allIds.length ? new Set() : new Set(allIds),
                 );
               }}
-              sx={{ color: '#ff66ab' }}
+              sx={{ color: 'primary.main' }}
             >
               {selectedDiffs.size === pendingBeatmapset.beatmaps.length ? 'Deselect all' : 'Select all'}
             </Button>
@@ -428,7 +428,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
               variant="contained"
               onClick={handleConfirmDifficulty}
               disabled={selectedDiffs.size === 0}
-              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+              sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
             >
               Add {selectedDiffs.size > 0 ? `(${selectedDiffs.size})` : ''}
             </Button>
@@ -610,8 +610,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
         activeStep={step}
         sx={{
           mb: 3,
-          '& .MuiStepIcon-root.Mui-active': { color: '#ff66ab' },
-          '& .MuiStepIcon-root.Mui-completed': { color: '#ff66ab' },
+          '& .MuiStepIcon-root.Mui-active': { color: 'primary.main' },
+          '& .MuiStepIcon-root.Mui-completed': { color: 'primary.main' },
         }}
       >
         {STEPS.map((label) => (
@@ -644,8 +644,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             onClick={() => { setError(''); setStep((s) => s + 1); }}
             disabled={!canAdvance(step)}
             sx={{
-              backgroundColor: '#ff66ab',
-              '&:hover': { backgroundColor: '#ff4499' },
+              backgroundColor: 'primary.main',
+              '&:hover': { backgroundColor: 'primary.dark' },
             }}
           >
             Next
@@ -657,8 +657,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             onClick={handleGenerateLink}
             disabled={creating || !user}
             sx={{
-              backgroundColor: '#ff66ab',
-              '&:hover': { backgroundColor: '#ff4499' },
+              backgroundColor: 'primary.main',
+              '&:hover': { backgroundColor: 'primary.dark' },
             }}
           >
             {creating ? 'Creating...' : 'Create & Share'}
@@ -716,7 +716,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
           <Button
             variant="contained"
             onClick={() => navigate(`/s/${generatedLink.split('/').pop()}`)}
-            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
           >
             View Pack
           </Button>

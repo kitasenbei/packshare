@@ -40,8 +40,7 @@ import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
 import OsuButton from './OsuButton';
 import RemoveButton from './RemoveButton';
-
-const STASH_STORAGE_KEY = 'packshare_stash';
+import { STASH_STORAGE_KEY } from '../utils/stash';
 const MAPS_PER_PAGE = 5;
 const STASH_PER_PAGE = 8;
 
@@ -342,7 +341,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
           {user && (
             <Avatar
               src={user.avatar_url}
-              sx={{ width: 48, height: 48, border: '3px solid #ff66ab' }}
+              sx={{ width: 48, height: 48, border: 3, borderColor: 'primary.main' }}
             />
           )}
           <Box>
@@ -362,7 +361,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
             to="/create"
             variant="contained"
             startIcon={<AddIcon />}
-            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
           >
             New Pack
           </Button>
@@ -383,7 +382,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
             '&:hover': { backgroundColor: '#222244' },
           }}
         >
-          <InventoryIcon sx={{ mr: 1.5, color: '#ff66ab' }} />
+          <InventoryIcon sx={{ mr: 1.5, color: 'primary.main' }} />
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h6" fontWeight="bold">
               My Stash
@@ -438,9 +437,9 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                       setStashPage(1);
                     }}
                     sx={{
-                      backgroundColor: stashFilter === filter ? '#ff66ab' : undefined,
+                      backgroundColor: stashFilter === filter ? 'primary.main' : undefined,
                       color: stashFilter === filter ? 'white' : undefined,
-                      '&:hover': { backgroundColor: stashFilter === filter ? '#ff4499' : undefined },
+                      '&:hover': { backgroundColor: stashFilter === filter ? 'primary.dark' : undefined },
                     }}
                   />
                 ))}
@@ -509,7 +508,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
       {/* Loading state */}
       {packsLoading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress sx={{ color: '#ff66ab' }} />
+          <CircularProgress sx={{ color: 'primary.main' }} />
         </Box>
       )}
 
@@ -751,7 +750,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
             variant="contained"
             onClick={handleSaveEdit}
             disabled={saving}
-            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
@@ -812,7 +811,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                     sx={{
                       width: 32,
                       height: 22,
-                      backgroundColor: '#ff66ab',
+                      backgroundColor: 'primary.main',
                       borderRadius: 0.5,
                       display: 'flex',
                       alignItems: 'center',

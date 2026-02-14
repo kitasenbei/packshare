@@ -54,12 +54,13 @@ const PINK_HOVER = '#ff4499';
 const BLUE = '#4a9eff';
 const BLUE_HOVER = '#3a8eef';
 
-function makeTheme(accent: string) {
+function makeTheme(accent: string, accentHover: string) {
   return createTheme({
     palette: {
       mode: 'light',
       primary: {
         main: accent,
+        dark: accentHover,
       },
       background: {
         default: '#f0f2f5',
@@ -530,7 +531,8 @@ function App() {
 
   const accent = authMode === 'key' ? BLUE : PINK;
 
-  const theme = useMemo(() => makeTheme(accent), [accent]);
+  const accentHover = authMode === 'key' ? BLUE_HOVER : PINK_HOVER;
+  const theme = useMemo(() => makeTheme(accent, accentHover), [accent, accentHover]);
 
   useEffect(() => {
     // Check for auth error in URL

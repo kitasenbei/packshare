@@ -125,8 +125,8 @@ func (h *PackHandler) GetPack(c *fiber.Ctx) error {
 		})
 	}
 
-	// Increment view count asynchronously, return current+1
-	go h.db.Model(&models.Pack{}).Where("id = ?", pack.ID).Update("views", gorm.Expr("views + 1"))
+	// Increment view count (fire and forget, but don't use goroutine to avoid connection leaks)
+	h.db.Model(&models.Pack{}).Where("id = ?", pack.ID).Update("views", gorm.Expr("views + 1"))
 
 	return c.JSON(fiber.Map{
 		"id":          pack.ID,

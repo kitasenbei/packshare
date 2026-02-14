@@ -1,6 +1,6 @@
 import type { StashBeatmap } from '../types/beatmap';
 
-const STASH_STORAGE_KEY = 'packshare_stash';
+export const STASH_STORAGE_KEY = 'packshare_stash';
 
 export function getStash(): StashBeatmap[] {
   const saved = localStorage.getItem(STASH_STORAGE_KEY);

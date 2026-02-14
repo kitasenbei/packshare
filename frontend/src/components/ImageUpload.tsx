@@ -90,13 +90,13 @@ export default function ImageUpload({ label = 'Upload Image', value, onChange, a
           position: 'relative',
           aspectRatio,
           border: '2px dashed',
-          borderColor: error ? 'error.main' : dragOver ? '#ff66ab' : 'divider',
+          borderColor: error ? 'error.main' : dragOver ? 'primary.main' : 'divider',
           borderRadius: 2,
           backgroundColor: dragOver ? 'rgba(255,102,171,0.05)' : 'background.paper',
           cursor: value ? 'default' : 'pointer',
           overflow: 'hidden',
           transition: 'all 0.2s',
-          '&:hover': !value ? { borderColor: '#ff66ab' } : {},
+          '&:hover': !value ? { borderColor: 'primary.main' } : {},
         }}
       >
         {value ? (
@@ -148,7 +148,7 @@ export default function ImageUpload({ label = 'Upload Image', value, onChange, a
           </>
         ) : loading ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <CircularProgress size={32} sx={{ color: '#ff66ab' }} />
+            <CircularProgress size={32} sx={{ color: 'primary.main' }} />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               Uploading...
             </Typography>
