@@ -47,8 +47,14 @@ const STASH_PER_PAGE = 8;
 
 interface MyPacksProps {
   user?: User | null;
+  permissions?: string[];
+  isKeySession?: boolean;
 }
 
+function hasPerm(permissions: string[] | undefined, isKey: boolean | undefined, perm: string): boolean {
+  if (!isKey) return true;
+  return permissions?.includes(perm) ?? false;
+}
 
 const sourceLabels: Record<string, { label: string; color: string }> = {
   browse: { label: 'Browsed', color: '#4a90d9' },
@@ -57,7 +63,7 @@ const sourceLabels: Record<string, { label: string; color: string }> = {
   pack: { label: 'From Pack', color: '#b44ad9' },
 };
 
-export default function MyPacks({ user }: MyPacksProps) {
+export default function MyPacks({ user, permissions, isKeySession }: MyPacksProps) {
   const [packs, setPacks] = useState<Pack[]>([]);
   const [packsLoading, setPacksLoading] = useState(true);
   const [packsError, setPacksError] = useState<string | null>(null);
@@ -350,15 +356,17 @@ export default function MyPacks({ user }: MyPacksProps) {
             </Typography>
           </Box>
         </Box>
-        <Button
-          component={Link}
-          to="/create"
-          variant="contained"
-          startIcon={<AddIcon />}
-          sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
-        >
-          New Pack
-        </Button>
+        {hasPerm(permissions, isKeySession, 'create') && (
+          <Button
+            component={Link}
+            to="/create"
+            variant="contained"
+            startIcon={<AddIcon />}
+            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+          >
+            New Pack
+          </Button>
+        )}
       </Box>
 
       {/* My Stash Section */}
@@ -562,16 +570,20 @@ export default function MyPacks({ user }: MyPacksProps) {
                         <OpenInNewIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Edit">
-                      <IconButton size="small" onClick={() => handleEditClick(pack)} sx={{ color: 'white' }}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton size="small" onClick={() => handleDeleteClick(pack)} sx={{ color: '#ff6b6b' }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    {hasPerm(permissions, isKeySession, 'edit') && (
+                      <Tooltip title="Edit">
+                        <IconButton size="small" onClick={() => handleEditClick(pack)} sx={{ color: 'white' }}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {hasPerm(permissions, isKeySession, 'delete') && (
+                      <Tooltip title="Delete">
+                        <IconButton size="small" onClick={() => handleDeleteClick(pack)} sx={{ color: '#ff6b6b' }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Stack>
                 </Box>
 

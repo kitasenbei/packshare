@@ -236,20 +236,22 @@ function BottomNav({ user, authMode, keyName, permissions, onLogout, onKeyLogin 
         <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.2)' }} />
 
         {/* Create Button */}
-        <Button
-          component={Link}
-          to="/create"
-          variant="contained"
-          startIcon={<AddIcon />}
-          sx={{
-            backgroundColor: accent,
-            color: 'white',
-            '&:hover': { backgroundColor: accentHover },
-            px: 2,
-          }}
-        >
-          Add Pack
-        </Button>
+        {(!isKey || permissions.includes('create')) && (
+          <Button
+            component={Link}
+            to="/create"
+            variant="contained"
+            startIcon={<AddIcon />}
+            sx={{
+              backgroundColor: accent,
+              color: 'white',
+              '&:hover': { backgroundColor: accentHover },
+              px: 2,
+            }}
+          >
+            Add Pack
+          </Button>
+        )}
 
         {/* Supporter - subtle heart */}
         <Box
@@ -609,8 +611,8 @@ function App() {
               <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Routes>
                   <Route path="/" element={<Home user={user} />} />
-                  <Route path="/create" element={<PackCreator user={user} />} />
-                  <Route path="/my-packs" element={<MyPacks user={user} />} />
+                  <Route path="/create" element={<PackCreator user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
+                  <Route path="/my-packs" element={<MyPacks user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
                   <Route path="/explore" element={<Explore />} />
                   <Route path="/tournaments" element={<Tournaments />} />
                   <Route path="/keys" element={<KeyManager user={user} authMode={authMode} />} />

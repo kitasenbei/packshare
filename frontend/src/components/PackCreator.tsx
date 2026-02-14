@@ -35,6 +35,8 @@ import RemoveButton from './RemoveButton';
 
 interface PackCreatorProps {
   user?: User | null;
+  permissions?: string[];
+  isKeySession?: boolean;
 }
 
 interface PackBeatmap {
@@ -50,8 +52,18 @@ interface PackBeatmap {
 
 const STEPS = ['Details', 'Beatmaps', 'Review'];
 
-export default function PackCreator({ user }: PackCreatorProps) {
+export default function PackCreator({ user, permissions, isKeySession }: PackCreatorProps) {
   const navigate = useNavigate();
+
+  if (isKeySession && !permissions?.includes('create')) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 8 }}>
+        <Typography variant="h6" color="text.secondary">
+          Your access key doesn't have permission to create packs
+        </Typography>
+      </Box>
+    );
+  }
   const [step, setStep] = useState(0);
   const [packName, setPackName] = useState('');
   const [packDescription, setPackDescription] = useState('');
