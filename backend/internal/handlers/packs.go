@@ -154,7 +154,7 @@ func (h *PackHandler) CreatePack(c *fiber.Ctx) error {
 	}
 
 	if !claims.HasPermission("create") {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access key lacks 'create' permission"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "access key lacks 'create' permission"})
 	}
 
 	var req CreatePackRequest
@@ -287,7 +287,7 @@ func (h *PackHandler) UpdatePack(c *fiber.Ctx) error {
 	}
 
 	if !claims.HasPermission("edit") {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access key lacks 'edit' permission"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "access key lacks 'edit' permission"})
 	}
 
 	code := c.Params("code")
@@ -404,7 +404,7 @@ func (h *PackHandler) DeletePack(c *fiber.Ctx) error {
 	}
 
 	if !claims.HasPermission("delete") {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access key lacks 'delete' permission"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "access key lacks 'delete' permission"})
 	}
 
 	code := c.Params("code")

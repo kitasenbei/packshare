@@ -22,6 +22,15 @@ function authHeaders(): Record<string, string> {
   };
 }
 
+async function parseError(response: Response, fallback: string): Promise<string> {
+  try {
+    const data = await response.json();
+    return data.error || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function createKey(
   name: string,
   permissions: string[],
@@ -39,8 +48,7 @@ export async function createKey(
   });
 
   if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || 'Failed to create key');
+    throw new Error(await parseError(response, 'Failed to create key'));
   }
 
   return response.json();
@@ -52,8 +60,7 @@ export async function listKeys(): Promise<AccessKey[]> {
   });
 
   if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || 'Failed to list keys');
+    throw new Error(await parseError(response, 'Failed to list keys'));
   }
 
   return response.json();
@@ -66,7 +73,6 @@ export async function revokeKey(id: number): Promise<void> {
   });
 
   if (!response.ok && response.status !== 204) {
-    const data = await response.json();
-    throw new Error(data.error || 'Failed to revoke key');
+    throw new Error(await parseError(response, 'Failed to revoke key'));
   }
 }

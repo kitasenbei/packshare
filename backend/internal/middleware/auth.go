@@ -143,7 +143,7 @@ func OAuthOnlyMiddleware(secret string) fiber.Handler {
 		}
 
 		if claims.KeyName != "" {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "this endpoint requires OAuth authentication, not an access key",
 			})
 		}

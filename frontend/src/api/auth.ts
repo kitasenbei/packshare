@@ -155,8 +155,14 @@ export async function loginWithKey(key: string): Promise<AuthState> {
   });
 
   if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || 'Invalid access key');
+    let message = 'Invalid access key';
+    try {
+      const data = await response.json();
+      message = data.error || message;
+    } catch {
+      // Response wasn't JSON (e.g. proxy error)
+    }
+    throw new Error(message);
   }
 
   const data = await response.json();
