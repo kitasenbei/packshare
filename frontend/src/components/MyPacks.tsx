@@ -565,6 +565,11 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Open shared link">
+                      <IconButton size="small" component={Link} to={`/s/${pack.share_code}`} sx={{ color: 'white' }}>
+                        <LinkIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="Open full page">
                       <IconButton size="small" component={Link} to={`/pack/${pack.share_code}`} sx={{ color: 'white' }}>
                         <OpenInNewIcon fontSize="small" />

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Typography, Button, IconButton, Tooltip, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
 import DownloadIcon from '@mui/icons-material/Download';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
@@ -254,24 +255,42 @@ export default function SharedPack({ packId }: SharedPackProps) {
             )}
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: 0.6 }}>
-          <Typography variant="body2">sent with</Typography>
-          <Typography sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-            pack
-            <Box
-              component="span"
-              sx={{
-                backgroundColor: '#ff66ab',
-                px: 0.5,
-                py: 0.15,
-                borderRadius: 0.5,
-                ml: 0.5,
-                fontSize: 12,
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: 0.6 }}>
+            <Typography variant="body2">sent with</Typography>
+            <Typography sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+              pack
+              <Box
+                component="span"
+                sx={{
+                  backgroundColor: '#ff66ab',
+                  px: 0.5,
+                  py: 0.15,
+                  borderRadius: 0.5,
+                  ml: 0.5,
+                  fontSize: 12,
+                }}
+              >
+                share
+              </Box>
+            </Typography>
+          </Box>
+          <Tooltip title="Copy link">
+            <IconButton
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                setSnackbar({ open: true, message: 'Link copied!' });
               }}
+              sx={{
+                color: 'rgba(255,255,255,0.5)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                '&:hover': { color: '#ff66ab', borderColor: '#ff66ab' },
+              }}
+              size="small"
             >
-              share
-            </Box>
-          </Typography>
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
 
