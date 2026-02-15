@@ -202,7 +202,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
       </Box>
 
       {/* Two-column layout: beatmap list (left) + sidebar (right) */}
-      <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
+      <Box sx={{ display: 'flex', gap: 3, alignItems: { xs: 'stretch', md: 'flex-start' }, flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Left column — Beatmap list */}
         <Paper sx={{ overflow: 'hidden', flex: 1, minWidth: 0, borderRadius: 2 }}>
           {/* Info bar */}
