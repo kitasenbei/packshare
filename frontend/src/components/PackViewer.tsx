@@ -19,6 +19,7 @@ import { getPack, type Pack } from '../api/packs';
 import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
 import OsuButton from './OsuButton';
+import PackBanner from './PackBanner';
 
 const MAPS_PER_PAGE = 10;
 
@@ -136,6 +137,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
     <Box sx={{}}>
       {/* Header Card */}
       <Paper sx={{ overflow: 'hidden', mb: 3 }}>
+        <PackBanner beatmaps={pack.beatmaps} />
         <Box sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Box sx={{ flex: 1 }}>
