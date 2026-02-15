@@ -29,17 +29,19 @@ type Pack struct {
 }
 
 type PackBeatmap struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	PackID    uint      `gorm:"not null;index" json:"pack_id"`
-	BeatmapID int64     `gorm:"not null" json:"beatmapset_id"`
-	Title     string    `gorm:"not null" json:"title"`
-	Artist    string    `json:"artist"`
-	Creator   string    `json:"creator"`
-	BPM       float64   `json:"bpm"`
-	Keys      int       `json:"keys"`
-	Status    string    `json:"status"`
-	SortOrder int       `gorm:"default:0" json:"sort_order"`
-	CreatedAt time.Time `json:"created_at"`
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	PackID         uint      `gorm:"not null;index" json:"pack_id"`
+	BeatmapID      int64     `gorm:"not null" json:"beatmapset_id"`
+	Title          string    `gorm:"not null" json:"title"`
+	Artist         string    `json:"artist"`
+	Creator        string    `json:"creator"`
+	BPM            float64   `json:"bpm"`
+	Keys           int       `json:"keys"`
+	StarRating     *float64  `json:"star_rating,omitempty"`
+	DifficultyName string    `json:"difficulty_name,omitempty"`
+	Status         string    `json:"status"`
+	SortOrder      int       `gorm:"default:0" json:"sort_order"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type AccessKey struct {

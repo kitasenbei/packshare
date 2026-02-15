@@ -97,7 +97,7 @@ export default function BeatmapRow({
     }
   }
 
-  if (starRating != null && !starRatingSeparate) {
+  if (starRating != null && !starRatingSeparate && beatmapsetId == null) {
     subtitleParts.push(` · ${starRating.toFixed(2)}*`);
   }
 
@@ -136,6 +136,7 @@ export default function BeatmapRow({
               borderRadius: 1,
               overflow: 'hidden',
               flexShrink: 0,
+              position: 'relative',
             }}
           >
             <Box
@@ -144,6 +145,28 @@ export default function BeatmapRow({
               alt=""
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
+            {starRating != null && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 0.25,
+                  py: 0.25,
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)',
+                  color: '#f5c842',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+              >
+                ★ {starRating.toFixed(2)}
+              </Box>
+            )}
           </Box>
         )}
 

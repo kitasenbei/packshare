@@ -36,13 +36,15 @@ type CreatePackRequest struct {
 }
 
 type BeatmapRequest struct {
-	BeatmapsetID int64   `json:"beatmapset_id"`
-	Title        string  `json:"title"`
-	Artist       string  `json:"artist"`
-	Creator      string  `json:"creator"`
-	BPM          float64 `json:"bpm"`
-	Keys         int     `json:"keys"`
-	Status       string  `json:"status"`
+	BeatmapsetID   int64    `json:"beatmapset_id"`
+	Title          string   `json:"title"`
+	Artist         string   `json:"artist"`
+	Creator        string   `json:"creator"`
+	BPM            float64  `json:"bpm"`
+	Keys           int      `json:"keys"`
+	StarRating     *float64 `json:"star_rating"`
+	DifficultyName string   `json:"difficulty_name"`
+	Status         string   `json:"status"`
 }
 
 func generateShareCode() (string, error) {
@@ -243,15 +245,17 @@ func (h *PackHandler) CreatePack(c *fiber.Ctx) error {
 		beatmaps := make([]models.PackBeatmap, len(req.Beatmaps))
 		for i, bm := range req.Beatmaps {
 			beatmaps[i] = models.PackBeatmap{
-				PackID:    pack.ID,
-				BeatmapID: bm.BeatmapsetID,
-				Title:     truncate(bm.Title, maxFieldLength),
-				Artist:    truncate(bm.Artist, maxFieldLength),
-				Creator:   truncate(bm.Creator, maxFieldLength),
-				BPM:       bm.BPM,
-				Keys:      bm.Keys,
-				Status:    truncate(bm.Status, 50),
-				SortOrder: i,
+				PackID:         pack.ID,
+				BeatmapID:      bm.BeatmapsetID,
+				Title:          truncate(bm.Title, maxFieldLength),
+				Artist:         truncate(bm.Artist, maxFieldLength),
+				Creator:        truncate(bm.Creator, maxFieldLength),
+				BPM:            bm.BPM,
+				Keys:           bm.Keys,
+				StarRating:     bm.StarRating,
+				DifficultyName: truncate(bm.DifficultyName, maxFieldLength),
+				Status:         truncate(bm.Status, 50),
+				SortOrder:      i,
 			}
 		}
 		if err := tx.Create(&beatmaps).Error; err != nil {
@@ -359,15 +363,17 @@ func (h *PackHandler) UpdatePack(c *fiber.Ctx) error {
 			beatmaps := make([]models.PackBeatmap, len(req.Beatmaps))
 			for i, bm := range req.Beatmaps {
 				beatmaps[i] = models.PackBeatmap{
-					PackID:    pack.ID,
-					BeatmapID: bm.BeatmapsetID,
-					Title:     truncate(bm.Title, maxFieldLength),
-					Artist:    truncate(bm.Artist, maxFieldLength),
-					Creator:   truncate(bm.Creator, maxFieldLength),
-					BPM:       bm.BPM,
-					Keys:      bm.Keys,
-					Status:    truncate(bm.Status, 50),
-					SortOrder: i,
+					PackID:         pack.ID,
+					BeatmapID:      bm.BeatmapsetID,
+					Title:          truncate(bm.Title, maxFieldLength),
+					Artist:         truncate(bm.Artist, maxFieldLength),
+					Creator:        truncate(bm.Creator, maxFieldLength),
+					BPM:            bm.BPM,
+					Keys:           bm.Keys,
+					StarRating:     bm.StarRating,
+					DifficultyName: truncate(bm.DifficultyName, maxFieldLength),
+					Status:         truncate(bm.Status, 50),
+					SortOrder:      i,
 				}
 			}
 			if err := tx.Create(&beatmaps).Error; err != nil {
