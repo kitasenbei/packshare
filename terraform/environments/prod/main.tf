@@ -126,8 +126,6 @@ module "lambda_auth" {
   source = "../../modules/lambda-auth"
 
   environment               = var.environment
-  vpc_id                    = module.vpc.vpc_id
-  subnet_ids                = module.vpc.private_subnet_ids
   lambda_role_arn           = module.iam.lambda_auth_role_arn
   lambda_zip_path           = var.auth_lambda_zip
   api_gateway_execution_arn = module.api_gateway.execution_arn
