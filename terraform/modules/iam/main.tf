@@ -72,11 +72,6 @@ resource "aws_iam_role_policy_attachment" "lambda_backend_vpc" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_auth_vpc" {
-  role       = aws_iam_role.lambda_auth.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-}
-
 # Secrets Manager access policy for backend
 resource "aws_iam_policy" "lambda_secrets_backend" {
   name        = "${var.environment}-lambda-backend-secrets-policy"

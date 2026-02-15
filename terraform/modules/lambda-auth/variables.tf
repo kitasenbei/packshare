@@ -3,16 +3,6 @@ variable "environment" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "VPC ID"
-  type        = string
-}
-
-variable "subnet_ids" {
-  description = "Subnet IDs for Lambda"
-  type        = list(string)
-}
-
 variable "lambda_role_arn" {
   description = "IAM role ARN for Lambda"
   type        = string

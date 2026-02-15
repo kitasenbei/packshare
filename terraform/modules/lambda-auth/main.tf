@@ -9,35 +9,7 @@ terraform {
   }
 }
 
-# Security Group for Lambda
-resource "aws_security_group" "lambda" {
-  name        = "${var.environment}-lambda-auth-sg"
-  description = "Security group for Lambda auth service"
-  vpc_id      = var.vpc_id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
-
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS for osu! API and Secrets Manager"
-  }
-
-  tags = {
-    Name        = "${var.environment}-lambda-auth-sg"
-    Environment = var.environment
-  }
-}
-
-# Lambda function
+# Lambda function (no VPC — only calls osu! API + Secrets Manager via internet)
 resource "aws_lambda_function" "auth" {
   function_name = "${var.environment}-packshare-auth"
   description   = "PackShare Python auth service"
@@ -52,11 +24,6 @@ resource "aws_lambda_function" "auth" {
   memory_size                    = var.memory_size
   timeout                        = var.timeout
   reserved_concurrent_executions = var.reserved_concurrency
-
-  vpc_config {
-    subnet_ids         = var.subnet_ids
-    security_group_ids = [aws_security_group.lambda.id]
-  }
 
   environment {
     variables = {

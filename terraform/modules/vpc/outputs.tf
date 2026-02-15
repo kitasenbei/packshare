@@ -35,5 +35,5 @@ output "availability_zones" {
 
 output "nat_gateway_ips" {
   description = "Public IPs of NAT gateways"
-  value       = aws_eip.nat[*].public_ip
+  value       = var.enable_nat_gateway ? aws_eip.nat[*].public_ip : []
 }

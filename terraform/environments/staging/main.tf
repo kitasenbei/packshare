@@ -55,7 +55,8 @@ module "vpc" {
   aws_region         = var.aws_region
   vpc_cidr           = "10.0.0.0/16"
   az_count           = 2
-  single_nat_gateway = true  # Cost savings for staging
+  enable_nat_gateway = false  # Auth Lambda moved out of VPC, backend uses VPC endpoint for Secrets Manager
+  single_nat_gateway = true
 }
 
 # Secrets Manager
@@ -137,13 +138,11 @@ module "lambda_backend" {
   allowed_origins = "https://${local.domain_name}"
 }
 
-# Lambda Auth
+# Lambda Auth (no VPC — only needs osu! API + Secrets Manager via internet)
 module "lambda_auth" {
   source = "../../modules/lambda-auth"
 
   environment               = var.environment
-  vpc_id                    = module.vpc.vpc_id
-  subnet_ids                = module.vpc.private_subnet_ids
   lambda_role_arn           = module.iam.lambda_auth_role_arn
   lambda_zip_path           = var.auth_lambda_zip
   api_gateway_execution_arn = module.api_gateway.execution_arn

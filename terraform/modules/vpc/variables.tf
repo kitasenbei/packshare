@@ -15,6 +15,12 @@ variable "az_count" {
   default     = 2
 }
 
+variable "enable_nat_gateway" {
+  description = "Whether to create NAT gateway(s)"
+  type        = bool
+  default     = true
+}
+
 variable "single_nat_gateway" {
   description = "Use a single NAT gateway instead of one per AZ"
   type        = bool
