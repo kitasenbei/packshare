@@ -36,9 +36,9 @@ module "vpc" {
 
   environment        = var.environment
   aws_region         = var.aws_region
-  vpc_cidr           = "10.1.0.0/16"  # Different CIDR from staging
+  vpc_cidr           = "10.1.0.0/16" # Different CIDR from staging
   az_count           = 2
-  single_nat_gateway = false  # NAT per AZ for high availability
+  single_nat_gateway = false # NAT per AZ for high availability
 }
 
 # Secrets Manager
@@ -149,7 +149,7 @@ module "frontend" {
 
   environment            = var.environment
   aws_account_id         = data.aws_caller_identity.current.account_id
-  cloudfront_price_class = "PriceClass_200"  # US, Canada, Europe, Asia, Middle East, Africa
+  cloudfront_price_class = "PriceClass_200" # US, Canada, Europe, Asia, Middle East, Africa
   api_gateway_domain     = replace(module.api_gateway.api_endpoint, "https://", "")
   acm_certificate_arn    = var.acm_certificate_arn
   domain_names           = var.domain_name != "" ? [var.domain_name] : []

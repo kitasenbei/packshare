@@ -68,11 +68,11 @@ resource "aws_lambda_function" "backend" {
 
   environment {
     variables = {
-      ENVIRONMENT          = var.environment
-      DB_SECRETS_ARN       = var.db_secrets_arn
-      JWT_SECRET_ARN       = var.jwt_secret_arn
-      ALLOWED_ORIGINS      = var.allowed_origins
-      AWS_SECRETS_MANAGER  = "true"
+      ENVIRONMENT         = var.environment
+      DB_SECRETS_ARN      = var.db_secrets_arn
+      JWT_SECRET_ARN      = var.jwt_secret_arn
+      ALLOWED_ORIGINS     = var.allowed_origins
+      AWS_SECRETS_MANAGER = "true"
     }
   }
 

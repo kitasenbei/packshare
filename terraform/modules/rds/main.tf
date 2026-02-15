@@ -94,8 +94,8 @@ resource "aws_db_instance" "main" {
   performance_insights_retention_period = var.performance_insights_enabled ? 7 : null
 
   # Deletion protection
-  deletion_protection      = var.deletion_protection
-  skip_final_snapshot      = var.environment == "staging" ? true : false
+  deletion_protection       = var.deletion_protection
+  skip_final_snapshot       = var.environment == "staging" ? true : false
   final_snapshot_identifier = var.environment == "staging" ? null : "${var.environment}-packshare-final-snapshot"
 
   tags = {

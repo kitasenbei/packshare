@@ -15,9 +15,9 @@ terraform {
 
 # Generate random password for database if not provided
 resource "random_password" "db_password" {
-  count   = var.db_password == "" ? 1 : 0
-  length  = 32
-  special = true
+  count            = var.db_password == "" ? 1 : 0
+  length           = 32
+  special          = true
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 

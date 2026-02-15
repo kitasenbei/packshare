@@ -27,12 +27,12 @@ resource "aws_lambda_function" "auth" {
 
   environment {
     variables = {
-      ENVIRONMENT          = var.environment
-      JWT_SECRET_ARN       = var.jwt_secret_arn
-      OSU_OAUTH_ARN        = var.osu_oauth_arn
-      DEFAULT_REDIRECT     = var.default_redirect
-      ALLOWED_ORIGINS      = var.allowed_origins
-      AWS_SECRETS_MANAGER  = "true"
+      ENVIRONMENT         = var.environment
+      JWT_SECRET_ARN      = var.jwt_secret_arn
+      OSU_OAUTH_ARN       = var.osu_oauth_arn
+      DEFAULT_REDIRECT    = var.default_redirect
+      ALLOWED_ORIGINS     = var.allowed_origins
+      AWS_SECRETS_MANAGER = "true"
     }
   }
 

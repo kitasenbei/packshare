@@ -55,7 +55,7 @@ module "vpc" {
   aws_region         = var.aws_region
   vpc_cidr           = "10.0.0.0/16"
   az_count           = 2
-  enable_nat_gateway = false  # Auth Lambda moved out of VPC, backend uses VPC endpoint for Secrets Manager
+  enable_nat_gateway = false # Auth Lambda moved out of VPC, backend uses VPC endpoint for Secrets Manager
   single_nat_gateway = true
 }
 
@@ -131,7 +131,7 @@ module "lambda_backend" {
   # Staging configuration
   memory_size          = 256
   timeout              = 30
-  reserved_concurrency = -1  # No reservation for staging
+  reserved_concurrency = -1 # No reservation for staging
 
   db_secrets_arn  = module.secrets.db_credentials_arn
   jwt_secret_arn  = module.secrets.jwt_secret_arn
@@ -150,7 +150,7 @@ module "lambda_auth" {
   # Staging configuration
   memory_size          = 256
   timeout              = 30
-  reserved_concurrency = -1  # No reservation for staging
+  reserved_concurrency = -1 # No reservation for staging
 
   jwt_secret_arn   = module.secrets.jwt_secret_arn
   osu_oauth_arn    = module.secrets.osu_oauth_arn
@@ -164,7 +164,7 @@ module "frontend" {
 
   environment            = var.environment
   aws_account_id         = data.aws_caller_identity.current.account_id
-  cloudfront_price_class = "PriceClass_100"  # US, Canada, Europe
+  cloudfront_price_class = "PriceClass_100" # US, Canada, Europe
   api_gateway_domain     = replace(module.api_gateway.api_endpoint, "https://", "")
   acm_certificate_arn    = local.certificate_arn
   domain_names           = [local.domain_name]
