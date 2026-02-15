@@ -108,5 +108,5 @@ jobs:
           echo "## ✅ Deployed to ${{ steps.env.outputs.env }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.env.outputs.env }}" = "staging" ]; then
-            echo "**URL:** https://d3imer994mgg77.cloudfront.net" >> $GITHUB_STEP_SUMMARY
+            echo "**URL:** https://staging.packshare.cloud" >> $GITHUB_STEP_SUMMARY
           fi

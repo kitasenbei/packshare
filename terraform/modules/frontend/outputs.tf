@@ -27,3 +27,8 @@ output "cloudfront_url" {
   description = "CloudFront distribution URL"
   value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
 }
+
+output "cloudfront_hosted_zone_id" {
+  description = "CloudFront distribution hosted zone ID (for Route 53 alias)"
+  value       = aws_cloudfront_distribution.frontend.hosted_zone_id
+}

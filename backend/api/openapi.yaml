@@ -18,7 +18,7 @@ info:
     name: PackShare
 
 servers:
-  - url: https://d3imer994mgg77.cloudfront.net
+  - url: https://staging.packshare.cloud
     description: Staging
   - url: http://localhost:8080
     description: Local development

@@ -69,7 +69,7 @@ output "jwt_secret_name" {
 # URLs for application
 output "application_url" {
   description = "Main application URL"
-  value       = var.domain_name != "" ? "https://${var.domain_name}" : module.frontend.cloudfront_url
+  value       = "https://${local.domain_name}"
 }
 
 output "api_url" {

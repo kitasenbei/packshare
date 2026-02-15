@@ -30,6 +30,23 @@ provider "aws" {
 # Get current AWS account ID
 data "aws_caller_identity" "current" {}
 
+# Pull shared DNS state (hosted zone + ACM cert)
+data "terraform_remote_state" "dns" {
+  backend = "s3"
+
+  config = {
+    bucket = "packshare-terraform-state"
+    key    = "dns/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
+locals {
+  domain_name     = "staging.packshare.cloud"
+  zone_id         = data.terraform_remote_state.dns.outputs.zone_id
+  certificate_arn = data.terraform_remote_state.dns.outputs.certificate_arn
+}
+
 # VPC
 module "vpc" {
   source = "../../modules/vpc"
@@ -91,7 +108,7 @@ module "api_gateway" {
   environment               = var.environment
   backend_lambda_invoke_arn = module.lambda_backend.invoke_arn
   auth_lambda_invoke_arn    = module.lambda_auth.invoke_arn
-  allowed_origins           = var.domain_name != "" ? ["https://${var.domain_name}"] : ["*"]
+  allowed_origins           = ["https://${local.domain_name}"]
 
   # Staging throttling limits
   throttling_burst_limit = 50
@@ -117,7 +134,7 @@ module "lambda_backend" {
 
   db_secrets_arn  = module.secrets.db_credentials_arn
   jwt_secret_arn  = module.secrets.jwt_secret_arn
-  allowed_origins = var.domain_name != "" ? "https://${var.domain_name}" : "*"
+  allowed_origins = "https://${local.domain_name}"
 }
 
 # Lambda Auth
@@ -138,8 +155,8 @@ module "lambda_auth" {
 
   jwt_secret_arn   = module.secrets.jwt_secret_arn
   osu_oauth_arn    = module.secrets.osu_oauth_arn
-  default_redirect = var.domain_name != "" ? "https://${var.domain_name}" : module.frontend.cloudfront_url
-  allowed_origins  = var.domain_name != "" ? "https://${var.domain_name}" : "*"
+  default_redirect = "https://${local.domain_name}"
+  allowed_origins  = "https://${local.domain_name}"
 }
 
 # Frontend (S3 + CloudFront)
@@ -150,6 +167,31 @@ module "frontend" {
   aws_account_id         = data.aws_caller_identity.current.account_id
   cloudfront_price_class = "PriceClass_100"  # US, Canada, Europe
   api_gateway_domain     = replace(module.api_gateway.api_endpoint, "https://", "")
-  acm_certificate_arn    = var.acm_certificate_arn
-  domain_names           = var.domain_name != "" ? [var.domain_name] : []
+  acm_certificate_arn    = local.certificate_arn
+  domain_names           = [local.domain_name]
+}
+
+# DNS record: staging.packshare.cloud → CloudFront
+resource "aws_route53_record" "staging" {
+  zone_id = local.zone_id
+  name    = local.domain_name
+  type    = "A"
+
+  alias {
+    name                   = module.frontend.cloudfront_domain_name
+    zone_id                = module.frontend.cloudfront_hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "staging_ipv6" {
+  zone_id = local.zone_id
+  name    = local.domain_name
+  type    = "AAAA"
+
+  alias {
+    name                   = module.frontend.cloudfront_domain_name
+    zone_id                = module.frontend.cloudfront_hosted_zone_id
+    evaluate_target_health = false
+  }
 }
