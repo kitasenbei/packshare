@@ -104,7 +104,7 @@ export default function Explore() {
       </Box>
 
       {/* Search & Filters */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={1}>
+      <Paper sx={{ p: 2, mb: 3 }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
           <TextField
             placeholder="Search packs..."
@@ -191,7 +191,7 @@ export default function Explore() {
       )}
 
       {!loading && !error && data && data.packs.length === 0 && (
-        <Paper sx={{ p: 6, textAlign: 'center' }} elevation={2}>
+        <Paper sx={{ p: 6, textAlign: 'center' }}>
           <ExploreIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" gutterBottom>
             {search ? 'No packs found' : 'No packs yet'}

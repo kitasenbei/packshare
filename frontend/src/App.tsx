@@ -45,7 +45,7 @@ function makeTheme(accent: string, accentHover: string) {
         dark: accentHover,
       },
       background: {
-        default: '#f0f2f5',
+        default: '#ffffff',
       },
     },
     components: {
@@ -58,9 +58,12 @@ function makeTheme(accent: string, accentHover: string) {
         },
       },
       MuiPaper: {
+        defaultProps: {
+          elevation: 0,
+        },
         styleOverrides: {
           root: {
-            borderRadius: 12,
+            borderRadius: 8,
           },
         },
       },
@@ -205,14 +208,6 @@ function App() {
                   pt: `${TOPNAV_HEIGHT}px`,
                   minHeight: '100vh',
                   backgroundColor: 'background.default',
-                  backgroundImage: `
-                    linear-gradient(45deg, rgba(0,0,0,0.02) 25%, transparent 25%),
-                    linear-gradient(-45deg, rgba(0,0,0,0.02) 25%, transparent 25%),
-                    linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.02) 75%),
-                    linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.02) 75%)
-                  `,
-                  backgroundSize: '40px 40px',
-                  backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0px',
                 }}
               >
                 <Container maxWidth="lg" sx={{ py: 4 }}>

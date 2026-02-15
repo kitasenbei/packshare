@@ -474,7 +474,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
                   }}
                 />
               )}
-              <Avatar src={user.avatar_url} sx={{ width: 28, height: 28, border: `2px solid ${accent}` }} />
+              <Avatar src={user.avatar_url} sx={{ width: 28, height: 28 }} />
             </Box>
           ) : (
             <Button

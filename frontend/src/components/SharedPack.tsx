@@ -1,8 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Button, IconButton, Tooltip, Snackbar, Alert, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  Button,
+  IconButton,
+  Tooltip,
+  Snackbar,
+  Alert,
+  CircularProgress,
+  Stack,
+} from '@mui/material';
 import { Link } from 'react-router-dom';
 import DownloadIcon from '@mui/icons-material/Download';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ShareIcon from '@mui/icons-material/Share';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
@@ -158,6 +170,23 @@ export default function SharedPack({ packId }: SharedPackProps) {
     setSnackbar({ open: true, message: `Starting ${toDownload.length} downloads...` });
   };
 
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: pack?.name,
+          text: pack ? `Check out this beatmap pack: ${pack.name}` : undefined,
+          url: shareUrl,
+        });
+        return;
+      } catch {
+        // User cancelled or share failed, fall back to copy
+      }
+    }
+    navigator.clipboard.writeText(shareUrl);
+    setSnackbar({ open: true, message: 'Link copied to clipboard!' });
+  };
 
   const handleOpenOsu = (beatmap: Pack['beatmaps'][0]) => {
     window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}`, '_blank');
@@ -165,7 +194,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
 
   if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white', p: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <CircularProgress sx={{ color: 'primary.main' }} />
       </Box>
     );
@@ -173,9 +202,9 @@ export default function SharedPack({ packId }: SharedPackProps) {
 
   if (error || !pack) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white', p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <Typography variant="h4" sx={{ mb: 2 }}>Pack not found</Typography>
-        <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>{error || 'This pack may have been deleted or the link is invalid.'}</Typography>
+        <Typography color="text.secondary">{error || 'This pack may have been deleted or the link is invalid.'}</Typography>
       </Box>
     );
   }
@@ -183,19 +212,19 @@ export default function SharedPack({ packId }: SharedPackProps) {
   const allInStash = isLoggedIn && pack.beatmaps.every(b => stashedIds.has(b.id));
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white', p: 4 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
-        <Box>
+    <Box sx={{ minHeight: '100vh', py: 6 }}>
+      <Container maxWidth="md">
+        {/* Header */}
+        <Paper sx={{ p: 4, mb: 3, textAlign: 'center' }}>
           <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
             {pack.name}
           </Typography>
           {pack.description && (
-            <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
               {pack.description}
             </Typography>
           )}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 3 }}>
             {pack.user ? (
               <Link
                 to={`/explore?user_id=${pack.user.id}&username=${encodeURIComponent(pack.user.username)}`}
@@ -209,25 +238,25 @@ export default function SharedPack({ packId }: SharedPackProps) {
                     sx={{ width: 24, height: 24, borderRadius: '50%' }}
                   />
                 )}
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'primary.main' } }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
                   by {pack.user.username}
                 </Typography>
               </Link>
             ) : (
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+              <Typography variant="body2" color="text.secondary">
                 by Unknown
               </Typography>
             )}
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+            <Typography variant="body2" color="text.disabled">
               · {pack.beatmaps.length} maps
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap">
             <Button
               variant="contained"
               startIcon={<DownloadIcon />}
               onClick={handleDownloadSelected}
-              sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
+              sx={{ borderRadius: 99, px: 3 }}
             >
               {selectedIds.size === 0
                 ? 'Download Whole Pack'
@@ -242,146 +271,158 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 onClick={handleSaveAllToStash}
                 disabled={allInStash}
                 sx={{
-                  borderColor: allInStash ? 'rgba(255,255,255,0.2)' : 'primary.main',
-                  color: allInStash ? 'rgba(255,255,255,0.4)' : 'primary.main',
-                  '&:hover': {
-                    borderColor: 'primary.dark',
-                    backgroundColor: 'rgba(255,102,171,0.1)',
-                  },
+                  borderRadius: 99,
+                  px: 3,
+                  borderColor: allInStash ? '#e0e0e0' : undefined,
+                  color: allInStash ? 'text.disabled' : undefined,
                 }}
               >
                 {allInStash ? 'All Saved' : 'Save All to Stash'}
               </Button>
             )}
+            <Button
+              variant="outlined"
+              startIcon={<ShareIcon />}
+              onClick={handleShare}
+              sx={{
+                borderRadius: 99,
+                px: 3,
+                color: 'text.secondary',
+                borderColor: '#e0e0e0',
+                '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
+              }}
+            >
+              Share
+            </Button>
+          </Stack>
+        </Paper>
+
+        {/* Map List */}
+        <Paper sx={{ overflow: 'hidden' }}>
+          <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Beatmaps
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => {
+                setSelectedIds((prev) =>
+                  prev.size === pack.beatmaps.length
+                    ? new Set()
+                    : new Set(pack.beatmaps.map(b => b.id)),
+                );
+              }}
+              sx={{ color: 'primary.main' }}
+            >
+              {selectedIds.size === pack.beatmaps.length ? 'Deselect all' : 'Select all'}
+            </Button>
           </Box>
-        </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: 0.6 }}>
-            <Typography variant="body2">sent with</Typography>
-            <Typography sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ p: 1 }}>
+            {pack.beatmaps.map((beatmap) => {
+              const isInStash = isLoggedIn && stashedIds.has(beatmap.id);
+              return (
+                <BeatmapRow
+                  key={beatmap.id}
+                  title={beatmap.title}
+                  artist={beatmap.artist}
+                  keys={beatmap.keys}
+                  creator={beatmap.creator}
+                  creatorPrefix="mapped by"
+                  starRating={beatmap.star_rating}
+                  beatmapsetId={beatmap.beatmapset_id}
+                  density="compact"
+                  stashHighlight={isInStash}
+                  onClick={() => handleToggleSelect(beatmap.id)}
+                  sx={selectedIds.has(beatmap.id) ? { backgroundColor: 'rgba(100,180,255,0.08)' } : undefined}
+                  actions={
+                    <>
+                      {isLoggedIn && (
+                        <Tooltip title={isInStash ? 'Remove from stash' : 'Save to stash'}>
+                          <IconButton
+                            onClick={() => handleSaveToStash(beatmap)}
+                            sx={{
+                              color: isInStash ? 'primary.main' : 'text.disabled',
+                              '&:hover': { color: 'primary.main' },
+                            }}
+                          >
+                            {isInStash ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <OsuButton onClick={() => handleOpenOsu(beatmap)} />
+                      {selectedIds.has(beatmap.id) ? (
+                        <Button
+                          size="small"
+                          startIcon={<CheckCircleIcon fontSize="small" />}
+                          onClick={(e) => { e.stopPropagation(); handleToggleSelect(beatmap.id); }}
+                          sx={{
+                            color: 'primary.main',
+                            textTransform: 'none',
+                            minWidth: 'auto',
+                          }}
+                        >
+                          Selected
+                        </Button>
+                      ) : (
+                        <DownloadButton
+                          downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                          downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                          stashData={{
+                            id: beatmap.id,
+                            beatmapsetId: beatmap.beatmapset_id,
+                            title: beatmap.title,
+                            artist: beatmap.artist,
+                            creator: beatmap.creator,
+                            keys: beatmap.keys,
+                            source: 'download',
+                            sourcePackId: pack!.share_code,
+                            sourcePackName: pack!.name,
+                          }}
+                        />
+                      )}
+                    </>
+                  }
+                />
+              );
+            })}
+          </Box>
+        </Paper>
+        {/* Footer */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Typography
+            component={Link}
+            to="/"
+            variant="caption"
+            sx={{
+              textDecoration: 'none',
+              color: 'text.disabled',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              '&:hover': { color: 'text.secondary' },
+            }}
+          >
+            powered by
+            <Box component="span" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
               pack
               <Box
                 component="span"
                 sx={{
                   backgroundColor: 'primary.main',
+                  color: 'white',
                   px: 0.5,
-                  py: 0.15,
+                  py: 0.1,
                   borderRadius: 0.5,
-                  ml: 0.5,
-                  fontSize: 12,
+                  ml: 0.25,
+                  fontSize: 10,
                 }}
               >
                 share
               </Box>
-            </Typography>
-          </Box>
-          <Tooltip title="Copy link">
-            <IconButton
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                setSnackbar({ open: true, message: 'Link copied!' });
-              }}
-              sx={{
-                color: 'rgba(255,255,255,0.5)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                '&:hover': { color: 'primary.main', borderColor: 'primary.main' },
-              }}
-              size="small"
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+            </Box>
+          </Typography>
         </Box>
-      </Box>
-
-      {/* Map List */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-        <Button
-          size="small"
-          onClick={() => {
-            setSelectedIds((prev) =>
-              prev.size === pack.beatmaps.length
-                ? new Set()
-                : new Set(pack.beatmaps.map(b => b.id)),
-            );
-          }}
-          sx={{ color: 'primary.main' }}
-        >
-          {selectedIds.size === pack.beatmaps.length ? 'Deselect all' : 'Select all'}
-        </Button>
-      </Box>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {pack.beatmaps.map((beatmap) => {
-          const isInStash = isLoggedIn && stashedIds.has(beatmap.id);
-          return (
-            <BeatmapRow
-              key={beatmap.id}
-              title={beatmap.title}
-              artist={beatmap.artist}
-              keys={beatmap.keys}
-              creator={beatmap.creator}
-              creatorPrefix="mapped by"
-              starRating={beatmap.star_rating}
-              beatmapsetId={beatmap.beatmapset_id}
-              variant="dark"
-              density="compact"
-              stashHighlight={isInStash}
-              onClick={() => handleToggleSelect(beatmap.id)}
-              sx={selectedIds.has(beatmap.id) ? { backgroundColor: 'rgba(100,180,255,0.12)' } : undefined}
-              actions={
-                <>
-                  {isLoggedIn && (
-                    <Tooltip title={isInStash ? 'Remove from stash' : 'Save to stash'}>
-                      <IconButton
-                        onClick={() => handleSaveToStash(beatmap)}
-                        sx={{
-                          color: isInStash ? 'primary.main' : 'rgba(255,255,255,0.5)',
-                          '&:hover': { color: 'primary.main' },
-                        }}
-                      >
-                        {isInStash ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  <OsuButton onClick={() => handleOpenOsu(beatmap)} variant="dark" />
-                  {selectedIds.has(beatmap.id) ? (
-                    <Button
-                      size="small"
-                      startIcon={<CheckCircleIcon fontSize="small" />}
-                      onClick={(e) => { e.stopPropagation(); handleToggleSelect(beatmap.id); }}
-                      sx={{
-                        color: '#64b4ff',
-                        '&:hover': { color: '#64b4ff' },
-                        textTransform: 'none',
-                        minWidth: 'auto',
-                      }}
-                    >
-                      Selected
-                    </Button>
-                  ) : (
-                    <DownloadButton
-                      downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
-                      downloadName={`${beatmap.artist} - ${beatmap.title}`}
-                      variant="dark"
-                      stashData={{
-                        id: beatmap.id,
-                        beatmapsetId: beatmap.beatmapset_id,
-                        title: beatmap.title,
-                        artist: beatmap.artist,
-                        creator: beatmap.creator,
-                        keys: beatmap.keys,
-                        source: 'download',
-                        sourcePackId: pack!.share_code,
-                        sourcePackName: pack!.name,
-                      }}
-                    />
-                  )}
-                </>
-              }
-            />
-          );
-        })}
-      </Box>
+      </Container>
 
       {/* Snackbar for feedback */}
       <Snackbar
@@ -393,7 +434,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity="success"
-          sx={{ backgroundColor: '#1a1a2e', color: 'white', border: 1, borderColor: 'primary.main' }}
+          sx={{ width: '100%' }}
         >
           {snackbar.message}
         </Alert>

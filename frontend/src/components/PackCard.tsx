@@ -37,22 +37,20 @@ function FullCard({ pack }: { pack: PackCardPack }) {
     <Paper
       component={Link}
       to={`/pack/${pack.share_code}`}
-      elevation={2}
       sx={{
         display: 'block',
         textDecoration: 'none',
         color: 'inherit',
         overflow: 'hidden',
-        transition: 'transform 0.15s, box-shadow 0.15s',
+        transition: 'border-color 0.15s',
         '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: 4,
+          borderColor: 'primary.main',
         },
       }}
     >
       {/* Cover art banner */}
       {hasCoverArt && (
-        <Box sx={{ height: 56, position: 'relative', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex' }}>
+        <Box sx={{ height: 56, position: 'relative', overflow: 'hidden', backgroundColor: '#f5f5f5', display: 'flex' }}>
           {pack.beatmapset_ids.slice(0, 5).map((id) => (
             <Box
               key={id}
@@ -109,10 +107,8 @@ function FullCard({ pack }: { pack: PackCardPack }) {
             </Typography>
           )}
         </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, textAlign: 'right' }}>
-          Created
-          <br />
-          {new Date(pack.created_at).toLocaleDateString()}
+        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+          Created at {new Date(pack.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
         </Typography>
       </Box>
     </Paper>
@@ -126,7 +122,6 @@ function GridCard({ pack }: { pack: PackCardPack }) {
     <Paper
       component={Link}
       to={`/pack/${pack.share_code}`}
-      elevation={2}
       sx={{
         display: 'flex',
         flexDirection: 'column',
@@ -134,15 +129,14 @@ function GridCard({ pack }: { pack: PackCardPack }) {
         color: 'inherit',
         overflow: 'hidden',
         height: '100%',
-        transition: 'transform 0.15s, box-shadow 0.15s',
+        transition: 'border-color 0.15s',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: 6,
+          borderColor: 'primary.main',
         },
       }}
     >
       {/* Cover image strip */}
-      <Box sx={{ height: 80, position: 'relative', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex' }}>
+      <Box sx={{ height: 80, position: 'relative', overflow: 'hidden', backgroundColor: '#f5f5f5', display: 'flex' }}>
         {hasCoverArt ? (
           pack.beatmapset_ids.slice(0, 4).map((id) => (
             <Box
@@ -191,13 +185,13 @@ function GridCard({ pack }: { pack: PackCardPack }) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <MusicNoteIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
             <Typography variant="caption" color="text.secondary">
-              {pack.beatmap_count}
+              {pack.beatmap_count} maps
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <VisibilityIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
             <Typography variant="caption" color="text.secondary">
-              {pack.views.toLocaleString()}
+              {pack.views.toLocaleString()} views
             </Typography>
           </Box>
         </Box>
@@ -211,16 +205,14 @@ function CompactCard({ pack }: { pack: PackCardPack }) {
     <Paper
       component={Link}
       to={`/pack/${pack.share_code}`}
-      elevation={1}
       sx={{
         display: 'block',
         textDecoration: 'none',
         color: 'inherit',
         overflow: 'hidden',
-        transition: 'transform 0.15s, box-shadow 0.15s',
+        transition: 'border-color 0.15s',
         '&:hover': {
-          transform: 'translateY(-1px)',
-          boxShadow: 3,
+          borderColor: 'primary.main',
         },
       }}
     >
@@ -274,7 +266,7 @@ function CompactCard({ pack }: { pack: PackCardPack }) {
           </Box>
         </Box>
         <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-          {new Date(pack.created_at).toLocaleDateString()}
+          Created at {new Date(pack.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
         </Typography>
       </Box>
     </Paper>

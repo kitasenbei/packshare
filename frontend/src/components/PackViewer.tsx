@@ -4,19 +4,17 @@ import {
   Paper,
   Typography,
   Button,
-  IconButton,
-  Tooltip,
   Pagination,
   Stack,
   CircularProgress,
   Snackbar,
   Alert,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import DownloadIcon from '@mui/icons-material/Download';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import BackButton from './BackButton';
 import { getPack, type Pack } from '../api/packs';
 import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
@@ -68,17 +66,11 @@ export default function PackViewer({ packId }: PackViewerProps) {
   if (error || !pack) {
     return (
       <Box sx={{}}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(-1)}
-          sx={{ mb: 2, color: 'text.secondary' }}
-        >
-          Back
-        </Button>
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h5" sx={{ mb: 2 }}>Pack not found</Typography>
           <Typography color="text.secondary">{error || 'This pack may have been deleted or the link is invalid.'}</Typography>
         </Paper>
+        <BackButton onClick={() => navigate(-1)} />
       </Box>
     );
   }
@@ -122,11 +114,6 @@ export default function PackViewer({ packId }: PackViewerProps) {
     window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}`, '_blank');
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/s/${pack.share_code}`);
-    setSnackbar({ open: true, message: 'Link copied to clipboard!' });
-  };
-
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/s/${pack.share_code}`;
     if (navigator.share) {
@@ -136,44 +123,27 @@ export default function PackViewer({ packId }: PackViewerProps) {
           text: `Check out this beatmap pack: ${pack.name}`,
           url: shareUrl,
         });
+        return;
       } catch {
         // User cancelled or share failed, fall back to copy
-        navigator.clipboard.writeText(shareUrl);
-        setSnackbar({ open: true, message: 'Link copied to clipboard!' });
       }
-    } else {
-      navigator.clipboard.writeText(shareUrl);
-      setSnackbar({ open: true, message: 'Link copied to clipboard!' });
     }
+    navigator.clipboard.writeText(shareUrl);
+    setSnackbar({ open: true, message: 'Link copied to clipboard!' });
   };
 
   return (
     <Box sx={{}}>
-      {/* Back button */}
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate(-1)}
-        sx={{ mb: 2, color: 'text.secondary' }}
-      >
-        Back
-      </Button>
-
       {/* Header Card */}
-      <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
-        <Box
-          sx={{
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-            color: 'white',
-            p: 3,
-          }}
-        >
+      <Paper sx={{ overflow: 'hidden', mb: 3 }}>
+        <Box sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Box sx={{ flex: 1 }}>
               <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
                 {pack.name}
               </Typography>
               {pack.description && (
-                <Typography sx={{ opacity: 0.8, mb: 2, maxWidth: 600 }}>
+                <Typography color="text.secondary" sx={{ mb: 2, maxWidth: 600 }}>
                   {pack.description}
                 </Typography>
               )}
@@ -186,16 +156,16 @@ export default function PackViewer({ packId }: PackViewerProps) {
                       sx={{ width: 24, height: 24, borderRadius: '50%' }}
                     />
                   )}
-                  <Typography variant="body2">{pack.user?.username || 'Unknown'}</Typography>
+                  <Typography variant="body2" color="text.secondary">{pack.user?.username || 'Unknown'}</Typography>
                 </Box>
-                <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                <Typography variant="body2" color="text.disabled">
                   {pack.beatmaps.length} maps
                 </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                <Typography variant="body2" color="text.disabled">
                   {pack.views.toLocaleString()} views
                 </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.6 }}>
-                  {new Date(pack.created_at).toLocaleDateString()}
+                <Typography variant="body2" color="text.disabled">
+                  Created at {new Date(pack.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                 </Typography>
               </Box>
               <Stack direction="row" spacing={1.5}>
@@ -206,35 +176,41 @@ export default function PackViewer({ packId }: PackViewerProps) {
                   sx={{
                     backgroundColor: hasSelection ? '#64b5f6' : 'primary.main',
                     '&:hover': { backgroundColor: hasSelection ? '#42a5f5' : 'primary.dark' },
+                    borderRadius: 99,
                     px: 3,
                   }}
                 >
                   {hasSelection ? `Download Selected (${selectedIds.size})` : 'Download All'}
                 </Button>
-                <Tooltip title="Copy share link">
-                  <IconButton
-                    onClick={handleCopyLink}
-                    sx={{
-                      color: 'white',
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' },
-                    }}
-                  >
-                    <ContentCopyIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Share">
-                  <IconButton
-                    onClick={handleShare}
-                    sx={{
-                      color: 'white',
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' },
-                    }}
-                  >
-                    <ShareIcon />
-                  </IconButton>
-                </Tooltip>
+                <Button
+                  variant="outlined"
+                  startIcon={<ShareIcon />}
+                  onClick={handleShare}
+                  sx={{
+                    color: 'text.secondary',
+                    borderColor: '#e0e0e0',
+                    borderRadius: 99,
+                    px: 3,
+                    '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
+                  }}
+                >
+                  Share
+                </Button>
+                <Button
+                  variant="outlined"
+                  component={Link}
+                  to={`/s/${pack.share_code}`}
+                  startIcon={<OpenInNewIcon />}
+                  sx={{
+                    color: 'text.secondary',
+                    borderColor: '#e0e0e0',
+                    borderRadius: 99,
+                    px: 3,
+                    '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
+                  }}
+                >
+                  Shared Page
+                </Button>
               </Stack>
             </Box>
           </Box>
@@ -242,8 +218,8 @@ export default function PackViewer({ packId }: PackViewerProps) {
       </Paper>
 
       {/* Beatmaps List */}
-      <Paper elevation={2} sx={{ overflow: 'hidden' }}>
-        <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Paper sx={{ overflow: 'hidden' }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="subtitle1" fontWeight="bold">
             Beatmaps
           </Typography>
@@ -313,6 +289,8 @@ export default function PackViewer({ packId }: PackViewerProps) {
           </Box>
         )}
       </Paper>
+
+      <BackButton onClick={() => navigate(-1)} />
 
       <Snackbar
         open={snackbar.open}

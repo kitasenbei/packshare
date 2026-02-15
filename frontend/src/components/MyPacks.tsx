@@ -369,17 +369,16 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
       </Box>
 
       {/* My Stash Section */}
-      <Paper elevation={2} sx={{ mb: 3, overflow: 'hidden' }}>
+      <Paper sx={{ mb: 3, overflow: 'hidden' }}>
         <Box
           onClick={() => setStashExpanded(!stashExpanded)}
           sx={{
             p: 2,
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: '#1a1a2e',
-            color: 'white',
             cursor: 'pointer',
-            '&:hover': { backgroundColor: '#222244' },
+            borderBottom: stashExpanded ? '1px solid #e0e0e0' : 'none',
+            '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
           }}
         >
           <InventoryIcon sx={{ mr: 1.5, color: 'primary.main' }} />
@@ -387,7 +386,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
             <Typography variant="h6" fontWeight="bold">
               My Stash
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.7 }}>
+            <Typography variant="body2" color="text.secondary">
               {stash.length} maps saved · Your collection from packs, downloads, and uploads
             </Typography>
           </Box>
@@ -399,7 +398,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
               sx={{
                 textTransform: 'none',
                 fontSize: 12,
-                color: 'rgba(255,255,255,0.6)',
+                color: 'text.disabled',
                 mr: 1,
                 '&:hover': { color: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)' },
               }}
@@ -407,7 +406,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
               Clear
             </Button>
           )}
-          <IconButton size="small" sx={{ color: 'white' }}>
+          <IconButton size="small" sx={{ color: 'text.secondary' }}>
             {stashExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
           </IconButton>
         </Box>
@@ -521,7 +520,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
 
       {/* Not logged in state */}
       {!user && !packsLoading && (
-        <Paper sx={{ p: 4, textAlign: 'center' }} elevation={2}>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Typography color="text.secondary" gutterBottom>
             Sign in to view and create your packs
           </Typography>
@@ -537,21 +536,20 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
             const displayMaps = pack.beatmaps.slice((currentPage - 1) * MAPS_PER_PAGE, currentPage * MAPS_PER_PAGE);
 
             return (
-              <Paper key={pack.share_code} elevation={2} sx={{ overflow: 'hidden' }}>
+              <Paper key={pack.share_code} sx={{ overflow: 'hidden' }}>
                 {/* Pack Header */}
                 <Box
                   sx={{
                     p: 2,
                     display: 'flex',
                     alignItems: 'center',
-                    backgroundColor: '#1a1a2e',
-                    color: 'white',
+                    borderBottom: '1px solid #e0e0e0',
                   }}
                 >
                   <Box sx={{ flexGrow: 1 }}>
                     <Typography variant="h6" fontWeight="bold">{pack.name}</Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                      {pack.beatmaps.length} maps · {pack.views.toLocaleString()} views · {new Date(pack.created_at).toLocaleDateString()}
+                    <Typography variant="body2" color="text.secondary">
+                      {pack.beatmaps.length} maps · {pack.views.toLocaleString()} views · Created at {new Date(pack.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Typography>
                   </Box>
                   <Stack direction="row" spacing={0.5}>
@@ -559,24 +557,24 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                       <IconButton
                         size="small"
                         onClick={() => navigator.clipboard.writeText(`${window.location.origin}/s/${pack.share_code}`)}
-                        sx={{ color: 'white' }}
+                        sx={{ color: 'text.secondary' }}
                       >
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Open shared link">
-                      <IconButton size="small" component={Link} to={`/s/${pack.share_code}`} sx={{ color: 'white' }}>
+                      <IconButton size="small" component={Link} to={`/s/${pack.share_code}`} sx={{ color: 'text.secondary' }}>
                         <LinkIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Open full page">
-                      <IconButton size="small" component={Link} to={`/pack/${pack.share_code}`} sx={{ color: 'white' }}>
+                      <IconButton size="small" component={Link} to={`/pack/${pack.share_code}`} sx={{ color: 'text.secondary' }}>
                         <OpenInNewIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     {hasPerm(permissions, isKeySession, 'edit') && (
                       <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => handleEditClick(pack)} sx={{ color: 'white' }}>
+                        <IconButton size="small" onClick={() => handleEditClick(pack)} sx={{ color: 'text.secondary' }}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -643,7 +641,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
       )}
 
       {user && !packsLoading && packs.length === 0 && (
-        <Paper sx={{ p: 4, textAlign: 'center' }} elevation={2}>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Typography color="text.secondary" gutterBottom>
             No packs yet
           </Typography>

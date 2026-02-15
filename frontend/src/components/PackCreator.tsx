@@ -23,7 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import BackButton from './BackButton';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import { type User, getBeatmapset, type BeatmapsetInfo } from '../api/auth';
@@ -251,14 +251,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
   });
 
   const renderStepDetails = () => (
-    <Paper elevation={2} sx={{ overflow: 'hidden' }}>
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-          color: 'white',
-          p: 3,
-        }}
-      >
+    <Paper sx={{ overflow: 'hidden' }}>
+      <Box sx={{ p: 3 }}>
         <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
           Pack Details
         </Typography>
@@ -269,24 +263,13 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             fullWidth
             value={packName}
             onChange={(e) => setPackName(e.target.value)}
-            variant="standard"
+            variant="outlined"
             slotProps={{
               input: {
-                disableUnderline: true,
                 sx: {
                   fontSize: 24,
                   fontWeight: 'bold',
-                  color: 'white',
-                  '&::placeholder': { color: 'rgba(255,255,255,0.5)' },
                 },
-              },
-            }}
-            sx={{
-              '& .MuiInput-root': {
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                borderRadius: 1,
-                px: 2,
-                py: 1,
               },
             }}
           />
@@ -297,24 +280,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             rows={2}
             value={packDescription}
             onChange={(e) => setPackDescription(e.target.value)}
-            variant="standard"
-            slotProps={{
-              input: {
-                disableUnderline: true,
-                sx: {
-                  color: 'white',
-                  '&::placeholder': { color: 'rgba(255,255,255,0.5)' },
-                },
-              },
-            }}
-            sx={{
-              '& .MuiInput-root': {
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                borderRadius: 1,
-                px: 2,
-                py: 1,
-              },
-            }}
+            variant="outlined"
           />
         </Stack>
       </Box>
@@ -324,8 +290,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
   const renderStepBeatmaps = () => (
     <>
       {/* Add Beatmap Section */}
-      <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
-        <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee' }}>
+      <Paper sx={{ overflow: 'hidden', mb: 3 }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
           <Typography variant="subtitle1" fontWeight="bold">
             Add Beatmaps
           </Typography>
@@ -376,8 +342,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
 
       {/* Inline Difficulty Selection */}
       {pendingBeatmapset && (
-        <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
-          <Box sx={{ p: 2, backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Paper sx={{ overflow: 'hidden', mb: 3 }}>
+          <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="subtitle1" fontWeight="bold">
                 Select Difficulties
@@ -437,12 +403,11 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
       )}
 
       {/* Beatmap List */}
-      <Paper elevation={2} sx={{ overflow: 'hidden' }}>
+      <Paper sx={{ overflow: 'hidden' }}>
         <Box
           sx={{
             p: 2,
-            backgroundColor: '#1a1a2e',
-            color: 'white',
+            borderBottom: '1px solid #e0e0e0',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -452,7 +417,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             <Typography variant="h6" fontWeight="bold">
               Beatmaps
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.7 }}>
+            <Typography variant="body2" color="text.secondary">
               {beatmaps.length} {beatmaps.length === 1 ? 'map' : 'maps'} added
             </Typography>
           </Box>
@@ -511,19 +476,13 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
   const renderStepReview = () => (
     <>
       {/* Pack Info Summary */}
-      <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
-        <Box
-          sx={{
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-            color: 'white',
-            p: 3,
-          }}
-        >
+      <Paper sx={{ overflow: 'hidden', mb: 3 }}>
+        <Box sx={{ p: 3 }}>
           <Typography variant="h5" fontWeight="bold">
             {packName}
           </Typography>
           {packDescription && (
-            <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               {packDescription}
             </Typography>
           )}
@@ -531,18 +490,17 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
       </Paper>
 
       {/* Read-only Beatmap List */}
-      <Paper elevation={2} sx={{ overflow: 'hidden' }}>
+      <Paper sx={{ overflow: 'hidden' }}>
         <Box
           sx={{
             p: 2,
-            backgroundColor: '#1a1a2e',
-            color: 'white',
+            borderBottom: '1px solid #e0e0e0',
           }}
         >
           <Typography variant="h6" fontWeight="bold">
             Beatmaps
           </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.7 }}>
+          <Typography variant="body2" color="text.secondary">
             {beatmaps.length} {beatmaps.length === 1 ? 'map' : 'maps'}
           </Typography>
         </Box>
@@ -574,15 +532,6 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
 
   return (
     <Box sx={{ maxWidth: 800, margin: '0 auto' }}>
-      {/* Back button */}
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate(-1)}
-        sx={{ mb: 2, color: 'text.secondary' }}
-      >
-        Back
-      </Button>
-
       {/* Not logged in warning */}
       {!user && (
         <Alert severity="warning" sx={{ mb: 3 }}>
@@ -591,19 +540,9 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
       )}
 
       {/* Header */}
-      <Paper elevation={2} sx={{ overflow: 'hidden', mb: 3 }}>
-        <Box
-          sx={{
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-            color: 'white',
-            p: 3,
-          }}
-        >
-          <Typography variant="h4" fontWeight="bold">
-            Create New Pack
-          </Typography>
-        </Box>
-      </Paper>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
+        Create New Pack
+      </Typography>
 
       {/* Stepper */}
       <Stepper
@@ -722,6 +661,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
           </Button>
         </DialogActions>
       </Dialog>
+
+      <BackButton onClick={() => navigate(-1)} />
     </Box>
   );
 }

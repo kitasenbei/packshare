@@ -10,6 +10,7 @@ import {
   Stack,
   Chip,
   Alert,
+  Popover,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
@@ -57,6 +58,8 @@ export default function Home({ user }: HomeProps) {
     return () => { cancelled = true; };
   }, [user]);
 
+  const [statsAnchor, setStatsAnchor] = useState<HTMLElement | null>(null);
+
   const totalPacks = recentPacks?.total ?? 0;
   const myPackCount = myPacks.length;
   const myTotalMaps = myPacks.reduce((sum, p) => sum + p.beatmaps.length, 0);
@@ -73,9 +76,41 @@ export default function Home({ user }: HomeProps) {
                 src={user.avatar_url}
                 sx={{ width: 48, height: 48, border: 3, borderColor: 'primary.main' }}
               />
-              <Typography variant="h5" fontWeight="bold">
-                Welcome back, {user.username}
-              </Typography>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  Welcome back, {user.username}
+                </Typography>
+                <Button
+                  size="small"
+                  onClick={(e) => setStatsAnchor(e.currentTarget)}
+                  sx={{ color: 'text.secondary', textTransform: 'none', p: 0, minWidth: 0, fontSize: 13, '&:hover': { color: 'primary.main', backgroundColor: 'transparent' } }}
+                >
+                  See stats
+                </Button>
+                <Popover
+                  open={!!statsAnchor}
+                  anchorEl={statsAnchor}
+                  onClose={() => setStatsAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                  slotProps={{ paper: { sx: { p: 2, mt: 1, minWidth: 200 } } }}
+                >
+                  <Stack spacing={1.5}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <FolderIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                      <Typography variant="body2"><strong>{myPackCount}</strong> Packs</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <MusicNoteIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                      <Typography variant="body2"><strong>{myTotalMaps}</strong> Maps</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <VisibilityIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                      <Typography variant="body2"><strong>{myTotalViews.toLocaleString()}</strong> Views</Typography>
+                    </Box>
+                  </Stack>
+                </Popover>
+              </Box>
             </Box>
             <Stack direction="row" spacing={1}>
               <Button
@@ -98,48 +133,23 @@ export default function Home({ user }: HomeProps) {
               </Button>
             </Stack>
           </Box>
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid size={{ xs: 4 }}>
-              <Paper sx={{ p: 2.5, textAlign: 'center' }} elevation={2}>
-                <FolderIcon sx={{ color: 'primary.main', fontSize: 28, mb: 0.5 }} />
-                <Typography variant="h5" fontWeight="bold">{myPackCount}</Typography>
-                <Typography variant="body2" color="text.secondary">Packs</Typography>
-              </Paper>
-            </Grid>
-            <Grid size={{ xs: 4 }}>
-              <Paper sx={{ p: 2.5, textAlign: 'center' }} elevation={2}>
-                <MusicNoteIcon sx={{ color: 'primary.main', fontSize: 28, mb: 0.5 }} />
-                <Typography variant="h5" fontWeight="bold">{myTotalMaps}</Typography>
-                <Typography variant="body2" color="text.secondary">Maps</Typography>
-              </Paper>
-            </Grid>
-            <Grid size={{ xs: 4 }}>
-              <Paper sx={{ p: 2.5, textAlign: 'center' }} elevation={2}>
-                <VisibilityIcon sx={{ color: 'primary.main', fontSize: 28, mb: 0.5 }} />
-                <Typography variant="h5" fontWeight="bold">{myTotalViews.toLocaleString()}</Typography>
-                <Typography variant="body2" color="text.secondary">Views</Typography>
-              </Paper>
-            </Grid>
-          </Grid>
         </>
       ) : (
         <Paper
-          elevation={3}
           sx={{
             p: 4,
             mb: 3,
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #2d1b3d 100%)',
-            color: 'white',
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
             <Box>
-              <Typography variant="h4" fontWeight="bold" sx={{ mb: 0.5 }}>
+              <Typography variant="h4" fontWeight="bold" sx={{ mb: 0.5, color: 'text.primary' }}>
                 pack
                 <Box
                   component="span"
                   sx={{
                     backgroundColor: 'primary.main',
+                    color: 'white',
                     px: 0.75,
                     py: 0.25,
                     borderRadius: 0.5,
@@ -150,11 +160,11 @@ export default function Home({ user }: HomeProps) {
                   share
                 </Box>
               </Typography>
-              <Typography variant="body1" sx={{ opacity: 0.8 }}>
+              <Typography variant="body1" color="text.secondary">
                 Create, share, and discover osu! mania beatmap packs
               </Typography>
               {totalPacks > 0 && (
-                <Typography variant="body2" sx={{ opacity: 0.5, mt: 0.5 }}>
+                <Typography variant="body2" color="text.disabled" sx={{ mt: 0.5 }}>
                   {totalPacks} packs shared by the community
                 </Typography>
               )}
@@ -183,8 +193,8 @@ export default function Home({ user }: HomeProps) {
                 to="/explore"
                 variant="outlined"
                 sx={{
-                  borderColor: 'rgba(255,255,255,0.3)',
-                  color: 'white',
+                  borderColor: '#e0e0e0',
+                  color: 'text.primary',
                   '&:hover': { borderColor: 'primary.main' },
                 }}
               >
@@ -222,18 +232,17 @@ export default function Home({ user }: HomeProps) {
                     key={pack.id}
                     component={Link}
                     to={`/pack/${pack.share_code}`}
-                    elevation={2}
                     sx={{
                       flex: 1,
                       textDecoration: 'none',
                       color: 'inherit',
                       overflow: 'hidden',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
+                      transition: 'box-shadow 0.2s',
+                      '&:hover': { boxShadow: 2 },
                     }}
                   >
                     {/* Cover strip from first few beatmapsets */}
-                    <Box sx={{ height: 72, position: 'relative', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex' }}>
+                    <Box sx={{ height: 72, position: 'relative', overflow: 'hidden', backgroundColor: '#f5f5f5', display: 'flex' }}>
                       {pack.beatmapset_ids?.slice(0, 5).map((id) => (
                         <Box
                           key={id}
@@ -325,7 +334,7 @@ export default function Home({ user }: HomeProps) {
 
           {/* Empty state */}
           {(!recentPacks || recentPacks.packs.length === 0) && (!popularPacks || popularPacks.packs.length === 0) && (
-            <Paper sx={{ p: 6, textAlign: 'center' }} elevation={2}>
+            <Paper sx={{ p: 6, textAlign: 'center' }}>
               <ExploreIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 No packs yet
