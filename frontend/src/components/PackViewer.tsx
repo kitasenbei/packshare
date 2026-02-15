@@ -59,7 +59,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
 
   if (loading) {
     return (
-      <Box sx={{ maxWidth: 900, margin: '0 auto', display: 'flex', justifyContent: 'center', py: 8 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
         <CircularProgress sx={{ color: 'primary.main' }} />
       </Box>
     );
@@ -67,7 +67,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
 
   if (error || !pack) {
     return (
-      <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
+      <Box sx={{}}>
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate(-1)}
@@ -148,7 +148,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
   };
 
   return (
-    <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
+    <Box sx={{}}>
       {/* Back button */}
       <Button
         startIcon={<ArrowBackIcon />}

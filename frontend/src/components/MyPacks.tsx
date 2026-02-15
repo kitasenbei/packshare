@@ -335,7 +335,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
   const displayStash = filteredStash.slice((stashPage - 1) * STASH_PER_PAGE, stashPage * STASH_PER_PAGE);
 
   return (
-    <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
+    <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {user && (

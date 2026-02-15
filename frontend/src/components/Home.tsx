@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Box,
+  Grid,
   Paper,
   Typography,
   Button,
@@ -62,53 +63,65 @@ export default function Home({ user }: HomeProps) {
   const myTotalViews = myPacks.reduce((sum, p) => sum + p.views, 0);
 
   return (
-    <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
+    <Box>
       {/* Header */}
       {user ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar
-              src={user.avatar_url}
-              sx={{ width: 48, height: 48, border: 3, borderColor: 'primary.main' }}
-            />
-            <Box>
+        <>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar
+                src={user.avatar_url}
+                sx={{ width: 48, height: 48, border: 3, borderColor: 'primary.main' }}
+              />
               <Typography variant="h5" fontWeight="bold">
                 Welcome back, {user.username}
               </Typography>
-              <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }}>
-                <Typography variant="body2" color="text.secondary">
-                  {myPackCount} packs
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {myTotalMaps} maps
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {myTotalViews.toLocaleString()} views
-                </Typography>
-              </Stack>
             </Box>
+            <Stack direction="row" spacing={1}>
+              <Button
+                component={Link}
+                to="/create"
+                variant="contained"
+                startIcon={<AddIcon />}
+                sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
+              >
+                New Pack
+              </Button>
+              <Button
+                component={Link}
+                to="/my-packs"
+                variant="outlined"
+                startIcon={<FolderIcon />}
+                sx={{ borderColor: 'primary.main', color: 'primary.main', '&:hover': { borderColor: 'primary.dark' } }}
+              >
+                My Packs
+              </Button>
+            </Stack>
           </Box>
-          <Stack direction="row" spacing={1}>
-            <Button
-              component={Link}
-              to="/create"
-              variant="contained"
-              startIcon={<AddIcon />}
-              sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-            >
-              New Pack
-            </Button>
-            <Button
-              component={Link}
-              to="/my-packs"
-              variant="outlined"
-              startIcon={<FolderIcon />}
-              sx={{ borderColor: 'primary.main', color: 'primary.main', '&:hover': { borderColor: 'primary.dark' } }}
-            >
-              My Packs
-            </Button>
-          </Stack>
-        </Box>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid size={{ xs: 4 }}>
+              <Paper sx={{ p: 2.5, textAlign: 'center' }} elevation={2}>
+                <FolderIcon sx={{ color: 'primary.main', fontSize: 28, mb: 0.5 }} />
+                <Typography variant="h5" fontWeight="bold">{myPackCount}</Typography>
+                <Typography variant="body2" color="text.secondary">Packs</Typography>
+              </Paper>
+            </Grid>
+            <Grid size={{ xs: 4 }}>
+              <Paper sx={{ p: 2.5, textAlign: 'center' }} elevation={2}>
+                <MusicNoteIcon sx={{ color: 'primary.main', fontSize: 28, mb: 0.5 }} />
+                <Typography variant="h5" fontWeight="bold">{myTotalMaps}</Typography>
+                <Typography variant="body2" color="text.secondary">Maps</Typography>
+              </Paper>
+            </Grid>
+            <Grid size={{ xs: 4 }}>
+              <Paper sx={{ p: 2.5, textAlign: 'center' }} elevation={2}>
+                <VisibilityIcon sx={{ color: 'primary.main', fontSize: 28, mb: 0.5 }} />
+                <Typography variant="h5" fontWeight="bold">{myTotalViews.toLocaleString()}</Typography>
+                <Typography variant="body2" color="text.secondary">Views</Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        </>
       ) : (
         <Paper
           elevation={3}
@@ -220,7 +233,7 @@ export default function Home({ user }: HomeProps) {
                     }}
                   >
                     {/* Cover strip from first few beatmapsets */}
-                    <Box sx={{ height: 48, position: 'relative', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex' }}>
+                    <Box sx={{ height: 72, position: 'relative', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex' }}>
                       {pack.beatmapset_ids?.slice(0, 5).map((id) => (
                         <Box
                           key={id}
@@ -300,11 +313,13 @@ export default function Home({ user }: HomeProps) {
                   View All
                 </Button>
               </Box>
-              <Stack spacing={1.5}>
+              <Grid container spacing={2}>
                 {recentPacks.packs.map((pack) => (
-                  <PackCard key={pack.id} pack={pack} compact />
+                  <Grid key={pack.id} size={{ xs: 12, sm: 6 }}>
+                    <PackCard pack={pack} compact />
+                  </Grid>
                 ))}
-              </Stack>
+              </Grid>
             </Box>
           )}
 

@@ -3,6 +3,7 @@ import {
   Autocomplete,
   Avatar,
   Box,
+  Grid,
   Paper,
   Typography,
   CircularProgress,
@@ -83,7 +84,7 @@ export default function Explore() {
   const pageCount = data ? Math.ceil(data.total / PACKS_PER_PAGE) : 0;
 
   return (
-    <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
+    <Box>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
         <ExploreIcon sx={{ color: 'primary.main' }} />
@@ -203,11 +204,13 @@ export default function Explore() {
 
       {!loading && !error && data && data.packs.length > 0 && (
         <>
-          <Stack spacing={2}>
+          <Grid container spacing={2.5}>
             {data.packs.map((pack) => (
-              <PackCard key={pack.id} pack={pack} />
+              <Grid key={pack.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                <PackCard pack={pack} variant="grid" />
+              </Grid>
             ))}
-          </Stack>
+          </Grid>
 
           {pageCount > 1 && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>

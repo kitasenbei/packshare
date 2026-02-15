@@ -573,7 +573,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
   );
 
   return (
-    <Box sx={{ maxWidth: 900, margin: '0 auto' }}>
+    <Box sx={{ maxWidth: 800, margin: '0 auto' }}>
       {/* Back button */}
       <Button
         startIcon={<ArrowBackIcon />}

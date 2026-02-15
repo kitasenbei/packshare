@@ -21,9 +21,11 @@ interface PackCardPack {
 interface PackCardProps {
   pack: PackCardPack;
   compact?: boolean;
+  variant?: 'list' | 'grid';
 }
 
-export default function PackCard({ pack, compact }: PackCardProps) {
+export default function PackCard({ pack, compact, variant }: PackCardProps) {
+  if (variant === 'grid') return <GridCard pack={pack} />;
   if (compact) return <CompactCard pack={pack} />;
   return <FullCard pack={pack} />;
 }
@@ -112,6 +114,93 @@ function FullCard({ pack }: { pack: PackCardPack }) {
           <br />
           {new Date(pack.created_at).toLocaleDateString()}
         </Typography>
+      </Box>
+    </Paper>
+  );
+}
+
+function GridCard({ pack }: { pack: PackCardPack }) {
+  const hasCoverArt = pack.beatmapset_ids && pack.beatmapset_ids.length > 0;
+
+  return (
+    <Paper
+      component={Link}
+      to={`/pack/${pack.share_code}`}
+      elevation={2}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        textDecoration: 'none',
+        color: 'inherit',
+        overflow: 'hidden',
+        height: '100%',
+        transition: 'transform 0.15s, box-shadow 0.15s',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: 6,
+        },
+      }}
+    >
+      {/* Cover image strip */}
+      <Box sx={{ height: 80, position: 'relative', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex' }}>
+        {hasCoverArt ? (
+          pack.beatmapset_ids.slice(0, 4).map((id) => (
+            <Box
+              key={id}
+              component="img"
+              src={`https://assets.ppy.sh/beatmaps/${id}/covers/cover.jpg`}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                height: '100%',
+                objectFit: 'cover',
+                opacity: 0.8,
+              }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          ))
+        ) : (
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MusicNoteIcon sx={{ color: 'rgba(255,255,255,0.2)', fontSize: 32 }} />
+          </Box>
+        )}
+      </Box>
+
+      {/* Body */}
+      <Box sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="body1" fontWeight="bold" noWrap>
+          {pack.name}
+        </Typography>
+        {pack.description && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            noWrap
+            sx={{ mt: 0.25 }}
+          >
+            {pack.description}
+          </Typography>
+        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+          <Avatar src={pack.user.avatar_url} sx={{ width: 20, height: 20 }} />
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {pack.user.username}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 'auto', pt: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <MusicNoteIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              {pack.beatmap_count}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <VisibilityIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              {pack.views.toLocaleString()}
+            </Typography>
+          </Box>
+        </Box>
       </Box>
     </Paper>
   );
