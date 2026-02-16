@@ -163,13 +163,12 @@ export default function SharedPack({ packId }: SharedPackProps) {
       : pack.beatmaps;
     toDownload.forEach((beatmap, index) => {
       setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = `https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`;
-        link.download = '';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }, index * 500);
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = `https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`;
+        document.body.appendChild(iframe);
+        setTimeout(() => document.body.removeChild(iframe), 30000);
+      }, index * 1500);
     });
     setSnackbar({ open: true, message: `Starting ${toDownload.length} downloads...` });
   };
