@@ -54,6 +54,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [zipping, setZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState({ done: 0, total: 0 });
+  const [downloadProgress, setDownloadProgress] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
     if (!packId) {
@@ -185,6 +186,33 @@ export default function SharedPack({ packId }: SharedPackProps) {
     }
   };
 
+  const fetchWithProgress = async (beatmap: Pack['beatmaps'][0]): Promise<Blob> => {
+    const res = await fetch(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const contentLength = res.headers.get('content-length');
+    if (!contentLength || !res.body) {
+      // Fallback: no streaming progress
+      setDownloadProgress(prev => new Map(prev).set(beatmap.id, -1));
+      const blob = await res.blob();
+      setDownloadProgress(prev => new Map(prev).set(beatmap.id, 1));
+      return blob;
+    }
+    const total = parseInt(contentLength, 10);
+    const reader = res.body.getReader();
+    const chunks: BlobPart[] = [];
+    let received = 0;
+    setDownloadProgress(prev => new Map(prev).set(beatmap.id, 0));
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      setDownloadProgress(prev => new Map(prev).set(beatmap.id, received / total));
+    }
+    setDownloadProgress(prev => new Map(prev).set(beatmap.id, 1));
+    return new Blob(chunks);
+  };
+
   const handleDownloadZip = useCallback(async () => {
     if (!pack) return;
     const toDownload = selectedIds.size > 0
@@ -193,6 +221,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
 
     setZipping(true);
     setZipProgress({ done: 0, total: toDownload.length });
+    setDownloadProgress(new Map());
 
     const zip = new JSZip();
     let failed = 0;
@@ -203,12 +232,11 @@ export default function SharedPack({ packId }: SharedPackProps) {
       while (queue.length > 0) {
         const beatmap = queue.shift()!;
         try {
-          const res = await fetch(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const blob = await res.blob();
+          const blob = await fetchWithProgress(beatmap);
           zip.file(`${beatmap.artist} - ${beatmap.title}.osz`, blob);
         } catch {
           failed++;
+          setDownloadProgress(prev => { const m = new Map(prev); m.delete(beatmap.id); return m; });
         }
         setZipProgress(prev => ({ ...prev, done: prev.done + 1 }));
       }
@@ -218,6 +246,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
 
     if (zip.length === 0) {
       setZipping(false);
+      setDownloadProgress(new Map());
       setSnackbar({ open: true, message: 'All downloads failed — could not create ZIP' });
       return;
     }
@@ -233,6 +262,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
     URL.revokeObjectURL(url);
 
     setZipping(false);
+    setDownloadProgress(new Map());
     const msg = failed > 0
       ? `ZIP ready! ${failed} map${failed > 1 ? 's' : ''} failed to download.`
       : 'ZIP downloaded!';
@@ -432,6 +462,16 @@ export default function SharedPack({ packId }: SharedPackProps) {
           <Box sx={{ p: 1 }}>
             {pack.beatmaps.map((beatmap) => {
               const isInStash = isLoggedIn && stashedIds.has(beatmap.id);
+              const dlProgress = downloadProgress.get(beatmap.id);
+              const progressSx = dlProgress !== undefined
+                ? dlProgress < 0
+                  ? { background: 'rgba(100,180,255,0.10)' } // indeterminate
+                  : dlProgress >= 1
+                    ? { background: 'rgba(100,200,100,0.12)' } // complete
+                    : { background: `linear-gradient(to right, rgba(100,180,255,0.15) ${dlProgress * 100}%, transparent ${dlProgress * 100}%)` }
+                : undefined;
+              const baseSx = selectedIds.has(beatmap.id) ? { backgroundColor: 'rgba(100,180,255,0.08)' } : undefined;
+              const mergedSx = progressSx ? { ...baseSx, ...progressSx } : baseSx;
               return (
                 <BeatmapRow
                   key={beatmap.id}
@@ -445,7 +485,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                   density="compact"
                   stashHighlight={isInStash}
                   onClick={() => handleToggleSelect(beatmap.id)}
-                  sx={selectedIds.has(beatmap.id) ? { backgroundColor: 'rgba(100,180,255,0.08)' } : undefined}
+                  sx={mergedSx}
                   actions={
                     <>
                       {isLoggedIn && (
