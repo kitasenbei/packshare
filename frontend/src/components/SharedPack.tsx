@@ -156,21 +156,33 @@ export default function SharedPack({ packId }: SharedPackProps) {
     });
   };
 
-  const handleDownloadSelected = () => {
+  const handleDownloadSelected = async () => {
     if (!pack) return;
     const toDownload = selectedIds.size > 0
       ? pack.beatmaps.filter(b => selectedIds.has(b.id))
       : pack.beatmaps;
-    toDownload.forEach((beatmap, index) => {
-      setTimeout(() => {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = `https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`;
-        document.body.appendChild(iframe);
-        setTimeout(() => document.body.removeChild(iframe), 30000);
-      }, index * 1500);
-    });
-    setSnackbar({ open: true, message: `Starting ${toDownload.length} downloads...` });
+    setSnackbar({ open: true, message: `Downloading ${toDownload.length} maps...` });
+    let failed = 0;
+    for (const beatmap of toDownload) {
+      try {
+        const res = await fetch(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`);
+        if (!res.ok) throw new Error();
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${beatmap.artist} - ${beatmap.title}.osz`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch {
+        failed++;
+      }
+    }
+    if (failed > 0) {
+      setSnackbar({ open: true, message: `Done! ${failed} map${failed > 1 ? 's' : ''} failed.` });
+    }
   };
 
   const handleDownloadZip = useCallback(async () => {
