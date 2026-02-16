@@ -19,6 +19,8 @@ import {
   TextField,
   InputAdornment,
   CircularProgress,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -62,7 +64,7 @@ const modColors: Record<string, string> = {
   HR: '#d94a4a',
   DT: '#b44ad9',
   FM: '#4ad98f',
-  FL: '#333333',
+  FL: '#1a1a3e',
 };
 
 const modIcons: Record<string, string> = {
@@ -81,7 +83,6 @@ const slotLabels: Record<string, string> = {
   JACK: 'Jack', SPEED: 'Speed', STAM: 'Stamina', SV: 'Slider Velocity', TB: 'Tiebreaker',
 };
 
-const mods = ['NM', 'HD', 'HR', 'DT', 'FM', 'FL'];
 
 interface TournamentMappoolProps {
   abbreviation?: string;
@@ -412,13 +413,18 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
 
   const handleTogglePickerMod = (mod: string) => {
     setPickerMods(prev => {
-      if (mod === 'NM') return ['NM']; // NM is exclusive
-      const withoutNM = prev.filter(m => m !== 'NM');
-      if (withoutNM.includes(mod)) {
-        const result = withoutNM.filter(m => m !== mod);
+      // NM and FM are exclusive checkboxes
+      if (mod === 'NM') return ['NM'];
+      if (mod === 'FM') return prev.includes('FM') ? ['NM'] : ['FM'];
+      // Clicking a pill while FM is active: ignore
+      if (prev.includes('FM')) return prev;
+      // Clicking a pill clears NM automatically
+      const real = prev.filter(m => m !== 'NM');
+      if (real.includes(mod)) {
+        const result = real.filter(m => m !== mod);
         return result.length === 0 ? ['NM'] : result;
       }
-      return [...withoutNM, mod];
+      return [...real, mod];
     });
   };
 
@@ -1164,31 +1170,67 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                       {isEditing && editingField === 'mod' && (
                         <Box sx={{ mx: 1.5, mb: 1, p: 2, backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 1 }}>
                           <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                            Select mods (click multiple to combine, e.g. HD+DT)
+                            Select mods
                           </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
-                            {mods.map(mod => {
-                              const isActive = pickerMods.includes(mod);
-                              return (
-                                <Chip
-                                  key={mod}
-                                  label={mod}
-                                  size="small"
-                                  icon={modIcons[mod] ? <Box component="img" src={modIcons[mod]} alt="" sx={{ width: 28, height: 28 }} /> : undefined}
-                                  onClick={() => handleTogglePickerMod(mod)}
-                                  sx={{
-                                    backgroundColor: isActive ? (modColors[mod] || '#666') : 'transparent',
-                                    color: isActive ? 'white' : 'text.primary',
-                                    border: '1px solid',
-                                    borderColor: isActive ? 'transparent' : 'divider',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    '&:hover': { opacity: 0.85 },
-                                  }}
-                                />
-                              );
-                            })}
-                          </Box>
+                          {(() => {
+                            const isNM = pickerMods.includes('NM');
+                            const isFM = pickerMods.includes('FM');
+                            const pillsDisabled = isNM || isFM;
+                            return (
+                              <>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1, alignItems: 'center' }}>
+                                  {['HD', 'HR', 'DT', 'FL'].map(mod => {
+                                    const isActive = !pillsDisabled && pickerMods.includes(mod);
+                                    return (
+                                      <Chip
+                                        key={mod}
+                                        label={mod}
+                                        size="small"
+                                        icon={modIcons[mod] ? <Box component="img" src={modIcons[mod]} alt="" sx={{ width: 28, height: 28, opacity: pillsDisabled ? 0.4 : 1 }} /> : undefined}
+                                        onClick={() => handleTogglePickerMod(mod)}
+                                        sx={{
+                                          backgroundColor: isActive ? (modColors[mod] || '#666') : '#555',
+                                          color: 'white',
+                                          border: '2px solid',
+                                          borderColor: isActive ? 'white' : 'transparent',
+                                          fontWeight: 'bold',
+                                          cursor: pillsDisabled ? 'not-allowed' : 'pointer',
+                                          opacity: pillsDisabled ? 0.4 : 1,
+                                          '&:hover': { opacity: pillsDisabled ? 0.4 : 0.85 },
+                                        }}
+                                      />
+                                    );
+                                  })}
+                                </Box>
+                                <Stack sx={{ mb: 1 }}>
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={isNM}
+                                        onChange={() => handleTogglePickerMod('NM')}
+                                        size="small"
+                                        sx={{ color: 'text.secondary', '&.Mui-checked': { color: modColors.NM } }}
+                                      />
+                                    }
+                                    label="No Mod"
+                                    sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'text.secondary' } }}
+                                  />
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={isFM}
+                                        onChange={() => handleTogglePickerMod('FM')}
+                                        size="small"
+                                        sx={{ color: 'text.secondary', '&.Mui-checked': { color: modColors.FM } }}
+                                      />
+                                    }
+                                    label="Free Mod — players choose their own mods"
+                                    sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'text.secondary' } }}
+                                  />
+                                </Stack>
+                              </>
+                            );
+                          })()}
                           <Stack direction="row" spacing={1} justifyContent="flex-end">
                             <Button size="small" onClick={handleCancelPicker}>Cancel</Button>
                             <Button
