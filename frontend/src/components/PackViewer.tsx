@@ -172,7 +172,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
             onClick={handleShare}
             sx={{
               color: 'text.secondary',
-              borderColor: '#e0e0e0',
+              borderColor: 'divider',
               borderRadius: 99,
               px: 2,
               textTransform: 'none',
@@ -189,7 +189,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
             startIcon={<OpenInNewIcon />}
             sx={{
               color: 'text.secondary',
-              borderColor: '#e0e0e0',
+              borderColor: 'divider',
               borderRadius: 99,
               px: 2,
               textTransform: 'none',
@@ -212,8 +212,9 @@ export default function PackViewer({ packId }: PackViewerProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid #e0e0e0',
-            backgroundColor: '#fafafa',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'action.hover',
           }}>
             <Typography variant="body2" fontWeight={600}>
               {pack.beatmaps.length} beatmaps
@@ -276,7 +277,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
 
           {/* Pagination */}
           {pageCount > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2, borderTop: '1px solid #eee' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
               <Pagination
                 count={pageCount}
                 page={currentPage}
@@ -343,7 +344,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
                 borderRadius: 1,
                 p: 0.5,
                 m: -0.5,
-                '&:hover': { backgroundColor: '#f5f5f5' },
+                '&:hover': { backgroundColor: 'action.hover' },
               }}
             >
               {pack.user?.avatar_url && (

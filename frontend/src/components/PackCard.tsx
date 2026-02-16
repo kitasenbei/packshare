@@ -50,7 +50,7 @@ function FullCard({ pack }: { pack: PackCardPack }) {
     >
       {/* Cover art banner */}
       {hasCoverArt && (
-        <Box sx={{ height: 56, position: 'relative', overflow: 'hidden', backgroundColor: '#f5f5f5', display: 'flex' }}>
+        <Box sx={{ height: 56, position: 'relative', overflow: 'hidden', backgroundColor: 'action.hover', display: 'flex' }}>
           {pack.beatmapset_ids.slice(0, 5).map((id) => (
             <Box
               key={id}
@@ -136,7 +136,7 @@ function GridCard({ pack }: { pack: PackCardPack }) {
       }}
     >
       {/* Cover image strip */}
-      <Box sx={{ height: 80, position: 'relative', overflow: 'hidden', backgroundColor: '#f5f5f5', display: 'flex' }}>
+      <Box sx={{ height: 80, position: 'relative', overflow: 'hidden', backgroundColor: 'action.hover', display: 'flex' }}>
         {hasCoverArt ? (
           pack.beatmapset_ids.slice(0, 4).map((id) => (
             <Box
@@ -254,7 +254,8 @@ function CompactCard({ pack }: { pack: PackCardPack }) {
                         objectFit: 'cover',
                         position: 'absolute',
                         left: idx * 12,
-                        border: '1px solid #fff',
+                        border: '1px solid',
+                        borderColor: 'background.paper',
                         boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
                       }}
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}

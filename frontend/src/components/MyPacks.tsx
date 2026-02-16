@@ -377,8 +377,9 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
             display: 'flex',
             alignItems: 'center',
             cursor: 'pointer',
-            borderBottom: stashExpanded ? '1px solid #e0e0e0' : 'none',
-            '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
+            borderBottom: stashExpanded ? 1 : 0,
+            borderColor: 'divider',
+            '&:hover': { backgroundColor: 'action.hover' },
           }}
         >
           <InventoryIcon sx={{ mr: 1.5, color: 'primary.main' }} />
@@ -481,7 +482,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
 
               {/* Stash pagination */}
               {stashPageCount > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5, borderTop: '1px solid #eee' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
                   <Pagination
                     size="small"
                     count={stashPageCount}
@@ -543,7 +544,8 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                     p: 2,
                     display: 'flex',
                     alignItems: 'center',
-                    borderBottom: '1px solid #e0e0e0',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
                   }}
                 >
                   <Box sx={{ flexGrow: 1 }}>
@@ -624,7 +626,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
 
                 {/* Pagination */}
                 {pageCount > 1 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 1, borderTop: '1px solid #eee' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 1, borderTop: '1px solid', borderColor: 'divider' }}>
                     <Pagination
                       size="small"
                       count={pageCount}

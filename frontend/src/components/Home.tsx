@@ -193,7 +193,7 @@ export default function Home({ user }: HomeProps) {
                 to="/explore"
                 variant="outlined"
                 sx={{
-                  borderColor: '#e0e0e0',
+                  borderColor: 'divider',
                   color: 'text.primary',
                   '&:hover': { borderColor: 'primary.main' },
                 }}
@@ -242,7 +242,7 @@ export default function Home({ user }: HomeProps) {
                     }}
                   >
                     {/* Cover strip from first few beatmapsets */}
-                    <Box sx={{ height: 72, position: 'relative', overflow: 'hidden', backgroundColor: '#f5f5f5', display: 'flex' }}>
+                    <Box sx={{ height: 72, position: 'relative', overflow: 'hidden', backgroundColor: 'action.hover', display: 'flex' }}>
                       {pack.beatmapset_ids?.slice(0, 5).map((id) => (
                         <Box
                           key={id}

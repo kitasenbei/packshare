@@ -291,7 +291,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
     <>
       {/* Add Beatmap Section */}
       <Paper sx={{ overflow: 'hidden', mb: 3 }}>
-        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="subtitle1" fontWeight="bold">
             Add Beatmaps
           </Typography>
@@ -343,7 +343,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
       {/* Inline Difficulty Selection */}
       {pendingBeatmapset && (
         <Paper sx={{ overflow: 'hidden', mb: 3 }}>
-          <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ p: 2, borderBottom: '1px solid',
+            borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="subtitle1" fontWeight="bold">
                 Select Difficulties
@@ -407,7 +408,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
         <Box
           sx={{
             p: 2,
-            borderBottom: '1px solid #e0e0e0',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -494,7 +496,8 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
         <Box
           sx={{
             p: 2,
-            borderBottom: '1px solid #e0e0e0',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
           }}
         >
           <Typography variant="h6" fontWeight="bold">
@@ -623,7 +626,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
               alignItems: 'center',
               gap: 1,
               p: 1.5,
-              backgroundColor: '#f5f5f5',
+              backgroundColor: 'action.hover',
               borderRadius: 1,
             }}
           >

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import type { PackBeatmap } from '../api/packs';
 
 interface PackBannerProps {
@@ -7,6 +7,7 @@ interface PackBannerProps {
 }
 
 export default function PackBanner({ beatmaps }: PackBannerProps) {
+  const theme = useTheme();
   const [hiddenStrips, setHiddenStrips] = useState<Set<number>>(new Set());
 
   if (beatmaps.length === 0) return null;
@@ -38,7 +39,7 @@ export default function PackBanner({ beatmaps }: PackBannerProps) {
             backgroundSize: `${n * 100}% auto`,
             backgroundPosition: positions[i],
             backgroundRepeat: 'no-repeat',
-            backgroundColor: hiddenStrips.has(i) ? '#f5f5f5' : undefined,
+            backgroundColor: hiddenStrips.has(i) ? 'background.default' : undefined,
           }}
         >
           {/* Hidden img to detect load errors */}
@@ -59,8 +60,9 @@ export default function PackBanner({ beatmaps }: PackBannerProps) {
         sx={{
           position: 'absolute',
           inset: 0,
-          background:
-            'linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)',
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(to top, ${theme.palette.background.paper} 0%, transparent 100%)`
+            : 'linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)',
           pointerEvents: 'none',
         }}
       />

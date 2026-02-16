@@ -20,6 +20,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Tooltip,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -32,6 +33,8 @@ import AddIcon from '@mui/icons-material/Add';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import MenuIcon from '@mui/icons-material/Menu';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import type { User, AuthMode } from '../api/auth';
 import { getLoginUrl } from '../api/auth';
 
@@ -49,9 +52,11 @@ interface SidebarProps {
   permissions: string[];
   onLogout: () => void;
   onKeyLogin: (key: string) => Promise<void>;
+  darkMode: boolean;
+  onToggleDarkMode: () => void;
 }
 
-export default function Sidebar({ user, authMode, keyName, permissions, onLogout, onKeyLogin }: SidebarProps) {
+export default function Sidebar({ user, authMode, keyName, permissions, onLogout, onKeyLogin, darkMode, onToggleDarkMode }: SidebarProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -259,8 +264,9 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
             left: 0,
             right: 0,
             height: TOPNAV_HEIGHT,
-            backgroundColor: 'white',
-            borderBottom: '1px solid #e0e0e0',
+            backgroundColor: 'background.paper',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
             display: 'flex',
             alignItems: 'center',
             px: 1.5,
@@ -272,6 +278,14 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
           </IconButton>
           <Logo accent={accent} />
           <Box sx={{ flex: 1 }} />
+          <Button
+            onClick={onToggleDarkMode}
+            size="small"
+            startIcon={darkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+            sx={{ mr: 1, color: 'text.secondary', fontSize: 12, minWidth: 0 }}
+          >
+            Toggle Theme
+          </Button>
           {user ? (
             <Avatar
               src={user.avatar_url}
@@ -348,8 +362,9 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
           left: 0,
           right: 0,
           height: TOPNAV_HEIGHT,
-          backgroundColor: 'white',
-          borderBottom: '1px solid #e0e0e0',
+          backgroundColor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
           display: 'flex',
           alignItems: 'center',
           px: 3,
@@ -408,6 +423,16 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
 
         {/* Right: create, supporter, account */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* Dark mode toggle */}
+          <Button
+            onClick={onToggleDarkMode}
+            size="small"
+            startIcon={darkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+            sx={{ color: 'text.secondary', fontSize: 12, minWidth: 0 }}
+          >
+            Toggle Theme
+          </Button>
+
           {/* Supporter heart */}
           <Box
             onClick={(e) => setSupporterAnchor(e.currentTarget)}
@@ -453,7 +478,8 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
                 px: 1,
                 py: 0.5,
                 borderRadius: 1,
-                border: '1px solid #e0e0e0',
+                border: '1px solid',
+                borderColor: 'divider',
                 '&:hover': { borderColor: accent },
               }}
             >
@@ -491,7 +517,8 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
                 color: 'text.primary',
                 fontWeight: 600,
                 fontSize: 13,
-                border: '1px solid #e0e0e0',
+                border: '1px solid',
+                borderColor: 'divider',
                 px: 2,
                 '&:hover': { borderColor: accent },
               }}

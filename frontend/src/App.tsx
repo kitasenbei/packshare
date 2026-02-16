@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  useMediaQuery,
 } from '@mui/material';
 import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import PackCreator from './components/PackCreator';
@@ -36,17 +37,27 @@ const PINK_HOVER = '#ff4499';
 const BLUE = '#4a9eff';
 const BLUE_HOVER = '#3a8eef';
 
-function makeTheme(accent: string, accentHover: string) {
+const DARK_MODE_KEY = 'packshare_dark_mode';
+
+function makeTheme(accent: string, accentHover: string, darkMode: boolean) {
   return createTheme({
     palette: {
-      mode: 'light',
+      mode: darkMode ? 'dark' : 'light',
       primary: {
         main: accent,
         dark: accentHover,
       },
       background: {
-        default: '#ffffff',
+        default: darkMode ? '#1a1a2a' : '#ffffff',
+        paper: darkMode ? '#242438' : '#ffffff',
       },
+      ...(darkMode && {
+        text: {
+          primary: '#e8e8ec',
+          secondary: '#9898a8',
+        },
+        divider: 'rgba(255,255,255,0.12)',
+      }),
     },
     components: {
       MuiButton: {
@@ -64,6 +75,7 @@ function makeTheme(accent: string, accentHover: string) {
         styleOverrides: {
           root: {
             borderRadius: 8,
+            backgroundImage: 'none',
           },
         },
       },
@@ -120,6 +132,12 @@ function NotFound() {
 }
 
 function App() {
+  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem(DARK_MODE_KEY);
+    if (saved !== null) return saved === 'true';
+    return prefersDark;
+  });
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>('oauth');
   const [keyName, setKeyName] = useState<string | null>(null);
@@ -130,7 +148,15 @@ function App() {
   const accent = authMode === 'key' ? BLUE : PINK;
 
   const accentHover = authMode === 'key' ? BLUE_HOVER : PINK_HOVER;
-  const theme = useMemo(() => makeTheme(accent, accentHover), [accent, accentHover]);
+  const theme = useMemo(() => makeTheme(accent, accentHover, darkMode), [accent, accentHover, darkMode]);
+
+  const toggleDarkMode = () => {
+    setDarkMode((prev) => {
+      const next = !prev;
+      localStorage.setItem(DARK_MODE_KEY, String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const authError = getAuthError();
@@ -201,6 +227,8 @@ function App() {
                 permissions={permissions}
                 onLogout={handleLogout}
                 onKeyLogin={handleKeyLogin}
+                darkMode={darkMode}
+                onToggleDarkMode={toggleDarkMode}
               />
               <Box
                 component="main"

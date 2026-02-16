@@ -273,7 +273,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 sx={{
                   borderRadius: 99,
                   px: 3,
-                  borderColor: allInStash ? '#e0e0e0' : undefined,
+                  borderColor: allInStash ? 'divider' : undefined,
                   color: allInStash ? 'text.disabled' : undefined,
                 }}
               >
@@ -288,7 +288,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 borderRadius: 99,
                 px: 3,
                 color: 'text.secondary',
-                borderColor: '#e0e0e0',
+                borderColor: 'divider',
                 '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
               }}
             >
@@ -299,7 +299,8 @@ export default function SharedPack({ packId }: SharedPackProps) {
 
         {/* Map List */}
         <Paper sx={{ overflow: 'hidden' }}>
-          <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ p: 2, borderBottom: '1px solid',
+            borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="subtitle1" fontWeight="bold">
               Beatmaps
             </Typography>
