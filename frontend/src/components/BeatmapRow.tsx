@@ -24,7 +24,7 @@ export interface BeatmapRowProps {
 
   // Tournament badges (replace keys badge)
   slotBadge?: { label: string; color: string };
-  modChip?: { label: string; color: string };
+  modChips?: { label: string; color: string; icon?: string }[];
 
   // Stash metadata
   sourceChip?: { label: string; color: string };
@@ -64,7 +64,7 @@ export default function BeatmapRow({
   difficultyName,
   beatmapsetId,
   slotBadge,
-  modChip,
+  modChips,
   sourceChip,
   sourceTooltip,
   checkbox,
@@ -106,7 +106,7 @@ export default function BeatmapRow({
   }
 
   const hasBgThumb = beatmapsetId != null;
-  const thumbUrl = hasBgThumb ? `https://assets.ppy.sh/beatmaps/${beatmapsetId}/covers/cover.jpg` : '';
+  const thumbUrl = hasBgThumb ? `https://assets.ppy.sh/beatmaps/${beatmapsetId}/covers/list.jpg` : '';
 
   return (
     <>
@@ -202,20 +202,22 @@ export default function BeatmapRow({
             </Box>
           )}
 
-          {/* Mod chip (tournament) */}
-          {modChip && (
+          {/* Mod chips (tournament) */}
+          {modChips && modChips.map((mc) => (
             <Chip
-              label={modChip.label}
+              key={mc.label}
+              label={mc.label}
               size="small"
+              icon={mc.icon ? <Box component="img" src={mc.icon} alt="" sx={{ width: 28, height: 28 }} /> : undefined}
               sx={{
-                backgroundColor: modChip.color,
+                backgroundColor: mc.color,
                 color: 'white',
                 fontWeight: 'bold',
-                fontSize: 11,
-                height: 22,
+                fontSize: 12,
+                height: 30,
               }}
             />
-          )}
+          ))}
 
           {/* Map info */}
           <Box sx={{ flex: 1, minWidth: 0 }}>

@@ -38,6 +38,25 @@ var validMods = map[string]bool{
 	"NM": true, "HD": true, "HR": true, "DT": true, "FM": true, "FL": true,
 }
 
+// isValidModCombo checks if a mod string is a valid single mod or combination (e.g. "HDDT", "HDHR").
+func isValidModCombo(mod string) bool {
+	if validMods[mod] {
+		return true
+	}
+	if len(mod) < 4 || len(mod)%2 != 0 {
+		return false
+	}
+	seen := make(map[string]bool)
+	for i := 0; i < len(mod); i += 2 {
+		part := mod[i : i+2]
+		if !validMods[part] || seen[part] {
+			return false
+		}
+		seen[part] = true
+	}
+	return true
+}
+
 type TournamentHandler struct {
 	db *gorm.DB
 }
@@ -366,7 +385,7 @@ func (h *TournamentHandler) AddMapToStage(c *fiber.Ctx) error {
 	if !validSlotTypes[req.SlotType] {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid slot type"})
 	}
-	if !validMods[req.Mod] {
+	if !isValidModCombo(req.Mod) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid mod"})
 	}
 	if req.BeatmapsetID <= 0 {

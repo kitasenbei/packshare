@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -14,10 +14,6 @@ import {
   DialogActions,
   Chip,
   Divider,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Snackbar,
   Alert,
   TextField,
@@ -27,10 +23,12 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import CloseIcon from '@mui/icons-material/Close';
 import LinkIcon from '@mui/icons-material/Link';
 import EditIcon from '@mui/icons-material/Edit';
+import CheckIcon from '@mui/icons-material/Check';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import type { StashBeatmap } from '../types/beatmap';
 import type { User } from '../api/auth';
@@ -67,6 +65,14 @@ const modColors: Record<string, string> = {
   FL: '#333333',
 };
 
+const modIcons: Record<string, string> = {
+  NM: 'https://raw.githubusercontent.com/ppy/osu-web/master/public/images/badges/mods/mod-no-mod.svg',
+  HD: 'https://raw.githubusercontent.com/ppy/osu-web/master/public/images/badges/mods/mod-hidden.svg',
+  HR: 'https://raw.githubusercontent.com/ppy/osu-web/master/public/images/badges/mods/mod-hard-rock.svg',
+  DT: 'https://raw.githubusercontent.com/ppy/osu-web/master/public/images/badges/mods/mod-double-time.svg',
+  FL: 'https://raw.githubusercontent.com/ppy/osu-web/master/public/images/badges/mods/mod-flashlight.svg',
+};
+
 const colorPalette = ['#4a90d9', '#4ad98f', '#b44ad9', '#f5c842', '#d94a4a', '#4ad9d9', '#d9a44a', '#ff66ab', '#ff4444', '#666666'];
 
 const slots = ['RC', 'LN', 'HB', 'TECH', 'JACK', 'SPEED', 'STAM', 'SV', 'TB'];
@@ -76,9 +82,6 @@ const slotLabels: Record<string, string> = {
 };
 
 const mods = ['NM', 'HD', 'HR', 'DT', 'FM', 'FL'];
-const modLabels: Record<string, string> = {
-  NM: 'No Mod', HD: 'Hidden', HR: 'Hard Rock', DT: 'Double Time', FM: 'Free Mod', FL: 'Flashlight',
-};
 
 interface TournamentMappoolProps {
   abbreviation?: string;
@@ -92,11 +95,6 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
   const [currentStage, setCurrentStage] = useState<number | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [stash, setStash] = useState<StashBeatmap[]>([]);
-  const [selectedStashIds, setSelectedStashIds] = useState<Set<number>>(new Set());
-  const [selectedSlot, setSelectedSlot] = useState('RC');
-  const [customSlot, setCustomSlot] = useState('');
-  const [customSlotColor, setCustomSlotColor] = useState('#4a90d9');
-  const [selectedMod, setSelectedMod] = useState('NM');
   const [customSlotColors, setCustomSlotColors] = useState<Record<string, string>>({});
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [urlInput, setUrlInput] = useState('');
@@ -104,6 +102,31 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
   const [urlError, setUrlError] = useState('');
   const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null);
   const [fetchedDiffs, setFetchedDiffs] = useState<{ beatmap_id: number; difficulty_name: string; star_rating: number; keys: number }[]>([]);
+  const [fetchedMeta, setFetchedMeta] = useState<{ beatmapset_id: number; title: string; artist: string; creator: string } | null>(null);
+
+  // Pending maps state (new map-first flow)
+  interface PendingMap {
+    id: string;
+    beatmapsetId: number;
+    title: string;
+    artist: string;
+    creator: string;
+    keys: number;
+    starRating: number;
+    difficultyName: string;
+    slot: string;
+    mods: string[];
+    customSlotColor?: string;
+    adding: boolean;
+  }
+  const [pendingMaps, setPendingMaps] = useState<PendingMap[]>([]);
+  const [editingMapId, setEditingMapId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<'slot' | 'mod' | null>(null);
+  const [pickerSlot, setPickerSlot] = useState('RC');
+  const [pickerMods, setPickerMods] = useState<string[]>(['NM']);
+  const [pickerCustomSlot, setPickerCustomSlot] = useState('');
+  const [pickerCustomSlotColor, setPickerCustomSlotColor] = useState('#4a90d9');
+  const pendingIdCounter = useRef(0);
 
   // Inline editing state
   const [editingName, setEditingName] = useState(false);
@@ -223,22 +246,17 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     }
   };
 
-  // Resolve the actual slot value (custom or preset)
-  const resolvedSlot = selectedSlot === '__custom__' ? customSlot.trim().toUpperCase() : selectedSlot;
-  const resolvedSlotLabel = slotLabels[resolvedSlot] || resolvedSlot || 'Custom';
   const allSlotColors = { ...slotColors, ...customSlotColors };
-  const resolvedSlotColor = selectedSlot === '__custom__' ? customSlotColor : (allSlotColors[resolvedSlot] || '#666');
 
   const handleOpenAddDialog = () => {
-    setSelectedStashIds(new Set());
-    setSelectedSlot('RC');
-    setCustomSlot('');
-    setCustomSlotColor('#4a90d9');
-    setSelectedMod('NM');
     setUrlInput('');
     setUrlError('');
     setFetchedDiffs([]);
+    setFetchedMeta(null);
     setSelectedDiffIndex(null);
+    setPendingMaps([]);
+    setEditingMapId(null);
+    setEditingField(null);
     setAddDialogOpen(true);
   };
 
@@ -251,8 +269,24 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     return null;
   };
 
-  const handleFetchBeatmap = async () => {
-    const id = extractBeatmapsetId(urlInput);
+  const makePendingId = () => {
+    pendingIdCounter.current += 1;
+    return `pending-${Date.now()}-${pendingIdCounter.current}`;
+  };
+
+  const pushPendingMap = useCallback((
+    beatmapsetId: number, title: string, artist: string, creator: string,
+    keys: number, starRating: number, difficultyName: string,
+  ) => {
+    setPendingMaps(prev => [...prev, {
+      id: makePendingId(),
+      beatmapsetId, title, artist, creator, keys, starRating, difficultyName,
+      slot: 'RC', mods: ['NM'], adding: false,
+    }]);
+  }, []);
+
+  const handleFetchBeatmap = async (inputOverride?: string) => {
+    const id = extractBeatmapsetId(inputOverride || urlInput);
     if (!id) {
       setUrlError('Invalid beatmap ID or URL');
       return;
@@ -261,6 +295,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     setUrlLoading(true);
     setUrlError('');
     setFetchedDiffs([]);
+    setFetchedMeta(null);
     setSelectedDiffIndex(null);
 
     try {
@@ -272,32 +307,25 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
       }
 
       if (beatmapset.beatmaps.length === 1) {
-        // Single diff — add directly
         const diff = beatmapset.beatmaps[0];
-        await handleAddMapAPI(
-          beatmapset.beatmapset_id,
-          beatmapset.title,
-          beatmapset.artist,
-          beatmapset.creator,
-          diff.keys,
-          diff.star_rating,
-          diff.difficulty_name,
+        pushPendingMap(
+          beatmapset.beatmapset_id, beatmapset.title, beatmapset.artist,
+          beatmapset.creator, diff.keys, diff.star_rating, diff.difficulty_name,
         );
+        setUrlInput('');
       } else {
-        // Multiple diffs — show picker
         setFetchedDiffs(beatmapset.beatmaps.map(b => ({
           beatmap_id: b.beatmap_id,
           difficulty_name: b.difficulty_name,
           star_rating: b.star_rating,
           keys: b.keys,
         })));
-        // Store beatmapset info for later use
-        setUrlInput(JSON.stringify({
+        setFetchedMeta({
           beatmapset_id: beatmapset.beatmapset_id,
           title: beatmapset.title,
           artist: beatmapset.artist,
           creator: beatmapset.creator,
-        }));
+        });
       }
     } catch {
       setUrlError('Failed to fetch beatmap');
@@ -306,88 +334,159 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     setUrlLoading(false);
   };
 
-  const handleAddSelectedDiff = async () => {
-    if (selectedDiffIndex === null) return;
+  const handleAddSelectedDiff = () => {
+    if (selectedDiffIndex === null || !fetchedMeta) return;
     const diff = fetchedDiffs[selectedDiffIndex];
-    try {
-      const meta = JSON.parse(urlInput);
-      await handleAddMapAPI(
-        meta.beatmapset_id,
-        meta.title,
-        meta.artist,
-        meta.creator,
-        diff.keys,
-        diff.star_rating,
-        diff.difficulty_name,
-      );
-      setFetchedDiffs([]);
-      setSelectedDiffIndex(null);
-      setUrlInput('');
-    } catch {
-      setUrlError('Failed to add map');
-    }
+    pushPendingMap(
+      fetchedMeta.beatmapset_id, fetchedMeta.title, fetchedMeta.artist,
+      fetchedMeta.creator, diff.keys, diff.star_rating, diff.difficulty_name,
+    );
+    setFetchedDiffs([]);
+    setFetchedMeta(null);
+    setSelectedDiffIndex(null);
+    setUrlInput('');
   };
 
-  const handleAddMapAPI = async (
-    beatmapsetId: number, title: string, artist: string, creator: string,
-    keys: number, starRating: number, difficultyName: string,
-  ) => {
-    if (!abbreviation || !currentStage) return;
+  const handleSubmitPending = async (pendingId: string) => {
+    const pm = pendingMaps.find(m => m.id === pendingId);
+    if (!pm || !abbreviation || !currentStage) return;
+
+    setPendingMaps(prev => prev.map(m => m.id === pendingId ? { ...m, adding: true } : m));
+
+    const resolvedSlotValue = pm.slot;
+
     try {
       await addMapToStage(abbreviation, currentStage, {
-        slot_type: resolvedSlot,
-        mod: selectedMod,
-        beatmapset_id: beatmapsetId,
-        title,
-        artist,
-        creator,
-        keys,
-        star_rating: starRating,
-        difficulty_name: difficultyName,
+        slot_type: resolvedSlotValue,
+        mod: pm.mods.join(''),
+        beatmapset_id: pm.beatmapsetId,
+        title: pm.title,
+        artist: pm.artist,
+        creator: pm.creator,
+        keys: pm.keys,
+        star_rating: pm.starRating,
+        difficulty_name: pm.difficultyName,
       });
       // Persist custom slot color for display
-      if (selectedSlot === '__custom__' && resolvedSlot) {
-        setCustomSlotColors(prev => ({ ...prev, [resolvedSlot]: customSlotColor }));
+      if (pm.customSlotColor && resolvedSlotValue) {
+        setCustomSlotColors(prev => ({ ...prev, [resolvedSlotValue]: pm.customSlotColor! }));
       }
-      setSnackbar({ open: true, message: `Added to ${resolvedSlotLabel} (${selectedMod})` });
+      const slotLabel = slotLabels[resolvedSlotValue] || resolvedSlotValue;
+      setSnackbar({ open: true, message: `Added to ${slotLabel} (${pm.mods.join('')})` });
+      setPendingMaps(prev => prev.filter(m => m.id !== pendingId));
       loadTournament();
     } catch (err) {
-      setUrlError(err instanceof Error ? err.message : 'Failed to add map');
+      setPendingMaps(prev => prev.map(m => m.id === pendingId ? { ...m, adding: false } : m));
+      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to add map' });
     }
   };
 
-  const handleToggleStashItem = (id: number) => {
-    setSelectedStashIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
+  const handleRemovePending = (pendingId: string) => {
+    setPendingMaps(prev => prev.filter(m => m.id !== pendingId));
+    if (editingMapId === pendingId) {
+      setEditingMapId(null);
+      setEditingField(null);
+    }
+  };
+
+  const handleOpenPicker = (mapId: string, field: 'slot' | 'mod') => {
+    if (editingMapId === mapId && editingField === field) {
+      // Toggle off
+      setEditingMapId(null);
+      setEditingField(null);
+      return;
+    }
+    const pm = pendingMaps.find(m => m.id === mapId);
+    if (!pm) return;
+    setEditingMapId(mapId);
+    setEditingField(field);
+    if (field === 'slot') {
+      const isCustom = !slots.includes(pm.slot);
+      setPickerSlot(isCustom ? '__custom__' : pm.slot);
+      setPickerCustomSlot(isCustom ? pm.slot : '');
+      setPickerCustomSlotColor(pm.customSlotColor || '#4a90d9');
+    } else {
+      setPickerMods([...pm.mods]);
+    }
+  };
+
+  const handleTogglePickerMod = (mod: string) => {
+    setPickerMods(prev => {
+      if (mod === 'NM') return ['NM']; // NM is exclusive
+      const withoutNM = prev.filter(m => m !== 'NM');
+      if (withoutNM.includes(mod)) {
+        const result = withoutNM.filter(m => m !== mod);
+        return result.length === 0 ? ['NM'] : result;
+      }
+      return [...withoutNM, mod];
     });
   };
 
-  const handleAddSelectedMaps = async () => {
-    const selectedMaps = stash.filter(b => selectedStashIds.has(b.id));
-    if (selectedMaps.length === 0 || !abbreviation || !currentStage) return;
+  const handleConfirmPicker = () => {
+    if (!editingMapId || !editingField) return;
+    setPendingMaps(prev => prev.map(m => {
+      if (m.id !== editingMapId) return m;
+      if (editingField === 'slot') {
+        const newSlot = pickerSlot === '__custom__' ? pickerCustomSlot.trim().toUpperCase() : pickerSlot;
+        return {
+          ...m,
+          slot: newSlot || 'RC',
+          customSlotColor: pickerSlot === '__custom__' ? pickerCustomSlotColor : undefined,
+        };
+      } else {
+        return { ...m, mods: [...pickerMods] };
+      }
+    }));
+    setEditingMapId(null);
+    setEditingField(null);
+  };
 
-    for (const beatmap of selectedMaps) {
+  const handleCancelPicker = () => {
+    setEditingMapId(null);
+    setEditingField(null);
+  };
+
+  const handleStashClick = (beatmap: StashBeatmap) => {
+    pushPendingMap(
+      beatmap.id, beatmap.title, beatmap.artist, beatmap.creator,
+      beatmap.keys || 4, 0, '',
+    );
+  };
+
+  const handleSubmitAllPending = async () => {
+    const toSubmit = pendingMaps.filter(m => !m.adding);
+    if (toSubmit.length === 0 || !abbreviation || !currentStage) return;
+
+    setPendingMaps(prev => prev.map(m => ({ ...m, adding: true })));
+
+    let added = 0;
+    for (const pm of toSubmit) {
       try {
         await addMapToStage(abbreviation, currentStage, {
-          slot_type: resolvedSlot,
-          mod: selectedMod,
-          beatmapset_id: beatmap.id,
-          title: beatmap.title,
-          artist: beatmap.artist,
-          creator: beatmap.creator,
-          keys: beatmap.keys,
+          slot_type: pm.slot,
+          mod: pm.mods.join(''),
+          beatmapset_id: pm.beatmapsetId,
+          title: pm.title,
+          artist: pm.artist,
+          creator: pm.creator,
+          keys: pm.keys,
+          star_rating: pm.starRating,
+          difficulty_name: pm.difficultyName,
         });
+        if (pm.customSlotColor) {
+          setCustomSlotColors(prev => ({ ...prev, [pm.slot]: pm.customSlotColor! }));
+        }
+        setPendingMaps(prev => prev.filter(m => m.id !== pm.id));
+        added++;
       } catch {
-        // continue with others
+        setPendingMaps(prev => prev.map(m => m.id === pm.id ? { ...m, adding: false } : m));
       }
     }
 
-    setSnackbar({ open: true, message: `Added ${selectedMaps.length} map(s) to ${resolvedSlotLabel} (${selectedMod})` });
-    setAddDialogOpen(false);
-    loadTournament();
+    if (added > 0) {
+      setSnackbar({ open: true, message: `Added ${added} map${added !== 1 ? 's' : ''} to pool` });
+      loadTournament();
+    }
   };
 
   const handleRemoveMap = async (mapId: number) => {
@@ -675,7 +774,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                     variant="dark"
                     density="compact"
                     slotBadge={{ label: `${map.slot_type}${map.slot_number}`, color: allSlotColors[map.slot_type] || '#666' }}
-                    modChip={map.mod !== 'NM' ? { label: map.mod, color: modColors[map.mod] || '#666' } : undefined}
+                    modChips={map.mod !== 'NM' ? (map.mod.match(/.{2}/g) || [map.mod]).map(m => ({ label: m, color: modColors[m] || '#666', icon: modIcons[m] })) : undefined}
                     actions={
                       <>
                         <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapset_id}`, '_blank')} variant="dark" />
@@ -753,113 +852,8 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <Stack spacing={2} sx={{ mb: 2 }}>
-            <Stack direction="row" spacing={2}>
-              {/* Slot selector */}
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <InputLabel>Slot</InputLabel>
-                <Select value={selectedSlot} label="Slot" onChange={(e) => setSelectedSlot(e.target.value)}>
-                  {slots.map(slot => (
-                    <MenuItem key={slot} value={slot}>
-                      <Chip label={slot} size="small" sx={{ backgroundColor: allSlotColors[slot] || '#666', color: 'white', mr: 1, minWidth: 40 }} />
-                      {slotLabels[slot]}
-                    </MenuItem>
-                  ))}
-                  <Divider />
-                  <MenuItem value="__custom__">
-                    <EditIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
-                    Custom...
-                  </MenuItem>
-                </Select>
-              </FormControl>
-
-              {/* Mod selector */}
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <InputLabel>Mod</InputLabel>
-                <Select value={selectedMod} label="Mod" onChange={(e) => setSelectedMod(e.target.value)}>
-                  {mods.map(mod => (
-                    <MenuItem key={mod} value={mod}>
-                      <Chip label={mod} size="small" sx={{ backgroundColor: modColors[mod] || '#666', color: 'white', mr: 1, minWidth: 40 }} />
-                      {modLabels[mod]}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Stack>
-
-            {selectedSlot === '__custom__' && (
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ pl: 0.5 }}>
-                <TextField
-                  size="small"
-                  label="Slot Name"
-                  value={customSlot}
-                  onChange={(e) => setCustomSlot(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                  placeholder="e.g. ACC"
-                  sx={{ width: 120 }}
-                />
-                {customSlot && (
-                  <Chip
-                    label={customSlot}
-                    size="small"
-                    sx={{ backgroundColor: customSlotColor, color: 'white', fontWeight: 'bold', minWidth: 40 }}
-                  />
-                )}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                  {colorPalette.map(color => (
-                    <Box
-                      key={color}
-                      onClick={() => setCustomSlotColor(color)}
-                      sx={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
-                        backgroundColor: color,
-                        cursor: 'pointer',
-                        border: '2px solid',
-                        borderColor: customSlotColor === color ? 'white' : 'transparent',
-                        outline: customSlotColor === color ? `2px solid ${color}` : 'none',
-                        transition: 'all 0.15s',
-                        '&:hover': { transform: 'scale(1.15)' },
-                      }}
-                    />
-                  ))}
-                  <TextField
-                    size="small"
-                    value={customSlotColor}
-                    onChange={(e) => {
-                      let v = e.target.value;
-                      if (!v.startsWith('#')) v = '#' + v;
-                      setCustomSlotColor(v.slice(0, 7));
-                    }}
-                    sx={{
-                      width: 90,
-                      ml: 0.5,
-                      '& .MuiInputBase-input': { fontSize: 12, py: 0.5, px: 1, fontFamily: 'monospace' },
-                    }}
-                    slotProps={{
-                      input: {
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Box sx={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: customSlotColor, border: '1px solid rgba(0,0,0,0.2)' }} />
-                          </InputAdornment>
-                        ),
-                      },
-                    }}
-                  />
-                </Box>
-              </Stack>
-            )}
-          </Stack>
-
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-            Selected maps will be added as <strong>{resolvedSlotLabel}</strong> with <strong>{modLabels[selectedMod]}</strong> mod
-          </Typography>
-
-          {/* Add by URL */}
-          <Box sx={{ mb: 3, p: 2, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 1 }}>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1.5 }}>
-              Add by URL or ID
-            </Typography>
+          {/* URL input */}
+          <Box sx={{ mb: 3 }}>
             {fetchedDiffs.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="body2" color="text.secondary">Select a difficulty:</Typography>
@@ -868,7 +862,10 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                     key={diff.beatmap_id}
                     onClick={() => setSelectedDiffIndex(i)}
                     sx={{
-                      p: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      p: 1,
                       borderRadius: 1,
                       cursor: 'pointer',
                       border: '2px solid',
@@ -877,14 +874,24 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                       '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
                     }}
                   >
-                    <Typography variant="body2" fontWeight="bold">{diff.difficulty_name}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {diff.keys}K · {diff.star_rating.toFixed(2)}*
-                    </Typography>
+                    {fetchedMeta && (
+                      <Box
+                        component="img"
+                        src={`https://assets.ppy.sh/beatmaps/${fetchedMeta.beatmapset_id}/covers/list.jpg`}
+                        alt=""
+                        sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', flexShrink: 0 }}
+                      />
+                    )}
+                    <Box>
+                      <Typography variant="body2" fontWeight="bold">{diff.difficulty_name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {diff.keys}K · {diff.star_rating.toFixed(2)}*
+                      </Typography>
+                    </Box>
                   </Box>
                 ))}
                 <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                  <Button size="small" onClick={() => { setFetchedDiffs([]); setUrlInput(''); }}>Back</Button>
+                  <Button size="small" onClick={() => { setFetchedDiffs([]); setFetchedMeta(null); setUrlInput(''); }}>Back</Button>
                   <Button
                     size="small"
                     variant="contained"
@@ -892,43 +899,316 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                     onClick={handleAddSelectedDiff}
                     sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
                   >
-                    Add Selected
+                    Add to Pending
                   </Button>
                 </Stack>
               </Stack>
             ) : (
-              <Stack direction="row" spacing={1}>
-                <TextField
-                  size="small"
-                  fullWidth
-                  placeholder="Enter beatmapset ID or osu.ppy.sh URL"
-                  value={typeof urlInput === 'string' && !urlInput.startsWith('{') ? urlInput : ''}
-                  onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
-                  onKeyDown={(e) => e.key === 'Enter' && urlInput.trim() && !urlLoading && handleFetchBeatmap()}
-                  error={!!urlError}
-                  helperText={urlError}
-                  disabled={urlLoading}
-                  slotProps={{
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <LinkIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleFetchBeatmap}
-                  disabled={urlLoading || !urlInput.trim()}
-                  sx={{ minWidth: 80, backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
-                >
-                  {urlLoading ? <CircularProgress size={20} color="inherit" /> : 'Add'}
-                </Button>
-              </Stack>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="Paste a beatmapset URL or ID..."
+                value={urlInput}
+                onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData('text');
+                  if (pasted && extractBeatmapsetId(pasted)) {
+                    e.preventDefault();
+                    setUrlInput(pasted);
+                    setUrlError('');
+                    handleFetchBeatmap(pasted);
+                  }
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && urlInput.trim() && !urlLoading && handleFetchBeatmap()}
+                error={!!urlError}
+                helperText={urlError}
+                disabled={urlLoading}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        {urlLoading ? <CircularProgress size={18} /> : <LinkIcon fontSize="small" />}
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
             )}
           </Box>
+
+          {/* Pending Maps */}
+          {pendingMaps.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle2" fontWeight="bold">
+                  Pending Maps ({pendingMaps.length})
+                </Typography>
+                {pendingMaps.length > 1 && (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSubmitAllPending}
+                    disabled={pendingMaps.some(m => m.adding)}
+                    sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' }, textTransform: 'none' }}
+                  >
+                    Add All
+                  </Button>
+                )}
+              </Stack>
+              <Stack spacing={0}>
+                {pendingMaps.map((pm) => {
+                  const slotColor = pm.customSlotColor || allSlotColors[pm.slot] || '#666';
+                  const isEditing = editingMapId === pm.id;
+                  return (
+                    <Box key={pm.id}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          py: 1,
+                          px: 1.5,
+                          borderRadius: 1,
+                          backgroundColor: isEditing ? 'rgba(255,102,171,0.05)' : 'transparent',
+                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.03)' },
+                        }}
+                      >
+                        {/* Thumbnail */}
+                        <Box
+                          component="img"
+                          src={`https://assets.ppy.sh/beatmaps/${pm.beatmapsetId}/covers/list.jpg`}
+                          alt=""
+                          sx={{ width: 44, height: 44, borderRadius: 1, objectFit: 'cover', flexShrink: 0 }}
+                        />
+                        {/* Slot chip */}
+                        <Chip
+                          label={pm.slot}
+                          size="small"
+                          onClick={() => handleOpenPicker(pm.id, 'slot')}
+                          sx={{
+                            backgroundColor: slotColor,
+                            color: 'white',
+                            fontWeight: 'bold',
+                            minWidth: 40,
+                            cursor: 'pointer',
+                            '&:hover': { opacity: 0.85 },
+                          }}
+                        />
+                        {/* Mod chips */}
+                        {pm.mods.map(mod => (
+                          <Chip
+                            key={mod}
+                            label={mod}
+                            size="small"
+                            icon={modIcons[mod] ? <Box component="img" src={modIcons[mod]} alt="" sx={{ width: 28, height: 28 }} /> : undefined}
+                            onClick={() => handleOpenPicker(pm.id, 'mod')}
+                            sx={{
+                              backgroundColor: modColors[mod] || '#666',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              minWidth: 32,
+                              cursor: 'pointer',
+                              '&:hover': { opacity: 0.85 },
+                            }}
+                          />
+                        ))}
+                        {/* Map info */}
+                        <Box sx={{ flex: 1, minWidth: 0, ml: 0.5 }}>
+                          <Typography variant="body2" noWrap fontWeight={500}>
+                            {pm.artist} - {pm.title}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" noWrap>
+                            {pm.difficultyName && `[${pm.difficultyName}] `}
+                            {pm.keys > 0 && `${pm.keys}K`}
+                            {pm.starRating > 0 && ` · ${pm.starRating.toFixed(2)}*`}
+                          </Typography>
+                        </Box>
+                        {/* Delete button */}
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemovePending(pm.id)}
+                          sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                        {/* Add button */}
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSubmitPending(pm.id)}
+                          disabled={pm.adding}
+                          sx={{
+                            color: '#ff66ab',
+                            backgroundColor: 'rgba(255,102,171,0.1)',
+                            '&:hover': { backgroundColor: 'rgba(255,102,171,0.2)' },
+                          }}
+                        >
+                          {pm.adding ? <CircularProgress size={18} color="inherit" /> : <AddIcon fontSize="small" />}
+                        </IconButton>
+                      </Box>
+
+                      {/* Inline picker panel */}
+                      {isEditing && editingField === 'slot' && (
+                        <Box sx={{ mx: 1.5, mb: 1, p: 2, backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                            Select slot
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+                            {slots.map(slot => (
+                              <Chip
+                                key={slot}
+                                label={slot}
+                                size="small"
+                                onClick={() => setPickerSlot(slot)}
+                                sx={{
+                                  backgroundColor: pickerSlot === slot ? (allSlotColors[slot] || '#666') : 'transparent',
+                                  color: pickerSlot === slot ? 'white' : 'text.primary',
+                                  border: '1px solid',
+                                  borderColor: pickerSlot === slot ? 'transparent' : 'divider',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  '&:hover': { opacity: 0.85 },
+                                }}
+                              />
+                            ))}
+                            <Chip
+                              label="Custom..."
+                              size="small"
+                              onClick={() => setPickerSlot('__custom__')}
+                              icon={<EditIcon sx={{ fontSize: 14 }} />}
+                              sx={{
+                                backgroundColor: pickerSlot === '__custom__' ? 'action.selected' : 'transparent',
+                                border: '1px solid',
+                                borderColor: pickerSlot === '__custom__' ? 'transparent' : 'divider',
+                                cursor: 'pointer',
+                              }}
+                            />
+                          </Box>
+                          {pickerSlot === '__custom__' && (
+                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                              <TextField
+                                size="small"
+                                label="Slot Name"
+                                value={pickerCustomSlot}
+                                onChange={(e) => setPickerCustomSlot(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                                placeholder="e.g. ACC"
+                                sx={{ width: 120 }}
+                              />
+                              {pickerCustomSlot && (
+                                <Chip
+                                  label={pickerCustomSlot}
+                                  size="small"
+                                  sx={{ backgroundColor: pickerCustomSlotColor, color: 'white', fontWeight: 'bold', minWidth: 40 }}
+                                />
+                              )}
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                                {colorPalette.map(color => (
+                                  <Box
+                                    key={color}
+                                    onClick={() => setPickerCustomSlotColor(color)}
+                                    sx={{
+                                      width: 20,
+                                      height: 20,
+                                      borderRadius: '50%',
+                                      backgroundColor: color,
+                                      cursor: 'pointer',
+                                      border: '2px solid',
+                                      borderColor: pickerCustomSlotColor === color ? 'white' : 'transparent',
+                                      outline: pickerCustomSlotColor === color ? `2px solid ${color}` : 'none',
+                                      transition: 'all 0.15s',
+                                      '&:hover': { transform: 'scale(1.15)' },
+                                    }}
+                                  />
+                                ))}
+                                <TextField
+                                  size="small"
+                                  value={pickerCustomSlotColor}
+                                  onChange={(e) => {
+                                    let v = e.target.value;
+                                    if (!v.startsWith('#')) v = '#' + v;
+                                    setPickerCustomSlotColor(v.slice(0, 7));
+                                  }}
+                                  sx={{
+                                    width: 85,
+                                    ml: 0.5,
+                                    '& .MuiInputBase-input': { fontSize: 11, py: 0.5, px: 1, fontFamily: 'monospace' },
+                                  }}
+                                  slotProps={{
+                                    input: {
+                                      startAdornment: (
+                                        <InputAdornment position="start">
+                                          <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: pickerCustomSlotColor, border: '1px solid rgba(0,0,0,0.2)' }} />
+                                        </InputAdornment>
+                                      ),
+                                    },
+                                  }}
+                                />
+                              </Box>
+                            </Stack>
+                          )}
+                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            <Button size="small" onClick={handleCancelPicker}>Cancel</Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              startIcon={<CheckIcon />}
+                              onClick={handleConfirmPicker}
+                              disabled={pickerSlot === '__custom__' && !pickerCustomSlot.trim()}
+                              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                            >
+                              OK
+                            </Button>
+                          </Stack>
+                        </Box>
+                      )}
+
+                      {isEditing && editingField === 'mod' && (
+                        <Box sx={{ mx: 1.5, mb: 1, p: 2, backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                            Select mods (click multiple to combine, e.g. HD+DT)
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+                            {mods.map(mod => {
+                              const isActive = pickerMods.includes(mod);
+                              return (
+                                <Chip
+                                  key={mod}
+                                  label={mod}
+                                  size="small"
+                                  icon={modIcons[mod] ? <Box component="img" src={modIcons[mod]} alt="" sx={{ width: 28, height: 28 }} /> : undefined}
+                                  onClick={() => handleTogglePickerMod(mod)}
+                                  sx={{
+                                    backgroundColor: isActive ? (modColors[mod] || '#666') : 'transparent',
+                                    color: isActive ? 'white' : 'text.primary',
+                                    border: '1px solid',
+                                    borderColor: isActive ? 'transparent' : 'divider',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    '&:hover': { opacity: 0.85 },
+                                  }}
+                                />
+                              );
+                            })}
+                          </Box>
+                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            <Button size="small" onClick={handleCancelPicker}>Cancel</Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              startIcon={<CheckIcon />}
+                              onClick={handleConfirmPicker}
+                              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                            >
+                              OK
+                            </Button>
+                          </Stack>
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Box>
+          )}
 
           <Divider sx={{ mb: 2 }}>
             <Typography variant="caption" color="text.secondary">
@@ -945,10 +1225,10 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
               </Typography>
             </Box>
           ) : (
-            <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+            <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
               {stash.map((beatmap) => {
-                const isSelected = selectedStashIds.has(beatmap.id);
                 const alreadyInPool = maps.some(m => m.beatmapset_id === beatmap.id);
+                const alreadyPending = pendingMaps.some(m => m.beatmapsetId === beatmap.id);
                 return (
                   <BeatmapRow
                     key={beatmap.id}
@@ -959,19 +1239,13 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                     bpm={beatmap.bpm}
                     beatmapsetId={beatmap.id}
                     density="compact"
-                    checkbox={{
-                      checked: isSelected,
-                      disabled: alreadyInPool,
-                      onChange: () => handleToggleStashItem(beatmap.id),
-                    }}
-                    statusChip={alreadyInPool ? { label: 'Already in pool' } : undefined}
-                    onClick={!alreadyInPool ? () => handleToggleStashItem(beatmap.id) : undefined}
+                    statusChip={alreadyInPool ? { label: 'Already in pool' } : alreadyPending ? { label: 'Pending' } : undefined}
+                    onClick={!alreadyInPool && !alreadyPending ? () => handleStashClick(beatmap) : undefined}
                     sx={{
-                      cursor: alreadyInPool ? 'not-allowed' : 'pointer',
-                      backgroundColor: isSelected ? 'rgba(255,102,171,0.1)' : 'transparent',
-                      opacity: alreadyInPool ? 0.5 : 1,
+                      cursor: alreadyInPool || alreadyPending ? 'not-allowed' : 'pointer',
+                      opacity: alreadyInPool ? 0.5 : alreadyPending ? 0.7 : 1,
                       '&:hover': {
-                        backgroundColor: alreadyInPool ? 'transparent' : isSelected ? 'rgba(255,102,171,0.15)' : 'rgba(0,0,0,0.04)',
+                        backgroundColor: alreadyInPool || alreadyPending ? 'transparent' : 'rgba(0,0,0,0.04)',
                       },
                     }}
                   />
@@ -981,18 +1255,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-            {selectedStashIds.size} map(s) selected
-          </Typography>
-          <Button onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleAddSelectedMaps}
-            disabled={selectedStashIds.size === 0 || !resolvedSlot}
-            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
-          >
-            Add to {resolvedSlot || '...'} ({selectedMod})
-          </Button>
+          <Button onClick={() => setAddDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 
