@@ -211,11 +211,41 @@ export default function SharedPack({ packId }: SharedPackProps) {
 
   const allInStash = isLoggedIn && pack.beatmaps.every(b => stashedIds.has(b.id));
 
+  const bannerMaps = pack.beatmaps.slice(0, 6);
+
   return (
     <Box sx={{ minHeight: '100vh', py: 6 }}>
       <Container maxWidth="md">
         {/* Header */}
-        <Paper sx={{ p: 4, mb: 3, textAlign: 'center' }}>
+        <Paper sx={{ mb: 3, textAlign: 'center', overflow: 'hidden' }}>
+          {/* Banner collage */}
+          {bannerMaps.length > 0 && (
+            <Box sx={{ position: 'relative', height: 140, display: 'flex', overflow: 'hidden' }}>
+              {bannerMaps.map((beatmap) => (
+                <Box
+                  key={beatmap.id}
+                  sx={{
+                    flex: 1,
+                    backgroundImage: `url(https://assets.ppy.sh/beatmaps/${beatmap.beatmapset_id}/covers/cover.jpg)`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+              ))}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? `linear-gradient(to top, ${theme.palette.background.paper} 0%, transparent 100%)`
+                      : 'linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)',
+                  pointerEvents: 'none',
+                }}
+              />
+            </Box>
+          )}
+          <Box sx={{ p: 4, pt: bannerMaps.length > 0 ? 0 : 4 }}>
           <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
             {pack.name}
           </Typography>
@@ -295,6 +325,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
               Share
             </Button>
           </Stack>
+          </Box>
         </Paper>
 
         {/* Map List */}
