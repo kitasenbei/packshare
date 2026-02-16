@@ -463,15 +463,24 @@ export default function SharedPack({ packId }: SharedPackProps) {
             {pack.beatmaps.map((beatmap) => {
               const isInStash = isLoggedIn && stashedIds.has(beatmap.id);
               const dlProgress = downloadProgress.get(beatmap.id);
-              const progressSx = dlProgress !== undefined
-                ? dlProgress < 0
-                  ? { background: 'rgba(100,180,255,0.10)' } // indeterminate
-                  : dlProgress >= 1
-                    ? { background: 'rgba(100,200,100,0.12)' } // complete
-                    : { background: `linear-gradient(to right, rgba(100,180,255,0.15) ${dlProgress * 100}%, transparent ${dlProgress * 100}%)` }
-                : undefined;
-              const baseSx = selectedIds.has(beatmap.id) ? { backgroundColor: 'rgba(100,180,255,0.08)' } : undefined;
-              const mergedSx = progressSx ? { ...baseSx, ...progressSx } : baseSx;
+              const isDownloading = dlProgress !== undefined;
+              let rowSx: Record<string, unknown> | undefined;
+              let statusChip: { label: string } | undefined;
+              if (isDownloading) {
+                if (dlProgress < 0) {
+                  rowSx = { background: 'rgba(100,180,255,0.10)' };
+                  statusChip = { label: 'Fetching...' };
+                } else if (dlProgress >= 1) {
+                  rowSx = { background: 'rgba(100,200,100,0.12)' };
+                  statusChip = { label: '100%' };
+                } else {
+                  const pct = Math.round(dlProgress * 100);
+                  rowSx = { background: `linear-gradient(to right, rgba(100,180,255,0.15) ${pct}%, transparent ${pct}%)` };
+                  statusChip = { label: `${pct}%` };
+                }
+              } else if (!zipping && selectedIds.has(beatmap.id)) {
+                rowSx = { backgroundColor: 'rgba(100,180,255,0.08)' };
+              }
               return (
                 <BeatmapRow
                   key={beatmap.id}
@@ -485,7 +494,8 @@ export default function SharedPack({ packId }: SharedPackProps) {
                   density="compact"
                   stashHighlight={isInStash}
                   onClick={() => handleToggleSelect(beatmap.id)}
-                  sx={mergedSx}
+                  statusChip={statusChip}
+                  sx={rowSx}
                   actions={
                     <>
                       {isLoggedIn && (
