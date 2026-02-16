@@ -15,15 +15,7 @@ export default function PackBanner({ beatmaps }: PackBannerProps) {
   const sorted = [...beatmaps].sort(
     (a, b) => (b.star_rating ?? 0) - (a.star_rating ?? 0)
   );
-  const top = sorted.slice(0, 4);
-  const n = top.length;
-
-  const positions = [
-    '0% center',
-    '33.33% center',
-    '66.67% center',
-    '100% center',
-  ];
+  const top = sorted.slice(0, 6);
 
   return (
     <Box sx={{ position: 'relative', height: 160, overflow: 'hidden', display: 'flex' }}>
@@ -36,13 +28,12 @@ export default function PackBanner({ beatmaps }: PackBannerProps) {
             backgroundImage: hiddenStrips.has(i)
               ? 'none'
               : `url(https://assets.ppy.sh/beatmaps/${beatmap.beatmapset_id}/covers/cover.jpg)`,
-            backgroundSize: `${n * 100}% auto`,
-            backgroundPosition: positions[i],
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             backgroundColor: hiddenStrips.has(i) ? 'background.default' : undefined,
           }}
         >
-          {/* Hidden img to detect load errors */}
           {!hiddenStrips.has(i) && (
             <img
               src={`https://assets.ppy.sh/beatmaps/${beatmap.beatmapset_id}/covers/cover.jpg`}
