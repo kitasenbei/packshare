@@ -73,3 +73,9 @@ variable "api_gateway_execution_arn" {
   description = "API Gateway execution ARN for Lambda permission"
   type        = string
 }
+
+variable "uploads_bucket" {
+  description = "S3 bucket name for uploads"
+  type        = string
+  default     = ""
+}

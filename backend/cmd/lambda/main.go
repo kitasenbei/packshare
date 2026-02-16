@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	fiberadapter "github.com/awslabs/aws-lambda-go-api-proxy/fiber"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/gofiber/fiber/v2"
 	appconfig "github.com/packshare/backend/internal/config"
@@ -43,6 +44,19 @@ func init() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	// Create S3 client for uploads if bucket is configured
+	var s3Client *s3.Client
+	var awsRegion string
+	if cfg.UploadsBucket != "" {
+		ctx := context.Background()
+		awsCfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			log.Fatalf("Failed to load AWS config for S3: %v", err)
+		}
+		s3Client = s3.NewFromConfig(awsCfg)
+		awsRegion = awsCfg.Region
+	}
+
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
@@ -55,7 +69,7 @@ func init() {
 		},
 	})
 
-	routes.Setup(app, db, cfg)
+	routes.Setup(app, db, cfg, s3Client, awsRegion)
 
 	fiberLambda = fiberadapter.New(app)
 }

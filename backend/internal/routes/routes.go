@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -11,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
+func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client, awsRegion string) {
 	// Middleware
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
@@ -60,6 +61,13 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	apiGroup.Post("/auth/key", keyHandler.KeyLogin)
 	apiGroup.Get("/tournaments", tournamentHandler.ListTournaments)
 	apiGroup.Get("/tournaments/:abbrev", tournamentHandler.GetTournament)
+
+	// Upload routes (requires auth + S3 configuration)
+	if s3Client != nil && cfg.UploadsBucket != "" {
+		uploadHandler := handlers.NewUploadHandler(s3Client, cfg.UploadsBucket, awsRegion)
+		uploadGroup := apiGroup.Group("", middleware.AuthMiddleware(cfg.JWTSecret))
+		uploadGroup.Post("/uploads/presign", uploadHandler.GetPresignedURL)
+	}
 
 	// Protected routes (OAuth or key auth)
 	protected := apiGroup.Group("", middleware.AuthMiddleware(cfg.JWTSecret))

@@ -167,3 +167,38 @@ export async function removeMap(abbrev: string, mapId: number): Promise<void> {
     throw new Error(`Failed to remove map: ${response.statusText}`);
   }
 }
+
+// Image uploads
+
+interface PresignResponse {
+  upload_url: string;
+  file_url: string;
+}
+
+async function getPresignedUrl(filename: string, contentType: string): Promise<PresignResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/uploads/presign`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ filename, content_type: contentType }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to get upload URL');
+  }
+  return response.json();
+}
+
+export async function uploadImage(file: File): Promise<string> {
+  const { upload_url, file_url } = await getPresignedUrl(file.name, file.type);
+
+  const uploadResponse = await fetch(upload_url, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+  if (!uploadResponse.ok) {
+    throw new Error('Failed to upload image to storage');
+  }
+
+  return file_url;
+}

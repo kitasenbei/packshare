@@ -121,3 +121,31 @@ resource "aws_iam_role_policy_attachment" "lambda_auth_secrets" {
   role       = aws_iam_role.lambda_auth.name
   policy_arn = aws_iam_policy.lambda_secrets_auth.arn
 }
+
+# S3 uploads access policy for backend
+resource "aws_iam_policy" "lambda_s3_uploads" {
+  count       = var.uploads_bucket_arn != "" ? 1 : 0
+  name        = "${var.environment}-lambda-backend-s3-uploads-policy"
+  description = "Allow Lambda backend to manage uploads in S3"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${var.uploads_bucket_arn}/tournaments/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_backend_s3_uploads" {
+  count      = var.uploads_bucket_arn != "" ? 1 : 0
+  role       = aws_iam_role.lambda_backend.name
+  policy_arn = aws_iam_policy.lambda_s3_uploads[0].arn
+}

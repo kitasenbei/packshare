@@ -67,13 +67,16 @@ resource "aws_lambda_function" "backend" {
   }
 
   environment {
-    variables = {
-      ENVIRONMENT         = var.environment
-      DB_SECRETS_ARN      = var.db_secrets_arn
-      JWT_SECRET_ARN      = var.jwt_secret_arn
-      ALLOWED_ORIGINS     = var.allowed_origins
-      AWS_SECRETS_MANAGER = "true"
-    }
+    variables = merge(
+      {
+        ENVIRONMENT         = var.environment
+        DB_SECRETS_ARN      = var.db_secrets_arn
+        JWT_SECRET_ARN      = var.jwt_secret_arn
+        ALLOWED_ORIGINS     = var.allowed_origins
+        AWS_SECRETS_MANAGER = "true"
+      },
+      var.uploads_bucket != "" ? { UPLOADS_BUCKET = var.uploads_bucket } : {}
+    )
   }
 
   tags = {

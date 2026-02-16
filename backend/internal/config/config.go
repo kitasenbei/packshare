@@ -11,6 +11,7 @@ type Config struct {
 	JWTSecret      string
 	MiauAuthURL    string
 	AllowedOrigins string
+	UploadsBucket  string
 }
 
 func Load() *Config {
@@ -29,6 +30,7 @@ func Load() *Config {
 		JWTSecret:      jwtSecret,
 		MiauAuthURL:    getEnv("MIAUAUTH_URL", "http://localhost:8001"),
 		AllowedOrigins: getEnv("ALLOWED_ORIGINS", "http://localhost:5173"),
+		UploadsBucket:  getEnv("UPLOADS_BUCKET", ""),
 	}
 }
 

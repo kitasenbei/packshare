@@ -3,6 +3,7 @@ import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import { uploadImage } from '../api/tournaments';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_SIZE_MB = 5;
@@ -42,18 +43,14 @@ export default function ImageUpload({ label = 'Upload Image', value, onChange, a
 
     setLoading(true);
 
-    // Convert to base64 for localStorage persistence
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      onChange(base64);
+    try {
+      const fileUrl = await uploadImage(file);
+      onChange(fileUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image');
+    } finally {
       setLoading(false);
-    };
-    reader.onerror = () => {
-      setError('Failed to read file');
-      setLoading(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {

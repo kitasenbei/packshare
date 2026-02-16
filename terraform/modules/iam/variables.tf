@@ -8,3 +8,9 @@ variable "secrets_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "uploads_bucket_arn" {
+  description = "ARN of the S3 uploads bucket"
+  type        = string
+  default     = ""
+}

@@ -36,7 +36,7 @@ func main() {
 		},
 	})
 
-	routes.Setup(app, db, cfg)
+	routes.Setup(app, db, cfg, nil, "")
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)

@@ -74,12 +74,21 @@ module "secrets" {
   osu_client_secret = var.osu_client_secret
 }
 
+# S3 Uploads
+module "storage" {
+  source = "../../modules/storage"
+
+  environment     = var.environment
+  allowed_origins = ["https://${local.domain_name}"]
+}
+
 # IAM Roles
 module "iam" {
   source = "../../modules/iam"
 
-  environment  = var.environment
-  secrets_arns = module.secrets.all_secrets_arns
+  environment        = var.environment
+  secrets_arns       = module.secrets.all_secrets_arns
+  uploads_bucket_arn = module.storage.bucket_arn
 }
 
 # RDS PostgreSQL
@@ -136,6 +145,7 @@ module "lambda_backend" {
   db_secrets_arn  = module.secrets.db_credentials_arn
   jwt_secret_arn  = module.secrets.jwt_secret_arn
   allowed_origins = "https://${local.domain_name}"
+  uploads_bucket  = module.storage.bucket_name
 }
 
 # Lambda Auth (no VPC — only needs osu! API + Secrets Manager via internet)
