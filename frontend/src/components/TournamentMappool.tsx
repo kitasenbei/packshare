@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -30,15 +30,18 @@ import AddIcon from '@mui/icons-material/Add';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import CloseIcon from '@mui/icons-material/Close';
 import LinkIcon from '@mui/icons-material/Link';
+import EditIcon from '@mui/icons-material/Edit';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import type { StashBeatmap } from '../types/beatmap';
 import type { User } from '../api/auth';
 import { getBeatmapset } from '../api/auth';
 import type { Tournament, TournamentMap } from '../api/tournaments';
-import { getTournament, addMapToStage, removeMap } from '../api/tournaments';
+import { getTournament, addMapToStage, removeMap, updateTournament } from '../api/tournaments';
 import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
 import OsuButton from './OsuButton';
 import RemoveButton from './RemoveButton';
+import ImageUpload from './ImageUpload';
 import { STASH_STORAGE_KEY } from '../utils/stash';
 
 // Slot colors (map categories)
@@ -63,6 +66,8 @@ const modColors: Record<string, string> = {
   FM: '#4ad98f',
   FL: '#333333',
 };
+
+const colorPalette = ['#4a90d9', '#4ad98f', '#b44ad9', '#f5c842', '#d94a4a', '#4ad9d9', '#d9a44a', '#ff66ab', '#ff4444', '#666666'];
 
 const slots = ['RC', 'LN', 'HB', 'TECH', 'JACK', 'SPEED', 'STAM', 'SV', 'TB'];
 const slotLabels: Record<string, string> = {
@@ -89,13 +94,23 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
   const [stash, setStash] = useState<StashBeatmap[]>([]);
   const [selectedStashIds, setSelectedStashIds] = useState<Set<number>>(new Set());
   const [selectedSlot, setSelectedSlot] = useState('RC');
+  const [customSlot, setCustomSlot] = useState('');
+  const [customSlotColor, setCustomSlotColor] = useState('#4a90d9');
   const [selectedMod, setSelectedMod] = useState('NM');
+  const [customSlotColors, setCustomSlotColors] = useState<Record<string, string>>({});
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
   const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null);
   const [fetchedDiffs, setFetchedDiffs] = useState<{ beatmap_id: number; difficulty_name: string; star_rating: number; keys: number }[]>([]);
+
+  // Inline editing state
+  const [editingName, setEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState('');
+  const [bannerUploadOpen, setBannerUploadOpen] = useState(false);
+  const [logoUploadOpen, setLogoUploadOpen] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!abbreviation) return;
@@ -126,6 +141,14 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     }
   }, [addDialogOpen]);
 
+  // Focus name input when editing starts
+  useEffect(() => {
+    if (editingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [editingName]);
+
   const stages = tournament?.stages || [];
   const activeStage = stages.find(s => s.id === currentStage);
   const maps = activeStage?.maps || [];
@@ -143,9 +166,74 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     setSnackbar({ open: true, message: 'Link copied!' });
   };
 
+  // Inline editing handlers
+  const handleStartEditName = () => {
+    if (!isOwner || !tournament) return;
+    setEditNameValue(tournament.name);
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!abbreviation || !tournament) return;
+    const trimmed = editNameValue.trim();
+    if (!trimmed || trimmed === tournament.name) {
+      setEditingName(false);
+      return;
+    }
+    try {
+      const updated = await updateTournament(abbreviation, { name: trimmed });
+      setTournament(updated);
+      setSnackbar({ open: true, message: 'Name updated' });
+    } catch (err) {
+      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update name' });
+    }
+    setEditingName(false);
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveName();
+    } else if (e.key === 'Escape') {
+      setEditingName(false);
+    }
+  };
+
+  const handleBannerUpload = async (url: string | null) => {
+    if (!abbreviation || !tournament) return;
+    try {
+      const updated = await updateTournament(abbreviation, { banner_url: url || undefined });
+      setTournament(updated);
+      setBannerUploadOpen(false);
+      setSnackbar({ open: true, message: url ? 'Banner updated' : 'Banner removed' });
+    } catch (err) {
+      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update banner' });
+    }
+  };
+
+  const handleLogoUpload = async (url: string | null) => {
+    if (!abbreviation || !tournament) return;
+    try {
+      const updated = await updateTournament(abbreviation, { logo_url: url || undefined });
+      setTournament(updated);
+      setLogoUploadOpen(false);
+      setSnackbar({ open: true, message: url ? 'Logo updated' : 'Logo removed' });
+    } catch (err) {
+      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update logo' });
+    }
+  };
+
+  // Resolve the actual slot value (custom or preset)
+  const resolvedSlot = selectedSlot === '__custom__' ? customSlot.trim().toUpperCase() : selectedSlot;
+  const resolvedSlotLabel = slotLabels[resolvedSlot] || resolvedSlot || 'Custom';
+  const allSlotColors = { ...slotColors, ...customSlotColors };
+  const resolvedSlotColor = selectedSlot === '__custom__' ? customSlotColor : (allSlotColors[resolvedSlot] || '#666');
+
   const handleOpenAddDialog = () => {
     setSelectedStashIds(new Set());
     setSelectedSlot('RC');
+    setCustomSlot('');
+    setCustomSlotColor('#4a90d9');
     setSelectedMod('NM');
     setUrlInput('');
     setUrlError('');
@@ -247,7 +335,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     if (!abbreviation || !currentStage) return;
     try {
       await addMapToStage(abbreviation, currentStage, {
-        slot_type: selectedSlot,
+        slot_type: resolvedSlot,
         mod: selectedMod,
         beatmapset_id: beatmapsetId,
         title,
@@ -257,7 +345,11 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
         star_rating: starRating,
         difficulty_name: difficultyName,
       });
-      setSnackbar({ open: true, message: `Added to ${slotLabels[selectedSlot]} (${selectedMod})` });
+      // Persist custom slot color for display
+      if (selectedSlot === '__custom__' && resolvedSlot) {
+        setCustomSlotColors(prev => ({ ...prev, [resolvedSlot]: customSlotColor }));
+      }
+      setSnackbar({ open: true, message: `Added to ${resolvedSlotLabel} (${selectedMod})` });
       loadTournament();
     } catch (err) {
       setUrlError(err instanceof Error ? err.message : 'Failed to add map');
@@ -280,7 +372,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     for (const beatmap of selectedMaps) {
       try {
         await addMapToStage(abbreviation, currentStage, {
-          slot_type: selectedSlot,
+          slot_type: resolvedSlot,
           mod: selectedMod,
           beatmapset_id: beatmap.id,
           title: beatmap.title,
@@ -293,7 +385,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
       }
     }
 
-    setSnackbar({ open: true, message: `Added ${selectedMaps.length} map(s) to ${slotLabels[selectedSlot]} (${selectedMod})` });
+    setSnackbar({ open: true, message: `Added ${selectedMaps.length} map(s) to ${resolvedSlotLabel} (${selectedMod})` });
     setAddDialogOpen(false);
     loadTournament();
   };
@@ -339,24 +431,127 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
           pb: 2,
         }}
       >
+        {/* Owner banner edit overlay */}
+        {isOwner && (
+          <Button
+            size="small"
+            startIcon={tournament.banner_url ? <EditIcon /> : <AddPhotoAlternateIcon />}
+            onClick={() => setBannerUploadOpen(true)}
+            sx={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              color: 'rgba(255,255,255,0.7)',
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              backdropFilter: 'blur(4px)',
+              '&:hover': { backgroundColor: 'rgba(0,0,0,0.6)', color: 'white' },
+              textTransform: 'none',
+              fontSize: 12,
+            }}
+          >
+            {tournament.banner_url ? 'Change Banner' : 'Add Banner'}
+          </Button>
+        )}
+
         <Box sx={{ maxWidth: 1200, margin: '0 auto' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Stack direction="row" spacing={3} alignItems="center">
-              {tournament.logo_url && (
-                <Avatar
-                  src={tournament.logo_url}
+              {/* Logo area */}
+              {tournament.logo_url ? (
+                <Box
+                  sx={{ position: 'relative', cursor: isOwner ? 'pointer' : 'default' }}
+                  onClick={isOwner ? () => setLogoUploadOpen(true) : undefined}
+                >
+                  <Avatar
+                    src={tournament.logo_url}
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      border: '3px solid #ff66ab',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                    }}
+                  />
+                  {isOwner && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                        '&:hover': { opacity: 1 },
+                      }}
+                    >
+                      <EditIcon sx={{ fontSize: 20 }} />
+                    </Box>
+                  )}
+                </Box>
+              ) : isOwner ? (
+                <Box
+                  onClick={() => setLogoUploadOpen(true)}
                   sx={{
                     width: 80,
                     height: 80,
-                    border: '3px solid #ff66ab',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                    borderRadius: '50%',
+                    border: '2px dashed rgba(255,255,255,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    '&:hover': { borderColor: '#ff66ab', backgroundColor: 'rgba(255,102,171,0.1)' },
                   }}
-                />
-              )}
+                >
+                  <AddPhotoAlternateIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 28 }} />
+                </Box>
+              ) : null}
+
               <Box>
-                <Typography variant="h3" sx={{ fontWeight: 'bold', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                  {tournament.name}
-                </Typography>
+                {/* Editable tournament name */}
+                {editingName ? (
+                  <TextField
+                    inputRef={nameInputRef}
+                    value={editNameValue}
+                    onChange={(e) => setEditNameValue(e.target.value)}
+                    onBlur={handleSaveName}
+                    onKeyDown={handleNameKeyDown}
+                    variant="standard"
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        color: 'white',
+                        fontSize: '2.5rem',
+                        fontWeight: 'bold',
+                        lineHeight: 1.2,
+                        textShadow: '0 2px 10px rgba(0,0,0,0.5)',
+                        py: 0,
+                      },
+                      '& .MuiInput-underline:before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
+                      '& .MuiInput-underline:after': { borderBottomColor: '#ff66ab' },
+                      minWidth: 300,
+                    }}
+                  />
+                ) : (
+                  <Typography
+                    variant="h3"
+                    onClick={isOwner ? handleStartEditName : undefined}
+                    sx={{
+                      fontWeight: 'bold',
+                      textShadow: '0 2px 10px rgba(0,0,0,0.5)',
+                      cursor: isOwner ? 'pointer' : 'default',
+                      '&:hover': isOwner ? {
+                        outline: '1px dashed rgba(255,255,255,0.3)',
+                        outlineOffset: 4,
+                        borderRadius: 1,
+                      } : {},
+                    }}
+                  >
+                    {tournament.name}
+                  </Typography>
+                )}
                 <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5 }}>
                   {activeStage ? `${activeStage.name} Mappool` : 'Mappool'}
                 </Typography>
@@ -452,7 +647,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                 <Box
                   sx={{
-                    backgroundColor: slotColors[slot] || '#666',
+                    backgroundColor: allSlotColors[slot] || '#666',
                     px: 2,
                     py: 0.5,
                     borderRadius: 1,
@@ -479,7 +674,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                     starRatingSeparate
                     variant="dark"
                     density="compact"
-                    slotBadge={{ label: `${map.slot_type}${map.slot_number}`, color: slotColors[map.slot_type] || '#666' }}
+                    slotBadge={{ label: `${map.slot_type}${map.slot_number}`, color: allSlotColors[map.slot_type] || '#666' }}
                     modChip={map.mod !== 'NM' ? { label: map.mod, color: modColors[map.mod] || '#666' } : undefined}
                     actions={
                       <>
@@ -510,6 +705,42 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
         )}
       </Box>
 
+      {/* Banner Upload Dialog */}
+      <Dialog open={bannerUploadOpen} onClose={() => setBannerUploadOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{tournament.banner_url ? 'Change Banner' : 'Add Banner'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1 }}>
+            <ImageUpload
+              label="Banner Image"
+              value={tournament.banner_url || undefined}
+              onChange={handleBannerUpload}
+              aspectRatio="4/1"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBannerUploadOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Logo Upload Dialog */}
+      <Dialog open={logoUploadOpen} onClose={() => setLogoUploadOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{tournament.logo_url ? 'Change Logo' : 'Add Logo'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1 }}>
+            <ImageUpload
+              label="Tournament Logo"
+              value={tournament.logo_url || undefined}
+              onChange={handleLogoUpload}
+              aspectRatio="1/1"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLogoUploadOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Add Maps Dialog */}
       <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -522,36 +753,106 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-            {/* Slot selector */}
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>Slot</InputLabel>
-              <Select value={selectedSlot} label="Slot" onChange={(e) => setSelectedSlot(e.target.value)}>
-                {slots.map(slot => (
-                  <MenuItem key={slot} value={slot}>
-                    <Chip label={slot} size="small" sx={{ backgroundColor: slotColors[slot] || '#666', color: 'white', mr: 1, minWidth: 40 }} />
-                    {slotLabels[slot]}
+          <Stack spacing={2} sx={{ mb: 2 }}>
+            <Stack direction="row" spacing={2}>
+              {/* Slot selector */}
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Slot</InputLabel>
+                <Select value={selectedSlot} label="Slot" onChange={(e) => setSelectedSlot(e.target.value)}>
+                  {slots.map(slot => (
+                    <MenuItem key={slot} value={slot}>
+                      <Chip label={slot} size="small" sx={{ backgroundColor: allSlotColors[slot] || '#666', color: 'white', mr: 1, minWidth: 40 }} />
+                      {slotLabels[slot]}
+                    </MenuItem>
+                  ))}
+                  <Divider />
+                  <MenuItem value="__custom__">
+                    <EditIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+                    Custom...
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                </Select>
+              </FormControl>
 
-            {/* Mod selector */}
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>Mod</InputLabel>
-              <Select value={selectedMod} label="Mod" onChange={(e) => setSelectedMod(e.target.value)}>
-                {mods.map(mod => (
-                  <MenuItem key={mod} value={mod}>
-                    <Chip label={mod} size="small" sx={{ backgroundColor: modColors[mod] || '#666', color: 'white', mr: 1, minWidth: 40 }} />
-                    {modLabels[mod]}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+              {/* Mod selector */}
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Mod</InputLabel>
+                <Select value={selectedMod} label="Mod" onChange={(e) => setSelectedMod(e.target.value)}>
+                  {mods.map(mod => (
+                    <MenuItem key={mod} value={mod}>
+                      <Chip label={mod} size="small" sx={{ backgroundColor: modColors[mod] || '#666', color: 'white', mr: 1, minWidth: 40 }} />
+                      {modLabels[mod]}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+
+            {selectedSlot === '__custom__' && (
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ pl: 0.5 }}>
+                <TextField
+                  size="small"
+                  label="Slot Name"
+                  value={customSlot}
+                  onChange={(e) => setCustomSlot(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  placeholder="e.g. ACC"
+                  sx={{ width: 120 }}
+                />
+                {customSlot && (
+                  <Chip
+                    label={customSlot}
+                    size="small"
+                    sx={{ backgroundColor: customSlotColor, color: 'white', fontWeight: 'bold', minWidth: 40 }}
+                  />
+                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                  {colorPalette.map(color => (
+                    <Box
+                      key={color}
+                      onClick={() => setCustomSlotColor(color)}
+                      sx={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        backgroundColor: color,
+                        cursor: 'pointer',
+                        border: '2px solid',
+                        borderColor: customSlotColor === color ? 'white' : 'transparent',
+                        outline: customSlotColor === color ? `2px solid ${color}` : 'none',
+                        transition: 'all 0.15s',
+                        '&:hover': { transform: 'scale(1.15)' },
+                      }}
+                    />
+                  ))}
+                  <TextField
+                    size="small"
+                    value={customSlotColor}
+                    onChange={(e) => {
+                      let v = e.target.value;
+                      if (!v.startsWith('#')) v = '#' + v;
+                      setCustomSlotColor(v.slice(0, 7));
+                    }}
+                    sx={{
+                      width: 90,
+                      ml: 0.5,
+                      '& .MuiInputBase-input': { fontSize: 12, py: 0.5, px: 1, fontFamily: 'monospace' },
+                    }}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Box sx={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: customSlotColor, border: '1px solid rgba(0,0,0,0.2)' }} />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                  />
+                </Box>
+              </Stack>
+            )}
           </Stack>
 
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-            Selected maps will be added as <strong>{slotLabels[selectedSlot]}</strong> with <strong>{modLabels[selectedMod]}</strong> mod
+            Selected maps will be added as <strong>{resolvedSlotLabel}</strong> with <strong>{modLabels[selectedMod]}</strong> mod
           </Typography>
 
           {/* Add by URL */}
@@ -687,10 +988,10 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
           <Button
             variant="contained"
             onClick={handleAddSelectedMaps}
-            disabled={selectedStashIds.size === 0}
+            disabled={selectedStashIds.size === 0 || !resolvedSlot}
             sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
           >
-            Add to {selectedSlot} ({selectedMod})
+            Add to {resolvedSlot || '...'} ({selectedMod})
           </Button>
         </DialogActions>
       </Dialog>
