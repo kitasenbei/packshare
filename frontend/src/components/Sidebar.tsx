@@ -20,7 +20,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Tooltip,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
