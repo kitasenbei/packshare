@@ -31,206 +31,60 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import CloseIcon from '@mui/icons-material/Close';
 import LinkIcon from '@mui/icons-material/Link';
 import type { StashBeatmap } from '../types/beatmap';
+import type { User } from '../api/auth';
+import { getBeatmapset } from '../api/auth';
+import type { Tournament, TournamentMap } from '../api/tournaments';
+import { getTournament, addMapToStage, removeMap } from '../api/tournaments';
 import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
 import OsuButton from './OsuButton';
 import RemoveButton from './RemoveButton';
 import { STASH_STORAGE_KEY } from '../utils/stash';
 
-const STORAGE_KEY = 'packshare_tournaments';
-const MAPPOOL_STORAGE_KEY = 'packshare_mappools';
-
 // Slot colors (map categories)
 const slotColors: Record<string, string> = {
-  RC: '#4a90d9',      // Rice
-  LN: '#4ad98f',      // Long Notes
-  HB: '#b44ad9',      // Hybrid
-  TECH: '#f5c842',    // Technical
-  JACK: '#d94a4a',    // Jack
-  SPEED: '#4ad9d9',   // Speed
-  STAM: '#d9a44a',    // Stamina
-  SV: 'primary.main',      // Slider Velocity
-  TB: '#ff4444',      // Tiebreaker
+  RC: '#4a90d9',
+  LN: '#4ad98f',
+  HB: '#b44ad9',
+  TECH: '#f5c842',
+  JACK: '#d94a4a',
+  SPEED: '#4ad9d9',
+  STAM: '#d9a44a',
+  SV: '#ff66ab',
+  TB: '#ff4444',
 };
 
 // Mod colors (game modifiers)
 const modColors: Record<string, string> = {
-  NM: '#666666',      // No Mod
-  HD: '#f5c842',      // Hidden
-  HR: '#d94a4a',      // Hard Rock
-  DT: '#b44ad9',      // Double Time
-  FM: '#4ad98f',      // Free Mod
-  FL: '#333333',      // Flashlight
+  NM: '#666666',
+  HD: '#f5c842',
+  HR: '#d94a4a',
+  DT: '#b44ad9',
+  FM: '#4ad98f',
+  FL: '#333333',
 };
 
 const slots = ['RC', 'LN', 'HB', 'TECH', 'JACK', 'SPEED', 'STAM', 'SV', 'TB'];
 const slotLabels: Record<string, string> = {
-  RC: 'Rice',
-  LN: 'Long Notes',
-  HB: 'Hybrid',
-  TECH: 'Technical',
-  JACK: 'Jack',
-  SPEED: 'Speed',
-  STAM: 'Stamina',
-  SV: 'Slider Velocity',
-  TB: 'Tiebreaker',
+  RC: 'Rice', LN: 'Long Notes', HB: 'Hybrid', TECH: 'Technical',
+  JACK: 'Jack', SPEED: 'Speed', STAM: 'Stamina', SV: 'Slider Velocity', TB: 'Tiebreaker',
 };
 
 const mods = ['NM', 'HD', 'HR', 'DT', 'FM', 'FL'];
 const modLabels: Record<string, string> = {
-  NM: 'No Mod',
-  HD: 'Hidden',
-  HR: 'Hard Rock',
-  DT: 'Double Time',
-  FM: 'Free Mod',
-  FL: 'Flashlight',
+  NM: 'No Mod', HD: 'Hidden', HR: 'Hard Rock', DT: 'Double Time', FM: 'Free Mod', FL: 'Flashlight',
 };
-
-interface MapInfo {
-  slot: string;       // RC, LN, HB, etc.
-  mod: string;        // NM, HD, HR, DT, FM
-  num: number;
-  artist: string;
-  title: string;
-  diff: string;
-  star: number;
-  mapper: string;
-  beatmapId?: number;
-}
-
-interface StoredTournament {
-  id: string;
-  name: string;
-  banner: string;
-  logo: string;
-  stages: string[];
-  currentStage: string;
-  format: string;
-  isUserCreated?: boolean;
-}
-
-// Default tournaments with full mappool data
-const defaultTournaments: Record<string, { name: string; logo: string; stages: Record<string, MapInfo[]> }> = {
-  'owc2024': {
-    name: 'osu! World Cup 2024',
-    logo: 'https://picsum.photos/seed/owclogo/100/100',
-    stages: {
-      'Grand Finals': [
-        { slot: 'RC', mod: 'NM', num: 1, artist: 'UNDEAD CORPORATION', title: 'Everything will freeze', diff: 'Time Freeze', star: 7.21, mapper: 'Ekoro' },
-        { slot: 'RC', mod: 'NM', num: 2, artist: 'DragonForce', title: 'Through the Fire and Flames', diff: 'Myth', star: 7.45, mapper: 'Ponoyoshi' },
-        { slot: 'RC', mod: 'HD', num: 1, artist: 'xi', title: 'Blue Zenith', diff: 'FOUR DIMENSIONS', star: 6.98, mapper: 'Asphyxia' },
-        { slot: 'RC', mod: 'HR', num: 1, artist: 'Camellia', title: 'GHOST', diff: 'Extreme', star: 7.12, mapper: 'Akali' },
-        { slot: 'LN', mod: 'NM', num: 1, artist: 'Camellia', title: "Exit This Earth's Atmosphere", diff: 'Evolution', star: 7.32, mapper: 'rrtyui' },
-        { slot: 'LN', mod: 'NM', num: 2, artist: 'YOASOBI', title: 'Idol', diff: 'Oshi', star: 6.54, mapper: 'Skyflame' },
-        { slot: 'HB', mod: 'NM', num: 1, artist: 'Hana', title: 'Sakura no Uta', diff: 'Euphoria', star: 6.21, mapper: 'BeasttrollMC' },
-        { slot: 'HB', mod: 'DT', num: 1, artist: 'Linked Horizon', title: 'Shinzou wo Sasageyo!', diff: 'Heart', star: 5.89, mapper: 'Monstrata' },
-        { slot: 'SPEED', mod: 'NM', num: 1, artist: 'ClariS', title: 'Hitorigoto', diff: 'Soliloquy', star: 5.34, mapper: 'Doormat' },
-        { slot: 'JACK', mod: 'NM', num: 1, artist: 'Kano', title: 'Dear Brave', diff: 'Valor', star: 5.67, mapper: 'Fycho' },
-        { slot: 'SV', mod: 'NM', num: 1, artist: 'REDALiCE', title: 'Taboo tears you up', diff: 'Insane', star: 6.34, mapper: 'Muya' },
-        { slot: 'TB', mod: 'FM', num: 1, artist: 'Imperial Circus Dead Decadence', title: 'Uta', diff: 'Himei', star: 8.32, mapper: 'DoKito' },
-      ],
-      'Finals': [
-        { slot: 'RC', mod: 'NM', num: 1, artist: 'Cres', title: 'End Time', diff: 'Extra', star: 6.45, mapper: 'Akali' },
-        { slot: 'RC', mod: 'NM', num: 2, artist: 'Nanahira', title: 'Petals', diff: 'Blossom', star: 6.12, mapper: 'Lasse' },
-        { slot: 'LN', mod: 'NM', num: 1, artist: 'Aoi', title: 'Thriving City', diff: 'Prosperity', star: 5.88, mapper: 'Niva' },
-        { slot: 'HB', mod: 'NM', num: 1, artist: 'Reol', title: 'No title', diff: 'Nameless', star: 5.67, mapper: 'Kowari' },
-        { slot: 'SPEED', mod: 'DT', num: 1, artist: 'Shiena Nishizawa', title: 'Brand-new World', diff: 'New', star: 5.12, mapper: 'Log Off Now' },
-        { slot: 'TB', mod: 'FM', num: 1, artist: 'Demetori', title: 'Emotional Skyscraper', diff: 'Reverie', star: 7.45, mapper: 'GoldenWolf' },
-      ],
-    },
-  },
-  'mwc2024': {
-    name: '4K Mania World Cup 2024',
-    logo: 'https://picsum.photos/seed/mwclogo/100/100',
-    stages: {
-      'Semifinals': [
-        { slot: 'RC', mod: 'NM', num: 1, artist: 'Camellia', title: 'crystallized', diff: 'Coalescence', star: 6.8, mapper: 'Abraxos' },
-        { slot: 'RC', mod: 'NM', num: 2, artist: 'xi', title: 'Parousia', diff: 'Sanctum', star: 7.1, mapper: 'Shoegazer' },
-        { slot: 'LN', mod: 'NM', num: 1, artist: 'PSYQUI', title: 'Hype feat. Such', diff: 'Energetic', star: 5.9, mapper: 'Vortex-' },
-        { slot: 'JACK', mod: 'NM', num: 1, artist: 'Kobaryo', title: 'Bookmaker', diff: 'Gambit', star: 6.5, mapper: 'Fresh Chicken' },
-        { slot: 'SPEED', mod: 'DT', num: 1, artist: 'Memme', title: 'Acid Burst', diff: 'Corrosive', star: 5.2, mapper: 'Lude' },
-        { slot: 'TB', mod: 'FM', num: 1, artist: 'Frums', title: 'Theyaremanycolors', diff: 'Chromatic', star: 7.8, mapper: 'Blocko' },
-      ],
-    },
-  },
-  'community-cup': {
-    name: 'Community Cup #12',
-    logo: 'https://picsum.photos/seed/cclogo/100/100',
-    stages: {
-      'Qualifiers': [
-        { slot: 'RC', mod: 'NM', num: 1, artist: 'Foreground Eclipse', title: 'From Under Cover', diff: 'Insane', star: 5.2, mapper: 'Seni' },
-        { slot: 'RC', mod: 'NM', num: 2, artist: 'FELT', title: 'Flower Flag', diff: 'Extra', star: 5.5, mapper: 'MrSergio' },
-        { slot: 'LN', mod: 'NM', num: 1, artist: 'Halozy', title: 'Genryuu Kaiko', diff: 'Higan', star: 5.1, mapper: 'Hollow Wings' },
-        { slot: 'HB', mod: 'NM', num: 1, artist: 'Demetori', title: 'Kuuchuu ni Shizumu', diff: 'Extra', star: 4.8, mapper: 'GoldenWolf' },
-        { slot: 'SV', mod: 'NM', num: 1, artist: 'Hanatan', title: 'Airman ga Taosenai', diff: 'Holy Shit!', star: 4.2, mapper: 'SOUND HOLIC' },
-      ],
-    },
-  },
-};
-
-function getTournamentData(tournamentId: string) {
-  // Check localStorage for user-created tournaments
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      const userTournaments: StoredTournament[] = JSON.parse(saved);
-      const found = userTournaments.find(t => t.id === tournamentId);
-      if (found) {
-        // Check for saved mappool data
-        const mappoolData = localStorage.getItem(`${MAPPOOL_STORAGE_KEY}_${tournamentId}`);
-        let stageData: Record<string, MapInfo[]> = {};
-
-        if (mappoolData) {
-          stageData = JSON.parse(mappoolData);
-        } else {
-          // Generate empty stage structure for user tournaments
-          found.stages.forEach(stage => {
-            stageData[stage] = [];
-          });
-        }
-
-        return {
-          name: found.name,
-          logo: found.logo,
-          banner: found.banner,
-          stages: stageData,
-          isUserCreated: true,
-        };
-      }
-    } catch {
-      // ignore parse errors
-    }
-  }
-
-  // Fall back to default tournaments
-  if (defaultTournaments[tournamentId]) {
-    return {
-      ...defaultTournaments[tournamentId],
-      banner: `https://picsum.photos/seed/${tournamentId}/1200/300`,
-      isUserCreated: false,
-    };
-  }
-
-  // Not found - return placeholder
-  return {
-    name: 'Tournament Not Found',
-    logo: '',
-    banner: '',
-    stages: {},
-    isUserCreated: false,
-  };
-}
 
 interface TournamentMappoolProps {
-  tournamentId?: string;
-  stage?: string;
+  abbreviation?: string;
+  user: User | null;
 }
 
-export default function TournamentMappool({ tournamentId, stage }: TournamentMappoolProps) {
-  const [tournamentData, setTournamentData] = useState(() => getTournamentData(tournamentId || ''));
-  const stages = Object.keys(tournamentData.stages);
-  const [currentStage, setCurrentStage] = useState(stage || stages[0] || '');
-  const [maps, setMaps] = useState<MapInfo[]>(tournamentData.stages[currentStage] || []);
+export default function TournamentMappool({ abbreviation, user }: TournamentMappoolProps) {
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [currentStage, setCurrentStage] = useState<number | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [stash, setStash] = useState<StashBeatmap[]>([]);
   const [selectedStashIds, setSelectedStashIds] = useState<Set<number>>(new Set());
@@ -240,35 +94,53 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
+  const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null);
+  const [fetchedDiffs, setFetchedDiffs] = useState<{ beatmap_id: number; difficulty_name: string; star_rating: number; keys: number }[]>([]);
+
+  useEffect(() => {
+    if (!abbreviation) return;
+    loadTournament();
+  }, [abbreviation]);
+
+  const loadTournament = async () => {
+    try {
+      const data = await getTournament(abbreviation!);
+      setTournament(data);
+      if (data.stages && data.stages.length > 0 && currentStage === null) {
+        setCurrentStage(data.stages[0].id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load tournament');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load stash when dialog opens
   useEffect(() => {
     if (addDialogOpen) {
       const saved = localStorage.getItem(STASH_STORAGE_KEY);
       if (saved) {
-        try {
-          setStash(JSON.parse(saved));
-        } catch {
-          setStash([]);
-        }
+        try { setStash(JSON.parse(saved)); } catch { setStash([]); }
       }
     }
   }, [addDialogOpen]);
 
-  // Update maps when stage changes
-  useEffect(() => {
-    setMaps(tournamentData.stages[currentStage] || []);
-  }, [currentStage, tournamentData]);
+  const stages = tournament?.stages || [];
+  const activeStage = stages.find(s => s.id === currentStage);
+  const maps = activeStage?.maps || [];
+  const isOwner = tournament?.user?.osu_id === user?.osu_id;
 
   // Group maps by slot
   const groupedMaps = maps.reduce((acc, map) => {
-    if (!acc[map.slot]) acc[map.slot] = [];
-    acc[map.slot].push(map);
+    if (!acc[map.slot_type]) acc[map.slot_type] = [];
+    acc[map.slot_type].push(map);
     return acc;
-  }, {} as Record<string, typeof maps>);
+  }, {} as Record<string, TournamentMap[]>);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
+    setSnackbar({ open: true, message: 'Link copied!' });
   };
 
   const handleOpenAddDialog = () => {
@@ -277,13 +149,13 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
     setSelectedMod('NM');
     setUrlInput('');
     setUrlError('');
+    setFetchedDiffs([]);
+    setSelectedDiffIndex(null);
     setAddDialogOpen(true);
   };
 
-  const extractBeatmapId = (input: string): string | null => {
-    if (/^\d+$/.test(input.trim())) {
-      return input.trim();
-    }
+  const extractBeatmapsetId = (input: string): string | null => {
+    if (/^\d+$/.test(input.trim())) return input.trim();
     const match = input.match(/osu\.ppy\.sh\/beatmapsets\/(\d+)/);
     if (match) return match[1];
     const nerinyanMatch = input.match(/nerinyan\.moe.*?(\d+)/);
@@ -291,67 +163,54 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
     return null;
   };
 
-  // Mock fetch beatmap - in production this would call an API
-  const mockFetchBeatmap = (id: string): Promise<{ id: number; title: string; artist: string; creator: string }> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: parseInt(id),
-          title: `Beatmap ${id}`,
-          artist: 'Various Artists',
-          creator: 'Mapper' + Math.floor(Math.random() * 100),
-        });
-      }, 500);
-    });
-  };
-
-  const handleAddByUrl = async () => {
-    const id = extractBeatmapId(urlInput);
+  const handleFetchBeatmap = async () => {
+    const id = extractBeatmapsetId(urlInput);
     if (!id) {
       setUrlError('Invalid beatmap ID or URL');
       return;
     }
 
-    // Check if already in pool
-    if (maps.some(m => m.beatmapId === parseInt(id))) {
-      setUrlError('Beatmap already in mappool');
-      return;
-    }
-
     setUrlLoading(true);
     setUrlError('');
+    setFetchedDiffs([]);
+    setSelectedDiffIndex(null);
 
     try {
-      const beatmap = await mockFetchBeatmap(id);
-
-      // Get the next number for this slot
-      const existingSlotMaps = maps.filter(m => m.slot === selectedSlot);
-      const nextNum = existingSlotMaps.length + 1;
-
-      const newMap: MapInfo = {
-        slot: selectedSlot,
-        mod: selectedMod,
-        num: nextNum,
-        artist: beatmap.artist,
-        title: beatmap.title,
-        diff: 'Normal',
-        star: 5.0,
-        mapper: beatmap.creator,
-        beatmapId: beatmap.id,
-      };
-
-      const updatedMaps = [...maps, newMap];
-      setMaps(updatedMaps);
-
-      // Save to localStorage
-      if (tournamentId && tournamentData.isUserCreated) {
-        const allStages = { ...tournamentData.stages, [currentStage]: updatedMaps };
-        localStorage.setItem(`${MAPPOOL_STORAGE_KEY}_${tournamentId}`, JSON.stringify(allStages));
-        setTournamentData(prev => ({ ...prev, stages: allStages }));
+      const beatmapset = await getBeatmapset(parseInt(id));
+      if (!beatmapset) {
+        setUrlError('Beatmap not found');
+        setUrlLoading(false);
+        return;
       }
 
-      setUrlInput('');
-      setSnackbar({ open: true, message: `Added to ${slotLabels[selectedSlot]} (${selectedMod})` });
+      if (beatmapset.beatmaps.length === 1) {
+        // Single diff — add directly
+        const diff = beatmapset.beatmaps[0];
+        await handleAddMapAPI(
+          beatmapset.beatmapset_id,
+          beatmapset.title,
+          beatmapset.artist,
+          beatmapset.creator,
+          diff.keys,
+          diff.star_rating,
+          diff.difficulty_name,
+        );
+      } else {
+        // Multiple diffs — show picker
+        setFetchedDiffs(beatmapset.beatmaps.map(b => ({
+          beatmap_id: b.beatmap_id,
+          difficulty_name: b.difficulty_name,
+          star_rating: b.star_rating,
+          keys: b.keys,
+        })));
+        // Store beatmapset info for later use
+        setUrlInput(JSON.stringify({
+          beatmapset_id: beatmapset.beatmapset_id,
+          title: beatmapset.title,
+          artist: beatmapset.artist,
+          creator: beatmapset.creator,
+        }));
+      }
     } catch {
       setUrlError('Failed to fetch beatmap');
     }
@@ -359,73 +218,112 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
     setUrlLoading(false);
   };
 
+  const handleAddSelectedDiff = async () => {
+    if (selectedDiffIndex === null) return;
+    const diff = fetchedDiffs[selectedDiffIndex];
+    try {
+      const meta = JSON.parse(urlInput);
+      await handleAddMapAPI(
+        meta.beatmapset_id,
+        meta.title,
+        meta.artist,
+        meta.creator,
+        diff.keys,
+        diff.star_rating,
+        diff.difficulty_name,
+      );
+      setFetchedDiffs([]);
+      setSelectedDiffIndex(null);
+      setUrlInput('');
+    } catch {
+      setUrlError('Failed to add map');
+    }
+  };
+
+  const handleAddMapAPI = async (
+    beatmapsetId: number, title: string, artist: string, creator: string,
+    keys: number, starRating: number, difficultyName: string,
+  ) => {
+    if (!abbreviation || !currentStage) return;
+    try {
+      await addMapToStage(abbreviation, currentStage, {
+        slot_type: selectedSlot,
+        mod: selectedMod,
+        beatmapset_id: beatmapsetId,
+        title,
+        artist,
+        creator,
+        keys,
+        star_rating: starRating,
+        difficulty_name: difficultyName,
+      });
+      setSnackbar({ open: true, message: `Added to ${slotLabels[selectedSlot]} (${selectedMod})` });
+      loadTournament();
+    } catch (err) {
+      setUrlError(err instanceof Error ? err.message : 'Failed to add map');
+    }
+  };
+
   const handleToggleStashItem = (id: number) => {
     setSelectedStashIds(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
       return newSet;
     });
   };
 
-  const handleAddSelectedMaps = () => {
+  const handleAddSelectedMaps = async () => {
     const selectedMaps = stash.filter(b => selectedStashIds.has(b.id));
-    if (selectedMaps.length === 0) return;
+    if (selectedMaps.length === 0 || !abbreviation || !currentStage) return;
 
-    // Get the next number for this slot
-    const existingSlotMaps = maps.filter(m => m.slot === selectedSlot);
-    let nextNum = existingSlotMaps.length + 1;
-
-    const newMaps: MapInfo[] = selectedMaps.map(beatmap => ({
-      slot: selectedSlot,
-      mod: selectedMod,
-      num: nextNum++,
-      artist: beatmap.artist,
-      title: beatmap.title,
-      diff: 'Normal', // Default difficulty name
-      star: 5.0, // Default star rating
-      mapper: beatmap.creator,
-      beatmapId: beatmap.id,
-    }));
-
-    const updatedMaps = [...maps, ...newMaps];
-    setMaps(updatedMaps);
-
-    // Save to localStorage
-    if (tournamentId && tournamentData.isUserCreated) {
-      const allStages = { ...tournamentData.stages, [currentStage]: updatedMaps };
-      localStorage.setItem(`${MAPPOOL_STORAGE_KEY}_${tournamentId}`, JSON.stringify(allStages));
-      setTournamentData(prev => ({ ...prev, stages: allStages }));
+    for (const beatmap of selectedMaps) {
+      try {
+        await addMapToStage(abbreviation, currentStage, {
+          slot_type: selectedSlot,
+          mod: selectedMod,
+          beatmapset_id: beatmap.id,
+          title: beatmap.title,
+          artist: beatmap.artist,
+          creator: beatmap.creator,
+          keys: beatmap.keys,
+        });
+      } catch {
+        // continue with others
+      }
     }
 
     setSnackbar({ open: true, message: `Added ${selectedMaps.length} map(s) to ${slotLabels[selectedSlot]} (${selectedMod})` });
     setAddDialogOpen(false);
+    loadTournament();
   };
 
-  const handleRemoveMap = (mapIndex: number) => {
-    const updatedMaps = maps.filter((_, i) => i !== mapIndex);
-
-    // Renumber maps within each slot
-    const renumbered = updatedMaps.map((map, _, arr) => {
-      const sameSlotMaps = arr.filter(m => m.slot === map.slot);
-      const idx = sameSlotMaps.indexOf(map);
-      return { ...map, num: idx + 1 };
-    });
-
-    setMaps(renumbered);
-
-    // Save to localStorage
-    if (tournamentId && tournamentData.isUserCreated) {
-      const allStages = { ...tournamentData.stages, [currentStage]: renumbered };
-      localStorage.setItem(`${MAPPOOL_STORAGE_KEY}_${tournamentId}`, JSON.stringify(allStages));
-      setTournamentData(prev => ({ ...prev, stages: allStages }));
+  const handleRemoveMap = async (mapId: number) => {
+    if (!abbreviation) return;
+    try {
+      await removeMap(abbreviation, mapId);
+      setSnackbar({ open: true, message: 'Map removed from mappool' });
+      loadTournament();
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to remove map' });
     }
-
-    setSnackbar({ open: true, message: 'Map removed from mappool' });
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#0d0d1a' }}>
+        <CircularProgress sx={{ color: '#ff66ab' }} />
+      </Box>
+    );
+  }
+
+  if (error || !tournament) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white' }}>
+        <Typography>{error || 'Tournament not found'}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white' }}>
@@ -433,8 +331,8 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
       <Box
         sx={{
           position: 'relative',
-          background: tournamentData.banner
-            ? `linear-gradient(to bottom, rgba(13,13,26,0.2) 0%, rgba(13,13,26,0.7) 40%, #0d0d1a 100%), url(${tournamentData.banner}) center / cover no-repeat`
+          background: tournament.banner_url
+            ? `linear-gradient(to bottom, rgba(13,13,26,0.2) 0%, rgba(13,13,26,0.7) 40%, #0d0d1a 100%), url(${tournament.banner_url}) center / cover no-repeat`
             : 'linear-gradient(to bottom, rgba(255,102,171,0.2), #0d0d1a)',
           px: 4,
           pt: 5,
@@ -444,21 +342,23 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
         <Box sx={{ maxWidth: 1200, margin: '0 auto' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Stack direction="row" spacing={3} alignItems="center">
-              <Avatar
-                src={tournamentData.logo}
-                sx={{
-                  width: 80,
-                  height: 80,
-                  border: 3, borderColor: 'primary.main',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                }}
-              />
+              {tournament.logo_url && (
+                <Avatar
+                  src={tournament.logo_url}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    border: '3px solid #ff66ab',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                  }}
+                />
+              )}
               <Box>
                 <Typography variant="h3" sx={{ fontWeight: 'bold', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                  {tournamentData.name}
+                  {tournament.name}
                 </Typography>
                 <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5 }}>
-                  {currentStage ? `${currentStage} Mappool` : 'Mappool'}
+                  {activeStage ? `${activeStage.name} Mappool` : 'Mappool'}
                 </Typography>
               </Box>
             </Stack>
@@ -470,7 +370,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                   <Box
                     component="span"
                     sx={{
-                      backgroundColor: 'primary.main',
+                      backgroundColor: '#ff66ab',
                       px: 0.5,
                       py: 0.15,
                       borderRadius: 0.5,
@@ -502,11 +402,11 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                 mt: 3,
                 '& .MuiTab-root': { color: 'rgba(255,255,255,0.6)', textTransform: 'none', fontWeight: 'bold', fontSize: 16 },
                 '& .Mui-selected': { color: 'white' },
-                '& .MuiTabs-indicator': { backgroundColor: 'primary.main', height: 3 },
+                '& .MuiTabs-indicator': { backgroundColor: '#ff66ab', height: 3 },
               }}
             >
               {stages.map((s) => (
-                <Tab key={s} label={s} value={s} />
+                <Tab key={s.id} label={s.name} value={s.id} />
               ))}
             </Tabs>
           )}
@@ -519,20 +419,20 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
           <Button
             variant="contained"
             startIcon={<DownloadIcon />}
-            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
+            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
           >
             Download All ({maps.length} maps)
           </Button>
         )}
-        {tournamentData.isUserCreated && (
+        {isOwner && (
           <Button
             variant="outlined"
             startIcon={<AddIcon />}
             onClick={handleOpenAddDialog}
             sx={{
-              borderColor: 'primary.main',
-              color: 'primary.main',
-              '&:hover': { borderColor: 'primary.dark', backgroundColor: 'rgba(255,102,171,0.1)' },
+              borderColor: '#ff66ab',
+              color: '#ff66ab',
+              '&:hover': { borderColor: '#ff4499', backgroundColor: 'rgba(255,102,171,0.1)' },
             }}
           >
             Add Maps
@@ -566,47 +466,44 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
                 </Typography>
               </Stack>
               <Stack spacing={1}>
-                {slotMaps.map((map, i) => {
-                  const globalIndex = maps.findIndex(m => m === map);
-                  return (
-                    <BeatmapRow
-                      key={i}
-                      title={map.title}
-                      artist={map.artist}
-                      creator={map.mapper}
-                      creatorPrefix="mapped by"
-                      beatmapsetId={map.beatmapId}
-                      difficultyName={map.diff}
-                      starRating={map.star}
-                      starRatingSeparate
-                      variant="dark"
-                      density="compact"
-                      slotBadge={{ label: `${map.slot}${map.num}`, color: slotColors[map.slot] || '#666' }}
-                      modChip={map.mod !== 'NM' ? { label: map.mod, color: modColors[map.mod] || '#666' } : undefined}
-                      actions={
-                        <>
-                          <OsuButton onClick={() => map.beatmapId && window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapId}`, '_blank')} variant="dark" />
-                          <DownloadButton
-                            downloadUrl={`https://api.nerinyan.moe/d/${map.beatmapId}`}
-                            downloadName={`${map.artist} - ${map.title}`}
-                            variant="dark"
-                            stashData={map.beatmapId ? {
-                              id: map.beatmapId,
-                              beatmapsetId: map.beatmapId,
-                              title: map.title,
-                              artist: map.artist,
-                              creator: map.mapper,
-                              source: 'download',
-                            } : undefined}
-                          />
-                          {tournamentData.isUserCreated && (
-                            <RemoveButton onClick={() => handleRemoveMap(globalIndex)} />
-                          )}
-                        </>
-                      }
-                    />
-                  );
-                })}
+                {slotMaps.map((map) => (
+                  <BeatmapRow
+                    key={map.id}
+                    title={map.title}
+                    artist={map.artist}
+                    creator={map.creator}
+                    creatorPrefix="mapped by"
+                    beatmapsetId={map.beatmapset_id}
+                    difficultyName={map.difficulty_name}
+                    starRating={map.star_rating}
+                    starRatingSeparate
+                    variant="dark"
+                    density="compact"
+                    slotBadge={{ label: `${map.slot_type}${map.slot_number}`, color: slotColors[map.slot_type] || '#666' }}
+                    modChip={map.mod !== 'NM' ? { label: map.mod, color: modColors[map.mod] || '#666' } : undefined}
+                    actions={
+                      <>
+                        <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapset_id}`, '_blank')} variant="dark" />
+                        <DownloadButton
+                          downloadUrl={`https://api.nerinyan.moe/d/${map.beatmapset_id}`}
+                          downloadName={`${map.artist} - ${map.title}`}
+                          variant="dark"
+                          stashData={{
+                            id: map.beatmapset_id,
+                            beatmapsetId: map.beatmapset_id,
+                            title: map.title,
+                            artist: map.artist,
+                            creator: map.creator,
+                            source: 'download',
+                          }}
+                        />
+                        {isOwner && (
+                          <RemoveButton onClick={() => handleRemoveMap(map.id)} />
+                        )}
+                      </>
+                    }
+                  />
+                ))}
               </Stack>
             </Box>
           ))
@@ -617,7 +514,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
       <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Stack direction="row" spacing={1} alignItems="center">
-            <InventoryIcon sx={{ color: 'primary.main' }} />
+            <InventoryIcon sx={{ color: '#ff66ab' }} />
             <span>Add Maps</span>
           </Stack>
           <IconButton size="small" onClick={() => setAddDialogOpen(false)}>
@@ -629,23 +526,10 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
             {/* Slot selector */}
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel>Slot</InputLabel>
-              <Select
-                value={selectedSlot}
-                label="Slot"
-                onChange={(e) => setSelectedSlot(e.target.value)}
-              >
+              <Select value={selectedSlot} label="Slot" onChange={(e) => setSelectedSlot(e.target.value)}>
                 {slots.map(slot => (
                   <MenuItem key={slot} value={slot}>
-                    <Chip
-                      label={slot}
-                      size="small"
-                      sx={{
-                        backgroundColor: slotColors[slot] || '#666',
-                        color: 'white',
-                        mr: 1,
-                        minWidth: 40,
-                      }}
-                    />
+                    <Chip label={slot} size="small" sx={{ backgroundColor: slotColors[slot] || '#666', color: 'white', mr: 1, minWidth: 40 }} />
                     {slotLabels[slot]}
                   </MenuItem>
                 ))}
@@ -655,23 +539,10 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
             {/* Mod selector */}
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel>Mod</InputLabel>
-              <Select
-                value={selectedMod}
-                label="Mod"
-                onChange={(e) => setSelectedMod(e.target.value)}
-              >
+              <Select value={selectedMod} label="Mod" onChange={(e) => setSelectedMod(e.target.value)}>
                 {mods.map(mod => (
                   <MenuItem key={mod} value={mod}>
-                    <Chip
-                      label={mod}
-                      size="small"
-                      sx={{
-                        backgroundColor: modColors[mod] || '#666',
-                        color: 'white',
-                        mr: 1,
-                        minWidth: 40,
-                      }}
-                    />
+                    <Chip label={mod} size="small" sx={{ backgroundColor: modColors[mod] || '#666', color: 'white', mr: 1, minWidth: 40 }} />
                     {modLabels[mod]}
                   </MenuItem>
                 ))}
@@ -688,40 +559,74 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1.5 }}>
               Add by URL or ID
             </Typography>
-            <Stack direction="row" spacing={1}>
-              <TextField
-                size="small"
-                fullWidth
-                placeholder="Enter beatmap ID or osu.ppy.sh URL"
-                value={urlInput}
-                onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
-                onKeyDown={(e) => e.key === 'Enter' && urlInput.trim() && !urlLoading && handleAddByUrl()}
-                error={!!urlError}
-                helperText={urlError}
-                disabled={urlLoading}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LinkIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-              <Button
-                variant="contained"
-                onClick={handleAddByUrl}
-                disabled={urlLoading || !urlInput.trim()}
-                sx={{
-                  minWidth: 80,
-                  backgroundColor: 'primary.main',
-                  '&:hover': { backgroundColor: 'primary.dark' }
-                }}
-              >
-                {urlLoading ? <CircularProgress size={20} color="inherit" /> : 'Add'}
-              </Button>
-            </Stack>
+            {fetchedDiffs.length > 0 ? (
+              <Stack spacing={1}>
+                <Typography variant="body2" color="text.secondary">Select a difficulty:</Typography>
+                {fetchedDiffs.map((diff, i) => (
+                  <Box
+                    key={diff.beatmap_id}
+                    onClick={() => setSelectedDiffIndex(i)}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      border: '2px solid',
+                      borderColor: selectedDiffIndex === i ? '#ff66ab' : 'transparent',
+                      backgroundColor: selectedDiffIndex === i ? 'rgba(255,102,171,0.08)' : 'transparent',
+                      '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight="bold">{diff.difficulty_name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {diff.keys}K · {diff.star_rating.toFixed(2)}*
+                    </Typography>
+                  </Box>
+                ))}
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button size="small" onClick={() => { setFetchedDiffs([]); setUrlInput(''); }}>Back</Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={selectedDiffIndex === null}
+                    onClick={handleAddSelectedDiff}
+                    sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                  >
+                    Add Selected
+                  </Button>
+                </Stack>
+              </Stack>
+            ) : (
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  placeholder="Enter beatmapset ID or osu.ppy.sh URL"
+                  value={typeof urlInput === 'string' && !urlInput.startsWith('{') ? urlInput : ''}
+                  onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && urlInput.trim() && !urlLoading && handleFetchBeatmap()}
+                  error={!!urlError}
+                  helperText={urlError}
+                  disabled={urlLoading}
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LinkIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleFetchBeatmap}
+                  disabled={urlLoading || !urlInput.trim()}
+                  sx={{ minWidth: 80, backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                >
+                  {urlLoading ? <CircularProgress size={20} color="inherit" /> : 'Add'}
+                </Button>
+              </Stack>
+            )}
           </Box>
 
           <Divider sx={{ mb: 2 }}>
@@ -742,7 +647,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
             <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
               {stash.map((beatmap) => {
                 const isSelected = selectedStashIds.has(beatmap.id);
-                const alreadyInPool = maps.some(m => m.beatmapId === beatmap.id);
+                const alreadyInPool = maps.some(m => m.beatmapset_id === beatmap.id);
                 return (
                   <BeatmapRow
                     key={beatmap.id}
@@ -783,7 +688,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
             variant="contained"
             onClick={handleAddSelectedMaps}
             disabled={selectedStashIds.size === 0}
-            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
+            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
           >
             Add to {selectedSlot} ({selectedMod})
           </Button>
@@ -800,7 +705,7 @@ export default function TournamentMappool({ tournamentId, stage }: TournamentMap
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity="success"
-          sx={{ backgroundColor: '#1a1a2e', color: 'white', border: 1, borderColor: 'primary.main' }}
+          sx={{ backgroundColor: '#1a1a2e', color: 'white', border: 1, borderColor: '#ff66ab' }}
         >
           {snackbar.message}
         </Alert>

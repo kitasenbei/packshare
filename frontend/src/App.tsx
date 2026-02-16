@@ -93,9 +93,9 @@ function SharedPackPage() {
   return <SharedPack packId={packId} />;
 }
 
-function TournamentMappoolPage() {
-  const { tournamentId } = useParams();
-  return <TournamentMappool tournamentId={tournamentId} />;
+function TournamentMappoolPage({ user }: { user: User | null }) {
+  const { abbreviation } = useParams();
+  return <TournamentMappool abbreviation={abbreviation} user={user} />;
 }
 
 function NotFound() {
@@ -215,7 +215,7 @@ function App() {
         <Routes>
           {/* Clean pages without sidebar */}
           <Route path="/s/:packId" element={<SharedPackPage />} />
-          <Route path="/t/:tournamentId" element={<TournamentMappoolPage />} />
+          <Route path="/t/:abbreviation" element={<TournamentMappoolPage user={user} />} />
 
           {/* Main app with top navbar */}
           <Route path="*" element={
@@ -244,7 +244,7 @@ function App() {
                     <Route path="/create" element={<PackCreator user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
                     <Route path="/my-packs" element={<MyPacks user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
                     <Route path="/explore" element={<Explore />} />
-                    <Route path="/tournaments" element={<Tournaments />} />
+                    <Route path="/tournaments" element={<Tournaments user={user} />} />
                     <Route path="/keys" element={<KeyManager user={user} authMode={authMode} />} />
                     <Route path="/pack/:packId" element={<PackPage />} />
                     <Route path="*" element={<NotFound />} />

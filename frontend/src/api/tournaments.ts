@@ -1,0 +1,169 @@
+import { API_BASE_URL } from './config';
+import { getStoredToken } from './auth';
+
+export interface TournamentMap {
+  id: number;
+  stage_id: number;
+  slot_type: string;
+  mod: string;
+  slot_number: number;
+  beatmapset_id: number;
+  title: string;
+  artist: string;
+  creator: string;
+  keys: number;
+  star_rating?: number;
+  difficulty_name?: string;
+}
+
+export interface TournamentStage {
+  id: number;
+  tournament_id: number;
+  name: string;
+  sort_order: number;
+  maps?: TournamentMap[];
+}
+
+export interface Tournament {
+  id: number;
+  name: string;
+  abbreviation: string;
+  format: string;
+  banner_url: string;
+  logo_url: string;
+  status: 'upcoming' | 'live' | 'completed';
+  user_id: number;
+  user?: {
+    id: number;
+    osu_id: number;
+    username: string;
+    country_code: string;
+    avatar_url: string;
+  };
+  stages?: TournamentStage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTournamentInput {
+  name: string;
+  abbreviation: string;
+  format: string;
+  banner_url?: string;
+  logo_url?: string;
+  stages: { name: string }[];
+}
+
+export interface UpdateTournamentInput {
+  name?: string;
+  banner_url?: string;
+  logo_url?: string;
+  status?: string;
+}
+
+export interface AddMapInput {
+  slot_type: string;
+  mod: string;
+  beatmapset_id: number;
+  title: string;
+  artist: string;
+  creator: string;
+  keys?: number;
+  star_rating?: number;
+  difficulty_name?: string;
+}
+
+function getAuthHeaders(): HeadersInit {
+  const token = getStoredToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export async function listTournaments(status?: string): Promise<Tournament[]> {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  const qs = params.toString();
+  const response = await fetch(`${API_BASE_URL}/api/tournaments${qs ? `?${qs}` : ''}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tournaments: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function getTournament(abbrev: string): Promise<Tournament> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}`);
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Tournament not found');
+    }
+    throw new Error(`Failed to fetch tournament: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function createTournament(input: CreateTournamentInput): Promise<Tournament> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `Failed to create tournament: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function updateTournament(abbrev: string, input: UpdateTournamentInput): Promise<Tournament> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `Failed to update tournament: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteTournament(abbrev: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error('You do not have permission to delete this tournament');
+    }
+    throw new Error(`Failed to delete tournament: ${response.statusText}`);
+  }
+}
+
+export async function addMapToStage(abbrev: string, stageId: number, input: AddMapInput): Promise<TournamentMap> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/stages/${stageId}/maps`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `Failed to add map: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function removeMap(abbrev: string, mapId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/maps/${mapId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to remove map: ${response.statusText}`);
+  }
+}

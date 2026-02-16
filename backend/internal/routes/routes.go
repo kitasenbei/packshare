@@ -48,6 +48,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	// Handlers
 	packHandler := handlers.NewPackHandler(db)
 	keyHandler := handlers.NewAccessKeyHandler(db, cfg.JWTSecret)
+	tournamentHandler := handlers.NewTournamentHandler(db)
 
 	// API routes
 	apiGroup := app.Group("/api")
@@ -57,6 +58,8 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	apiGroup.Get("/packs", packHandler.BrowsePacks)
 	apiGroup.Get("/packs/:code", packHandler.GetPack)
 	apiGroup.Post("/auth/key", keyHandler.KeyLogin)
+	apiGroup.Get("/tournaments", tournamentHandler.ListTournaments)
+	apiGroup.Get("/tournaments/:abbrev", tournamentHandler.GetTournament)
 
 	// Protected routes (OAuth or key auth)
 	protected := apiGroup.Group("", middleware.AuthMiddleware(cfg.JWTSecret))
@@ -64,6 +67,11 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	protected.Put("/packs/:code", packHandler.UpdatePack)
 	protected.Delete("/packs/:code", packHandler.DeletePack)
 	protected.Get("/my-packs", packHandler.GetMyPacks)
+	protected.Post("/tournaments", tournamentHandler.CreateTournament)
+	protected.Put("/tournaments/:abbrev", tournamentHandler.UpdateTournament)
+	protected.Delete("/tournaments/:abbrev", tournamentHandler.DeleteTournament)
+	protected.Post("/tournaments/:abbrev/stages/:stageId/maps", tournamentHandler.AddMapToStage)
+	protected.Delete("/tournaments/:abbrev/maps/:mapId", tournamentHandler.RemoveMapFromStage)
 
 	// OAuth-only routes (key management)
 	oauthOnly := apiGroup.Group("", middleware.OAuthOnlyMiddleware(cfg.JWTSecret))

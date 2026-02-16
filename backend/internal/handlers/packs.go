@@ -75,8 +75,12 @@ func truncate(s string, max int) string {
 }
 
 func (h *PackHandler) getOrCreateUser(claims *middleware.UserClaims) (*models.User, error) {
+	return getOrCreateUser(h.db, claims)
+}
+
+func getOrCreateUser(db *gorm.DB, claims *middleware.UserClaims) (*models.User, error) {
 	var user models.User
-	err := h.db.Where("osu_id = ?", claims.OsuID).First(&user).Error
+	err := db.Where("osu_id = ?", claims.OsuID).First(&user).Error
 	if err == gorm.ErrRecordNotFound {
 		user = models.User{
 			OsuID:       claims.OsuID,
@@ -84,7 +88,7 @@ func (h *PackHandler) getOrCreateUser(claims *middleware.UserClaims) (*models.Us
 			CountryCode: claims.CountryCode,
 			AvatarURL:   claims.AvatarURL,
 		}
-		if err := h.db.Create(&user).Error; err != nil {
+		if err := db.Create(&user).Error; err != nil {
 			return nil, err
 		}
 	} else if err != nil {
@@ -102,7 +106,7 @@ func (h *PackHandler) getOrCreateUser(claims *middleware.UserClaims) (*models.Us
 			updates["avatar_url"] = claims.AvatarURL
 		}
 		if len(updates) > 0 {
-			h.db.Model(&user).Updates(updates)
+			db.Model(&user).Updates(updates)
 		}
 	}
 	return &user, nil

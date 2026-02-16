@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
-  Paper,
   Typography,
   Button,
   Card,
@@ -22,174 +21,137 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  CircularProgress,
+  IconButton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import PeopleIcon from '@mui/icons-material/People';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import LinkIcon from '@mui/icons-material/Link';
+import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LinkIcon from '@mui/icons-material/Link';
 import ImageUpload from './ImageUpload';
+import type { User } from '../api/auth';
+import type { Tournament } from '../api/tournaments';
+import { listTournaments, createTournament, deleteTournament } from '../api/tournaments';
 
-interface Tournament {
-  id: string;
-  name: string;
-  banner: string;
-  logo: string;
-  stages: string[];
-  currentStage: string;
-  teams: number;
-  format: string;
-  status: 'live' | 'upcoming' | 'completed';
-  isUserCreated?: boolean;
+const steps = ['Tournament Info', 'Stages'];
+
+const presetStages = ['Qualifiers', 'Group Stage', 'RO64', 'RO32', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals'];
+
+interface TournamentsProps {
+  user: User | null;
 }
 
-const defaultTournaments: Tournament[] = [
-  {
-    id: 'owc2024',
-    name: 'osu! World Cup 2024',
-    banner: 'https://picsum.photos/seed/owc/800/200',
-    logo: 'https://picsum.photos/seed/owclogo/100/100',
-    stages: ['Qualifiers', 'RO32', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals'],
-    currentStage: 'Grand Finals',
-    teams: 32,
-    format: '4v4',
-    status: 'live',
-  },
-  {
-    id: 'mwc2024',
-    name: '4K Mania World Cup 2024',
-    banner: 'https://picsum.photos/seed/mwc/800/200',
-    logo: 'https://picsum.photos/seed/mwclogo/100/100',
-    stages: ['Qualifiers', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals'],
-    currentStage: 'Semifinals',
-    teams: 24,
-    format: '3v3',
-    status: 'live',
-  },
-  {
-    id: 'community-cup',
-    name: 'Community Cup #12',
-    banner: 'https://picsum.photos/seed/cc/800/200',
-    logo: 'https://picsum.photos/seed/cclogo/100/100',
-    stages: ['Qualifiers', 'RO16', 'Quarterfinals', 'Finals'],
-    currentStage: 'Qualifiers',
-    teams: 16,
-    format: '1v1',
-    status: 'upcoming',
-  },
-];
-
-const STORAGE_KEY = 'packshare_tournaments';
-
-const steps = ['Tournament Info', 'Stages', 'Extras', 'Payment'];
-
-interface AddOn {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  popular?: boolean;
-}
-
-const addOns: AddOn[] = [
-  { id: 'white-label', name: 'White Label', description: 'Remove "hosted on packshare" branding', price: 10, popular: true },
-  { id: 'custom-url', name: 'Custom URL', description: 'packshare.io/your-tournament-name', price: 3 },
-  { id: 'animated-banner', name: 'Animated Banner', description: 'Support for GIF/video banners', price: 5 },
-  { id: 'stats', name: 'Stats Dashboard', description: 'Track views, downloads, and engagement', price: 3, popular: true },
-  { id: 'priority-support', name: 'Priority Support', description: 'Direct Discord support channel', price: 5 },
-  { id: 'supporter-badge', name: 'Supporter Badge', description: 'Show your support on your profile', price: 5 },
-];
-
-export default function Tournaments() {
+export default function Tournaments({ user }: TournamentsProps) {
   const navigate = useNavigate();
-  const [tournaments, setTournaments] = useState<Tournament[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return [...JSON.parse(saved), ...defaultTournaments];
-      } catch {
-        return defaultTournaments;
-      }
-    }
-    return defaultTournaments;
-  });
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  // Step 1: Info
   const [tournamentName, setTournamentName] = useState('');
+  const [abbreviation, setAbbreviation] = useState('');
   const [format, setFormat] = useState('1v1');
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [selectedStages, setSelectedStages] = useState(['Qualifiers', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals']);
-  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
-  const [createdId, setCreatedId] = useState('');
 
-  const basePrice = 5;
-  const addOnsTotal = selectedAddOns.reduce((sum, id) => {
-    const addon = addOns.find(a => a.id === id);
-    return sum + (addon?.price || 0);
-  }, 0);
-  const totalPrice = basePrice + addOnsTotal;
+  // Step 2: Stages
+  const [selectedStages, setSelectedStages] = useState<string[]>(['Qualifiers', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals']);
+  const [customStage, setCustomStage] = useState('');
 
-  const saveUserTournaments = (allTournaments: Tournament[]) => {
-    const userTournaments = allTournaments.filter(t => t.isUserCreated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(userTournaments));
-  };
+  // Success state
+  const [createdAbbrev, setCreatedAbbrev] = useState('');
 
-  const handleNext = () => {
-    if (activeStep === steps.length - 1) {
-      // Mock payment success
-      const newId = tournamentName.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substring(2, 6);
+  useEffect(() => {
+    loadTournaments();
+  }, []);
 
-      const newTournament: Tournament = {
-        id: newId,
-        name: tournamentName,
-        banner: bannerUrl || `https://picsum.photos/seed/${newId}/800/200`,
-        logo: logoUrl || `https://picsum.photos/seed/${newId}logo/100/100`,
-        stages: selectedStages,
-        currentStage: selectedStages[0],
-        teams: 0,
-        format,
-        status: 'upcoming',
-        isUserCreated: true,
-      };
-
-      const updated = [newTournament, ...tournaments];
-      setTournaments(updated);
-      saveUserTournaments(updated);
-
-      setCreatedId(newId);
-      setActiveStep(activeStep + 1);
-    } else {
-      setActiveStep(activeStep + 1);
+  const loadTournaments = async () => {
+    try {
+      const data = await listTournaments();
+      setTournaments(data);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleBack = () => {
-    setActiveStep(activeStep - 1);
   };
 
   const handleClose = () => {
     setDialogOpen(false);
     setActiveStep(0);
     setTournamentName('');
+    setAbbreviation('');
+    setFormat('1v1');
     setBannerUrl(null);
     setLogoUrl(null);
-    setSelectedAddOns([]);
-    setCreatedId('');
+    setSelectedStages(['Qualifiers', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals']);
+    setCustomStage('');
+    setCreatedAbbrev('');
+    setError('');
   };
 
-  const toggleAddOn = (id: string) => {
-    if (selectedAddOns.includes(id)) {
-      setSelectedAddOns(selectedAddOns.filter(a => a !== id));
-    } else {
-      setSelectedAddOns([...selectedAddOns, id]);
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError('');
+    try {
+      const result = await createTournament({
+        name: tournamentName.trim(),
+        abbreviation: abbreviation.trim(),
+        format,
+        banner_url: bannerUrl || undefined,
+        logo_url: logoUrl || undefined,
+        stages: selectedStages.map(name => ({ name })),
+      });
+      setCreatedAbbrev(result.abbreviation);
+      setActiveStep(steps.length); // success step
+      loadTournaments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create tournament');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleOpenTournament = (id: string) => {
-    navigate(`/t/${id}`);
+  const handleDelete = async (abbrev: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this tournament? This cannot be undone.')) return;
+    try {
+      await deleteTournament(abbrev);
+      setTournaments(prev => prev.filter(t => t.abbreviation !== abbrev));
+    } catch {
+      // ignore
+    }
   };
+
+  const handleAddCustomStage = () => {
+    const name = customStage.trim();
+    if (name && !selectedStages.includes(name)) {
+      setSelectedStages([...selectedStages, name]);
+      setCustomStage('');
+    }
+  };
+
+  const isOwner = (tournament: Tournament) => tournament.user?.osu_id === user?.osu_id;
+
+  const canCreateStep0 = tournamentName.trim().length > 0 && abbreviation.trim().length > 0;
+  const canCreateStep1 = selectedStages.length > 0;
+
+  const statusColors: Record<string, string> = {
+    live: '#ff4444',
+    upcoming: '#4488ff',
+    completed: '#44bb44',
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -203,156 +165,102 @@ export default function Tournaments() {
             Host and share professional tournament mappools
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setDialogOpen(true)}
-          sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-        >
-          Create Tournament
-        </Button>
+        {user && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setDialogOpen(true)}
+            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
+          >
+            Create Tournament
+          </Button>
+        )}
       </Box>
 
-      {/* Pricing Banner */}
-      <Paper
-        sx={{
-          p: 3,
-          mb: 4,
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-          color: 'white',
-          borderRadius: 3,
-        }}
-      >
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h6" fontWeight="bold">
-              Tournament Hosting
-            </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>
-              Custom branding, all stages, shareable links, download stats
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="h5" fontWeight="bold">
-                $5
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.6 }}>
-                per tournament
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              onClick={() => setDialogOpen(true)}
-              sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-            >
-              Get Started
-            </Button>
-          </Stack>
-        </Stack>
-      </Paper>
-
       {/* Tournament List */}
-      <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-        Active Tournaments
-      </Typography>
-      <Stack spacing={2}>
-        {tournaments.map((tournament) => (
-          <Card
-            key={tournament.id}
-            onClick={() => handleOpenTournament(tournament.id)}
-            sx={{
-              overflow: 'hidden',
-              cursor: 'pointer',
-              '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
-              transition: 'all 0.2s',
-            }}
-          >
-            {/* Banner */}
-            <Box
+      {tournaments.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography color="text.secondary" variant="h6">No tournaments yet</Typography>
+          <Typography color="text.secondary" variant="body2">Create your first tournament to get started</Typography>
+        </Box>
+      ) : (
+        <Stack spacing={2}>
+          {tournaments.map((tournament) => (
+            <Card
+              key={tournament.id}
+              onClick={() => navigate(`/t/${tournament.abbreviation}`)}
               sx={{
-                height: 100,
-                backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.3)), url(${tournament.banner})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                px: 3,
-                gap: 2,
+                overflow: 'hidden',
+                cursor: 'pointer',
+                '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
+                transition: 'all 0.2s',
               }}
             >
-              <Avatar
-                src={tournament.logo}
-                sx={{ width: 64, height: 64, border: '3px solid white' }}
-              />
-              <Box sx={{ flex: 1 }}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-                    {tournament.name}
-                  </Typography>
-                  {tournament.status === 'live' && (
-                    <Chip
-                      label="LIVE"
-                      size="small"
-                      sx={{ backgroundColor: '#ff4444', color: 'white', fontWeight: 'bold', fontSize: 10 }}
-                    />
-                  )}
-                  {tournament.status === 'upcoming' && (
-                    <Chip
-                      label="UPCOMING"
-                      size="small"
-                      sx={{ backgroundColor: '#4488ff', color: 'white', fontWeight: 'bold', fontSize: 10 }}
-                    />
-                  )}
-                </Stack>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                  {tournament.format} · {tournament.teams} teams
-                </Typography>
-              </Box>
-              <Chip
-                label={tournament.currentStage}
-                sx={{ backgroundColor: 'primary.main', color: 'white', fontWeight: 'bold' }}
-              />
-            </Box>
-
-            {/* Stages */}
-            <CardContent sx={{ py: 2 }}>
-              <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 1 }}>
-                {tournament.stages.map((stage) => (
-                  <Chip
-                    key={stage}
-                    label={stage}
-                    size="small"
-                    variant={stage === tournament.currentStage ? 'filled' : 'outlined'}
-                    sx={stage === tournament.currentStage ? {
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                    } : {}}
+              {/* Banner */}
+              <Box
+                sx={{
+                  height: 100,
+                  backgroundImage: tournament.banner_url
+                    ? `linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.3)), url(${tournament.banner_url})`
+                    : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  px: 3,
+                  gap: 2,
+                }}
+              >
+                {tournament.logo_url && (
+                  <Avatar
+                    src={tournament.logo_url}
+                    sx={{ width: 64, height: 64, border: '3px solid white' }}
                   />
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-        ))}
-      </Stack>
+                )}
+                <Box sx={{ flex: 1 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+                      {tournament.name}
+                    </Typography>
+                    <Chip
+                      label={tournament.status.toUpperCase()}
+                      size="small"
+                      sx={{ backgroundColor: statusColors[tournament.status] || '#666', color: 'white', fontWeight: 'bold', fontSize: 10 }}
+                    />
+                  </Stack>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    {tournament.format} · {tournament.stages?.length || 0} stages
+                  </Typography>
+                </Box>
+                {isOwner(tournament) && (
+                  <IconButton
+                    onClick={(e) => handleDelete(tournament.abbreviation, e)}
+                    sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#ff4444' } }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                )}
+              </Box>
 
-      {/* Features */}
-      <Typography variant="h6" fontWeight="bold" sx={{ mt: 4, mb: 2 }}>
-        What's Included
-      </Typography>
-      <Stack direction="row" spacing={2}>
-        {[
-          { icon: <EmojiEventsIcon />, title: 'Custom Branding', desc: 'Your logo, colors, banner' },
-          { icon: <PeopleIcon />, title: 'Team Access', desc: 'Let staff manage pools' },
-          { icon: <CalendarTodayIcon />, title: 'All Stages', desc: 'Qualifiers to Grand Finals' },
-        ].map((feature) => (
-          <Paper key={feature.title} sx={{ p: 2, flex: 1, textAlign: 'center' }}>
-            <Box sx={{ color: 'primary.main', mb: 1 }}>{feature.icon}</Box>
-            <Typography fontWeight="bold">{feature.title}</Typography>
-            <Typography variant="body2" color="text.secondary">{feature.desc}</Typography>
-          </Paper>
-        ))}
-      </Stack>
+              {/* Stages */}
+              {tournament.stages && tournament.stages.length > 0 && (
+                <CardContent sx={{ py: 2 }}>
+                  <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 1 }}>
+                    {tournament.stages.map((stage) => (
+                      <Chip
+                        key={stage.id}
+                        label={stage.name}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Stack>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </Stack>
+      )}
 
       {/* Create Tournament Dialog */}
       <Dialog open={dialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -378,6 +286,14 @@ export default function Tournaments() {
                 value={tournamentName}
                 onChange={(e) => setTournamentName(e.target.value)}
                 placeholder="e.g. Community Cup 2024"
+              />
+              <TextField
+                label="Abbreviation (URL slug)"
+                fullWidth
+                value={abbreviation}
+                onChange={(e) => setAbbreviation(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                placeholder="e.g. cc-2024"
+                helperText={abbreviation ? `URL: /t/${abbreviation}` : 'Used in the tournament URL'}
               />
               <FormControl fullWidth>
                 <InputLabel>Format</InputLabel>
@@ -405,11 +321,11 @@ export default function Tournaments() {
 
           {activeStep === 1 && (
             <Stack spacing={2}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Select the stages for your tournament:
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Select stages or add custom ones:
               </Typography>
               <Stack direction="row" flexWrap="wrap" gap={1}>
-                {['Qualifiers', 'Group Stage', 'RO64', 'RO32', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals'].map((stage) => (
+                {presetStages.map((stage) => (
                   <Chip
                     key={stage}
                     label={stage}
@@ -426,97 +342,39 @@ export default function Tournaments() {
                   />
                 ))}
               </Stack>
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  placeholder="Custom stage name"
+                  value={customStage}
+                  onChange={(e) => setCustomStage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCustomStage()}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddCustomStage}
+                  disabled={!customStage.trim()}
+                >
+                  Add
+                </Button>
+              </Stack>
+              {/* Show custom stages that aren't presets */}
+              {selectedStages.filter(s => !presetStages.includes(s)).length > 0 && (
+                <Stack direction="row" flexWrap="wrap" gap={1}>
+                  {selectedStages.filter(s => !presetStages.includes(s)).map((stage) => (
+                    <Chip
+                      key={stage}
+                      label={stage}
+                      onDelete={() => setSelectedStages(selectedStages.filter(s => s !== stage))}
+                      color="primary"
+                      sx={{ backgroundColor: 'primary.main' }}
+                    />
+                  ))}
+                </Stack>
+              )}
               <Typography variant="caption" color="text.secondary">
                 {selectedStages.length} stages selected
-              </Typography>
-            </Stack>
-          )}
-
-          {activeStep === 2 && (
-            <Stack spacing={2}>
-              <Typography variant="body2" color="text.secondary">
-                Power up your tournament with extras:
-              </Typography>
-              {addOns.map((addon) => (
-                <Paper
-                  key={addon.id}
-                  onClick={() => toggleAddOn(addon.id)}
-                  sx={{
-                    p: 2,
-                    cursor: 'pointer',
-                    border: '2px solid',
-                    borderColor: selectedAddOns.includes(addon.id) ? 'primary.main' : 'transparent',
-                    backgroundColor: selectedAddOns.includes(addon.id) ? 'rgba(255,102,171,0.05)' : '#f5f5f5',
-                    transition: 'all 0.2s',
-                    '&:hover': { borderColor: 'primary.main' },
-                  }}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography fontWeight="bold">{addon.name}</Typography>
-                        {addon.popular && (
-                          <Chip label="Popular" size="small" sx={{ backgroundColor: 'primary.main', color: 'white', fontSize: 10, height: 20 }} />
-                        )}
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary">
-                        {addon.description}
-                      </Typography>
-                    </Box>
-                    <Typography fontWeight="bold" sx={{ color: 'primary.main', ml: 2 }}>
-                      +${addon.price}
-                    </Typography>
-                  </Box>
-                </Paper>
-              ))}
-              {selectedAddOns.length > 0 && (
-                <Box sx={{ textAlign: 'right', mt: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedAddOns.length} extra{selectedAddOns.length > 1 ? 's' : ''} selected (+${addOnsTotal})
-                  </Typography>
-                </Box>
-              )}
-            </Stack>
-          )}
-
-          {activeStep === 3 && (
-            <Stack spacing={3}>
-              <Paper sx={{ p: 3, backgroundColor: '#f5f5f5' }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Order Summary
-                </Typography>
-                <Stack spacing={1}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography>Tournament Hosting</Typography>
-                    <Typography>${basePrice}.00</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography color="text.secondary" variant="body2">{tournamentName} · {format} · {selectedStages.length} stages</Typography>
-                  </Box>
-                  {selectedAddOns.length > 0 && (
-                    <>
-                      <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee' }}>
-                        <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>Extras</Typography>
-                      </Box>
-                      {selectedAddOns.map(id => {
-                        const addon = addOns.find(a => a.id === id);
-                        return addon ? (
-                          <Box key={id} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <Typography variant="body2">{addon.name}</Typography>
-                            <Typography variant="body2">${addon.price}.00</Typography>
-                          </Box>
-                        ) : null;
-                      })}
-                    </>
-                  )}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, pt: 2, borderTop: '1px solid #ddd' }}>
-                    <Typography fontWeight="bold">Total</Typography>
-                    <Typography fontWeight="bold" sx={{ color: 'primary.main', fontSize: 20 }}>${totalPrice}.00</Typography>
-                  </Box>
-                </Stack>
-              </Paper>
-              <Typography variant="caption" color="text.secondary" textAlign="center">
-                This is a demo - no actual payment will be processed
               </Typography>
             </Stack>
           )}
@@ -527,24 +385,30 @@ export default function Tournaments() {
               <Typography variant="h6" textAlign="center">
                 Your tournament is ready!
               </Typography>
-              <Paper sx={{ p: 2, backgroundColor: '#f5f5f5', width: '100%' }}>
+              <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1, width: '100%' }}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   Share this link with your players:
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <LinkIcon color="action" />
                   <Typography sx={{ fontFamily: 'monospace', flex: 1 }}>
-                    {window.location.origin}/t/{createdId}
+                    {window.location.origin}/t/{createdAbbrev}
                   </Typography>
                   <Button
                     size="small"
-                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/t/${createdId}`)}
+                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/t/${createdAbbrev}`)}
                   >
                     Copy
                   </Button>
                 </Box>
-              </Paper>
+              </Box>
             </Stack>
+          )}
+
+          {error && (
+            <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+              {error}
+            </Typography>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
@@ -553,16 +417,27 @@ export default function Tournaments() {
               <Button onClick={handleClose}>Cancel</Button>
               <Box sx={{ flex: 1 }} />
               {activeStep > 0 && (
-                <Button onClick={handleBack}>Back</Button>
+                <Button onClick={() => setActiveStep(activeStep - 1)}>Back</Button>
               )}
-              <Button
-                variant="contained"
-                onClick={handleNext}
-                disabled={activeStep === 0 && !tournamentName.trim()}
-                sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-              >
-                {activeStep === steps.length - 1 ? `Pay $${totalPrice}` : activeStep === 2 ? (selectedAddOns.length > 0 ? `Continue with ${selectedAddOns.length} extra${selectedAddOns.length > 1 ? 's' : ''}` : 'Skip Extras') : 'Next'}
-              </Button>
+              {activeStep === steps.length - 1 ? (
+                <Button
+                  variant="contained"
+                  onClick={handleSubmit}
+                  disabled={!canCreateStep1 || submitting}
+                  sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
+                >
+                  {submitting ? <CircularProgress size={20} /> : 'Create Tournament'}
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={() => setActiveStep(activeStep + 1)}
+                  disabled={!canCreateStep0}
+                  sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
+                >
+                  Next
+                </Button>
+              )}
             </>
           ) : (
             <>
@@ -570,7 +445,7 @@ export default function Tournaments() {
               <Button
                 variant="contained"
                 component={Link}
-                to={`/t/${createdId}`}
+                to={`/t/${createdAbbrev}`}
                 sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
               >
                 View Tournament

@@ -98,7 +98,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
   const navItems = [
     { path: '/', label: 'HOME', icon: <HomeIcon /> },
     { path: '/explore', label: 'EXPLORE', icon: <ExploreIcon /> },
-    { path: '/tournaments', label: 'TOURNAMENTS', icon: <EmojiEventsIcon />, disabled: true, soon: true },
+    { path: '/tournaments', label: 'TOURNAMENTS', icon: <EmojiEventsIcon />, disabled: user?.username !== 'Shaamii', soon: user?.username !== 'Shaamii' },
     ...(user ? [{ path: '/my-packs', label: 'MY PACKS', icon: <FolderIcon /> }] : []),
   ];
 
