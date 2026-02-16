@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -14,11 +14,13 @@ import {
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import DownloadIcon from '@mui/icons-material/Download';
+import FolderZipIcon from '@mui/icons-material/FolderZip';
 import ShareIcon from '@mui/icons-material/Share';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import JSZip from 'jszip';
 import type { StashBeatmap } from '../types/beatmap';
 import { getPack, type Pack } from '../api/packs';
 import { getStoredToken } from '../api/auth';
@@ -50,6 +52,8 @@ export default function SharedPack({ packId }: SharedPackProps) {
   });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [zipping, setZipping] = useState(false);
+  const [zipProgress, setZipProgress] = useState({ done: 0, total: 0 });
 
   useEffect(() => {
     if (!packId) {
@@ -169,6 +173,60 @@ export default function SharedPack({ packId }: SharedPackProps) {
     });
     setSnackbar({ open: true, message: `Starting ${toDownload.length} downloads...` });
   };
+
+  const handleDownloadZip = useCallback(async () => {
+    if (!pack) return;
+    const toDownload = selectedIds.size > 0
+      ? pack.beatmaps.filter(b => selectedIds.has(b.id))
+      : pack.beatmaps;
+
+    setZipping(true);
+    setZipProgress({ done: 0, total: toDownload.length });
+
+    const zip = new JSZip();
+    let failed = 0;
+
+    // Fetch with concurrency limit of 3
+    const queue = [...toDownload];
+    const workers = Array.from({ length: 3 }, async () => {
+      while (queue.length > 0) {
+        const beatmap = queue.shift()!;
+        try {
+          const res = await fetch(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const blob = await res.blob();
+          zip.file(`${beatmap.artist} - ${beatmap.title}.osz`, blob);
+        } catch {
+          failed++;
+        }
+        setZipProgress(prev => ({ ...prev, done: prev.done + 1 }));
+      }
+    });
+
+    await Promise.all(workers);
+
+    if (zip.length === 0) {
+      setZipping(false);
+      setSnackbar({ open: true, message: 'All downloads failed — could not create ZIP' });
+      return;
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${pack.name}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setZipping(false);
+    const msg = failed > 0
+      ? `ZIP ready! ${failed} map${failed > 1 ? 's' : ''} failed to download.`
+      : 'ZIP downloaded!';
+    setSnackbar({ open: true, message: msg });
+  }, [pack, selectedIds]);
 
   const handleShare = async () => {
     const shareUrl = window.location.href;
@@ -293,6 +351,17 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 : selectedIds.size < pack.beatmaps.length
                   ? `Download (${selectedIds.size})`
                   : 'Download All'}
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FolderZipIcon />}
+              onClick={handleDownloadZip}
+              disabled={zipping}
+              sx={{ borderRadius: 99, px: 3 }}
+            >
+              {zipping
+                ? `Zipping ${zipProgress.done}/${zipProgress.total}...`
+                : 'ZIP'}
             </Button>
             {isLoggedIn && (
               <Button
