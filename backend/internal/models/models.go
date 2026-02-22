@@ -40,6 +40,7 @@ type PackBeatmap struct {
 	StarRating     *float64  `json:"star_rating,omitempty"`
 	DifficultyName string    `json:"difficulty_name,omitempty"`
 	Status         string    `json:"status"`
+	Downloads      int64     `gorm:"default:0" json:"downloads"`
 	SortOrder      int       `gorm:"default:0" json:"sort_order"`
 	CreatedAt      time.Time `json:"created_at"`
 }

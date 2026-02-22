@@ -535,6 +535,22 @@ func (h *PackHandler) ListUsers(c *fiber.Ctx) error {
 	return c.JSON(users)
 }
 
+func (h *PackHandler) TrackDownload(c *fiber.Ctx) error {
+	code := c.Params("code")
+	beatmapsetId := c.Params("beatmapsetId")
+
+	var pack models.Pack
+	if err := h.db.Where("share_code = ?", code).First(&pack).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "pack not found"})
+	}
+
+	h.db.Model(&models.PackBeatmap{}).
+		Where("pack_id = ? AND beatmap_id = ?", pack.ID, beatmapsetId).
+		Update("downloads", gorm.Expr("downloads + 1"))
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
 func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 20)

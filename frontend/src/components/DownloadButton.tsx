@@ -10,9 +10,10 @@ interface DownloadButtonProps {
   downloadName?: string;
   variant?: 'light' | 'dark';
   stashData?: Omit<StashBeatmap, 'addedAt'>;
+  onDownloaded?: () => void;
 }
 
-export default function DownloadButton({ downloadUrl, downloadName, variant = 'light', stashData }: DownloadButtonProps) {
+export default function DownloadButton({ downloadUrl, downloadName, variant = 'light', stashData, onDownloaded }: DownloadButtonProps) {
   const isDark = variant === 'dark';
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
@@ -63,6 +64,7 @@ export default function DownloadButton({ downloadUrl, downloadName, variant = 'l
         addToStash(stashData);
       }
 
+      onDownloaded?.();
       setSnackbar({ open: true, message: `Downloaded ${name}`, severity: 'success' });
     } catch {
       setSnackbar({ open: true, message: `Failed to download ${name}`, severity: 'error' });

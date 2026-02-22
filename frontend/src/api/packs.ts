@@ -10,6 +10,7 @@ export interface PackBeatmap {
   keys?: number;
   difficulty_name?: string;
   star_rating?: number;
+  downloads: number;
   sort_order: number;
 }
 
@@ -194,6 +195,13 @@ export async function updatePack(code: string, input: UpdatePackInput): Promise<
     throw new Error(error.error || `Failed to update pack: ${response.statusText}`);
   }
   return response.json();
+}
+
+// Track a beatmap download (fire-and-forget)
+export function trackDownload(code: string, beatmapsetId: number): void {
+  fetch(`${API_BASE_URL}/api/packs/${code}/download/${beatmapsetId}`, {
+    method: 'POST',
+  }).catch(() => {});
 }
 
 // Delete a pack

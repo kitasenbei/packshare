@@ -58,6 +58,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client,
 	apiGroup.Get("/users", packHandler.ListUsers)
 	apiGroup.Get("/packs", packHandler.BrowsePacks)
 	apiGroup.Get("/packs/:code", packHandler.GetPack)
+	apiGroup.Post("/packs/:code/download/:beatmapsetId", packHandler.TrackDownload)
 	apiGroup.Post("/auth/key", keyHandler.KeyLogin)
 	apiGroup.Get("/tournaments", tournamentHandler.ListTournaments)
 	apiGroup.Get("/tournaments/:abbrev", tournamentHandler.GetTournament)

@@ -22,7 +22,7 @@ import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import JSZip from 'jszip';
 import type { StashBeatmap } from '../types/beatmap';
-import { getPack, type Pack } from '../api/packs';
+import { getPack, trackDownload, type Pack } from '../api/packs';
 import { getStoredToken } from '../api/auth';
 import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
@@ -177,6 +177,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        trackDownload(pack.share_code, beatmap.beatmapset_id);
       } catch {
         failed++;
       }
@@ -234,6 +235,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
         try {
           const blob = await fetchWithProgress(beatmap);
           zip.file(`${beatmap.artist} - ${beatmap.title}.osz`, blob);
+          trackDownload(pack.share_code, beatmap.beatmapset_id);
         } catch {
           failed++;
           setDownloadProgress(prev => { const m = new Map(prev); m.delete(beatmap.id); return m; });
@@ -487,7 +489,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                   title={beatmap.title}
                   artist={beatmap.artist}
                   keys={beatmap.keys}
-                  creator={beatmap.creator}
+                  creator={beatmap.downloads > 0 ? `${beatmap.creator} · ${beatmap.downloads} download${beatmap.downloads !== 1 ? 's' : ''}` : beatmap.creator}
                   creatorPrefix="mapped by"
                   starRating={beatmap.star_rating}
                   beatmapsetId={beatmap.beatmapset_id}
@@ -540,6 +542,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                             sourcePackId: pack!.share_code,
                             sourcePackName: pack!.name,
                           }}
+                          onDownloaded={() => trackDownload(pack!.share_code, beatmap.beatmapset_id)}
                         />
                       )}
                     </>
