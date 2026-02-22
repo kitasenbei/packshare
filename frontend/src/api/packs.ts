@@ -10,7 +10,7 @@ export interface PackBeatmap {
   keys?: number;
   difficulty_name?: string;
   star_rating?: number;
-  downloads: number;
+  downloads?: number;
   sort_order: number;
 }
 

@@ -489,7 +489,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                   title={beatmap.title}
                   artist={beatmap.artist}
                   keys={beatmap.keys}
-                  creator={beatmap.downloads > 0 ? `${beatmap.creator} · ${beatmap.downloads} download${beatmap.downloads !== 1 ? 's' : ''}` : beatmap.creator}
+                  creator={beatmap.downloads ? `${beatmap.creator} · ${beatmap.downloads} download${beatmap.downloads !== 1 ? 's' : ''}` : beatmap.creator}
                   creatorPrefix="mapped by"
                   starRating={beatmap.star_rating}
                   beatmapsetId={beatmap.beatmapset_id}
