@@ -19,7 +19,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import BackButton from './BackButton';
-import { getPack, type Pack } from '../api/packs';
+import { getPack, trackDownload, type Pack } from '../api/packs';
 import BeatmapRow from './BeatmapRow';
 import DownloadButton from './DownloadButton';
 import OsuButton from './OsuButton';
@@ -109,6 +109,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        trackDownload(pack.share_code, beatmap.beatmapset_id);
       }, index * 500);
     });
     setSelectedIds(new Set());
@@ -240,7 +241,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
                   title={beatmap.title}
                   artist={beatmap.artist}
                   keys={beatmap.keys}
-                  creator={beatmap.creator}
+                  creator={beatmap.downloads ? `${beatmap.creator} · ${beatmap.downloads} download${beatmap.downloads !== 1 ? 's' : ''}` : beatmap.creator}
                   creatorPrefix="mapped by"
                   starRating={beatmap.star_rating}
                   beatmapsetId={beatmap.beatmapset_id}
@@ -267,6 +268,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
                           sourcePackId: pack.share_code,
                           sourcePackName: pack.name,
                         }}
+                        onDownloaded={() => trackDownload(pack.share_code, beatmap.beatmapset_id)}
                       />
                     </Stack>
                   }
