@@ -56,7 +56,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
   const [zipProgress, setZipProgress] = useState({ done: 0, total: 0 });
   const [downloadProgress, setDownloadProgress] = useState<Map<number, number>>(new Map());
 
-  useEffect(() => {
+  const loadPack = useCallback(() => {
     if (!packId) {
       setError('No pack ID provided');
       setLoading(false);
@@ -76,6 +76,10 @@ export default function SharedPack({ packId }: SharedPackProps) {
         setLoading(false);
       });
   }, [packId]);
+
+  useEffect(() => {
+    loadPack();
+  }, [loadPack]);
 
   const getStash = (): StashBeatmap[] => {
     const saved = localStorage.getItem(STASH_STORAGE_KEY);
@@ -302,10 +306,20 @@ export default function SharedPack({ packId }: SharedPackProps) {
   }
 
   if (error || !pack) {
+    const isNetworkError = error?.includes('Failed to fetch') || error?.includes('NetworkError') || error?.includes('TypeError');
     return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography variant="h4" sx={{ mb: 2 }}>Pack not found</Typography>
-        <Typography color="text.secondary">{error || 'This pack may have been deleted or the link is invalid.'}</Typography>
+      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+        <Typography variant="h4">
+          {isNetworkError ? 'Connection error' : 'Pack not found'}
+        </Typography>
+        <Typography color="text.secondary" sx={{ maxWidth: 400, textAlign: 'center' }}>
+          {isNetworkError
+            ? 'Could not reach the server. If you\'re using an ad blocker or VPN, try disabling it and refreshing.'
+            : error || 'This pack may have been deleted or the link is invalid.'}
+        </Typography>
+        <Button variant="outlined" onClick={loadPack} sx={{ borderRadius: 99, mt: 1 }}>
+          Try again
+        </Button>
       </Box>
     );
   }
