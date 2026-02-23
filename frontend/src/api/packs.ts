@@ -139,9 +139,14 @@ export async function browsePacks(
 
 // Get a pack by its share code
 export async function getPack(code: string): Promise<Pack> {
-  const response = await fetch(`${API_BASE_URL}/api/packs/${code}`);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/packs/${code}`);
+  } catch {
+    throw new Error('network_error');
+  }
   if (!response.ok) {
-    throw new Error(`Failed to fetch pack: ${response.statusText}`);
+    throw new Error(`HTTP ${response.status}`);
   }
   return response.json();
 }
