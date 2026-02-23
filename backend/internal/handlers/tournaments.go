@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -55,6 +56,14 @@ func isValidModCombo(mod string) bool {
 		seen[part] = true
 	}
 	return true
+}
+
+func isValidURL(raw string) bool {
+	if raw == "" {
+		return true
+	}
+	u, err := url.Parse(raw)
+	return err == nil && (u.Scheme == "https" || u.Scheme == "http") && u.Host != ""
 }
 
 type TournamentHandler struct {
@@ -157,6 +166,9 @@ func (h *TournamentHandler) CreateTournament(c *fiber.Ctx) error {
 	if len(req.BannerURL) > maxURLLen || len(req.LogoURL) > maxURLLen {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "URL too long"})
 	}
+	if !isValidURL(req.BannerURL) || !isValidURL(req.LogoURL) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid URL: must be http or https"})
+	}
 
 	user, err := getOrCreateUser(h.db, claims)
 	if err != nil {
@@ -176,7 +188,8 @@ func (h *TournamentHandler) CreateTournament(c *fiber.Ctx) error {
 		}
 
 		if err := tx.Create(&tournament).Error; err != nil {
-			if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "UNIQUE") {
+			errMsg := strings.ToLower(err.Error())
+			if strings.Contains(errMsg, "duplicate") || strings.Contains(errMsg, "unique") {
 				return fmt.Errorf("DUPLICATE")
 			}
 			return err
@@ -282,12 +295,18 @@ func (h *TournamentHandler) UpdateTournament(c *fiber.Ctx) error {
 		if len(req.BannerURL) > maxURLLen {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "URL too long"})
 		}
+		if !isValidURL(req.BannerURL) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid URL: must be http or https"})
+		}
 		tournament.BannerURL = req.BannerURL
 	}
 
 	if req.LogoURL != "" {
 		if len(req.LogoURL) > maxURLLen {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "URL too long"})
+		}
+		if !isValidURL(req.LogoURL) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid URL: must be http or https"})
 		}
 		tournament.LogoURL = req.LogoURL
 	}
@@ -328,7 +347,9 @@ func (h *TournamentHandler) DeleteTournament(c *fiber.Ctx) error {
 	txErr := h.db.Transaction(func(tx *gorm.DB) error {
 		// Delete maps via stages
 		var stageIDs []uint
-		tx.Model(&models.TournamentStage{}).Where("tournament_id = ?", tournament.ID).Pluck("id", &stageIDs)
+		if err := tx.Model(&models.TournamentStage{}).Where("tournament_id = ?", tournament.ID).Pluck("id", &stageIDs).Error; err != nil {
+			return err
+		}
 		if len(stageIDs) > 0 {
 			if err := tx.Where("stage_id IN ?", stageIDs).Delete(&models.TournamentMap{}).Error; err != nil {
 				return err
@@ -483,7 +504,9 @@ func (h *TournamentHandler) RemoveMapFromStage(c *fiber.Ctx) error {
 
 		for i, m := range remaining {
 			if m.SlotNumber != i+1 {
-				tx.Model(&m).Update("slot_number", i+1)
+				if err := tx.Model(&m).Update("slot_number", i+1).Error; err != nil {
+					return err
+				}
 			}
 		}
 

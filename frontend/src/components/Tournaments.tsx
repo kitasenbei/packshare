@@ -54,7 +54,7 @@ export default function Tournaments({ user }: TournamentsProps) {
       const data = await listTournaments();
       setTournaments(data);
     } catch {
-      // ignore
+      setError('Failed to load tournaments');
     } finally {
       setLoading(false);
     }

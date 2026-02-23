@@ -1,6 +1,7 @@
 """
 osu! API utilities for OAuth and beatmap lookups
 """
+import logging
 import time
 import httpx
 from typing import Dict, Any, Optional, List
@@ -57,7 +58,7 @@ class OsuAPI:
                 )
 
                 if response.status_code != 200:
-                    print(f"Client token failed: {response.text}")
+                    logging.warning("Client token failed: %s", response.text)
                     return None
 
                 result = response.json()
@@ -66,7 +67,7 @@ class OsuAPI:
                 return OsuAPI._client_token
 
             except Exception as e:
-                print(f"Error getting client token: {e}")
+                logging.error("Error getting client token: %s", e)
                 return None
 
     @staticmethod
@@ -95,14 +96,14 @@ class OsuAPI:
                 )
 
                 if response.status_code != 200:
-                    print(f"Token exchange failed: {response.text}")
+                    logging.warning("Token exchange failed: %s", response.text)
                     return None
 
                 result = response.json()
                 return result.get("access_token")
 
             except Exception as e:
-                print(f"Error exchanging code for token: {e}")
+                logging.error("Error exchanging code for token: %s", e)
                 return None
 
     @staticmethod
@@ -122,13 +123,13 @@ class OsuAPI:
                 )
 
                 if response.status_code != 200:
-                    print(f"Failed to get user info: {response.text}")
+                    logging.warning("Failed to get user info: %s", response.text)
                     return None
 
                 return response.json()
 
             except Exception as e:
-                print(f"Error getting user info: {e}")
+                logging.error("Error getting user info: %s", e)
                 return None
 
     @staticmethod
@@ -163,7 +164,7 @@ class OsuAPI:
                     return None
 
                 if response.status_code != 200:
-                    print(f"Beatmapset fetch failed: {response.text}")
+                    logging.warning("Beatmapset fetch failed: %s", response.text)
                     return None
 
                 data = response.json()
@@ -198,5 +199,5 @@ class OsuAPI:
                 }
 
             except Exception as e:
-                print(f"Error fetching beatmapset: {e}")
+                logging.error("Error fetching beatmapset: %s", e)
                 return None

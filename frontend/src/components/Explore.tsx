@@ -38,7 +38,7 @@ export default function Explore() {
   const [users, setUsers] = useState<UserInfo[]>([]);
 
   useEffect(() => {
-    getUsers().then(setUsers).catch(() => {});
+    getUsers().then(setUsers).catch(() => setUsers([]));
   }, []);
 
   const selectedUser = users.find((u) => u.id === filterUserId) ?? null;

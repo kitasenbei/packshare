@@ -206,9 +206,9 @@ func (h *AccessKeyHandler) KeyLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "access key has expired"})
 	}
 
-	// Update last used
+	// Update last used (non-critical, log but don't fail)
 	now := time.Now()
-	h.db.Model(&accessKey).Update("last_used_at", now)
+	_ = h.db.Model(&accessKey).Update("last_used_at", now).Error
 
 	// Issue JWT with key claims
 	permissions := accessKey.Permissions

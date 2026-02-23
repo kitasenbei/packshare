@@ -1,3 +1,4 @@
+import logging
 import os
 import json
 import dotenv
@@ -30,7 +31,7 @@ def _load_aws_secrets():
 
         return secrets
     except Exception as e:
-        print(f"Warning: Failed to load AWS secrets: {e}")
+        logging.warning("Failed to load AWS secrets: %s", e)
         return {}
 
 _aws_secrets = _load_aws_secrets()
@@ -42,7 +43,11 @@ class Config:
     OSU_REDIRECT_URI = os.getenv("OSU_REDIRECT_URI", "http://localhost:8001/auth/callback")
 
     # JWT
-    SECRET_KEY = _aws_secrets.get("SECRET_KEY") or os.getenv("SECRET_KEY", "change-me-in-production")
+    SECRET_KEY = _aws_secrets.get("SECRET_KEY") or os.getenv("SECRET_KEY", "")
+    if not SECRET_KEY:
+        if os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+            raise RuntimeError("SECRET_KEY must be set in deployed environments")
+        SECRET_KEY = "local-dev-only-secret"
     JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
     JWT_EXPIRATION_DAYS = int(os.getenv("JWT_EXPIRATION_DAYS", "7"))
 

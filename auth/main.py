@@ -2,7 +2,9 @@
 MiauAuth - osu! OAuth Identity Provider
 Issues JWT tokens with osu! user data for easy integration.
 """
+import binascii
 import base64
+import logging
 from typing import Optional
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -59,8 +61,8 @@ async def callback(
     if state:
         try:
             redirect_origin = base64.urlsafe_b64decode(state.encode()).decode()
-        except Exception:
-            pass
+        except (binascii.Error, UnicodeDecodeError) as e:
+            logging.warning("Failed to decode OAuth state parameter: %s", e)
 
     if not code:
         return RedirectResponse(url=f"{redirect_origin}?error=no_code", status_code=302)

@@ -21,10 +21,10 @@ type Pack struct {
 	Name        string        `gorm:"not null" json:"name"`
 	Description string        `json:"description"`
 	Views       int64         `gorm:"default:0" json:"views"`
-	UserID      uint          `gorm:"not null" json:"user_id"`
+	UserID      uint          `gorm:"not null;index:idx_packs_user_created,priority:1" json:"user_id"`
 	User        User          `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Beatmaps    []PackBeatmap `gorm:"foreignKey:PackID" json:"beatmaps,omitempty"`
-	CreatedAt   time.Time     `json:"created_at"`
+	CreatedAt   time.Time     `gorm:"index:idx_packs_user_created,priority:2" json:"created_at"`
 	UpdatedAt   time.Time     `json:"updated_at"`
 }
 

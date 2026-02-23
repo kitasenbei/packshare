@@ -106,7 +106,9 @@ func getOrCreateUser(db *gorm.DB, claims *middleware.UserClaims) (*models.User, 
 			updates["avatar_url"] = claims.AvatarURL
 		}
 		if len(updates) > 0 {
-			db.Model(&user).Updates(updates)
+			if err := db.Model(&user).Updates(updates).Error; err != nil {
+				return nil, err
+			}
 		}
 	}
 	return &user, nil
@@ -566,19 +568,22 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 	}
 	offset := (page - 1) * limit
 
+	// Build shared filter conditions
+	applyFilters := func(q *gorm.DB) *gorm.DB {
+		if userID > 0 {
+			q = q.Where("user_id = ?", userID)
+		}
+		if search != "" {
+			searchPattern := "%" + strings.ToLower(search) + "%"
+			q = q.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)
+		}
+		return q
+	}
+
 	var packs []models.Pack
-	query := h.db.Preload("Beatmaps", func(db *gorm.DB) *gorm.DB {
+	query := applyFilters(h.db.Preload("Beatmaps", func(db *gorm.DB) *gorm.DB {
 		return db.Order("sort_order ASC")
-	}).Preload("User")
-
-	if userID > 0 {
-		query = query.Where("user_id = ?", userID)
-	}
-
-	if search != "" {
-		searchPattern := "%" + strings.ToLower(search) + "%"
-		query = query.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)
-	}
+	}).Preload("User"))
 
 	switch sort {
 	case "popular":
@@ -590,15 +595,7 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 	}
 
 	var total int64
-	countQuery := h.db.Model(&models.Pack{})
-	if userID > 0 {
-		countQuery = countQuery.Where("user_id = ?", userID)
-	}
-	if search != "" {
-		searchPattern := "%" + strings.ToLower(search) + "%"
-		countQuery = countQuery.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)
-	}
-	if err := countQuery.Count(&total).Error; err != nil {
+	if err := applyFilters(h.db.Model(&models.Pack{})).Count(&total).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "database error",
 		})

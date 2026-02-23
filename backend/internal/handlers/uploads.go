@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -67,8 +66,6 @@ func (h *UploadHandler) GetPresignedURL(c *fiber.Ctx) error {
 		})
 	}
 
-	// Ignore the original extension, use the one matching the content type
-	_ = filepath.Ext(req.Filename)
 	key := fmt.Sprintf("tournaments/%d/%s%s", claims.OsuID, uuid.New().String(), ext)
 
 	presignResult, err := h.presignClient.PresignPutObject(context.Background(), &s3.PutObjectInput{
