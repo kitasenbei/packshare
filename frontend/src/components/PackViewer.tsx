@@ -243,6 +243,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
                   keys={beatmap.keys}
                   creator={beatmap.downloads ? `${beatmap.creator} · ${beatmap.downloads} download${beatmap.downloads !== 1 ? 's' : ''}` : beatmap.creator}
                   creatorPrefix="mapped by"
+                  difficultyName={beatmap.difficulty_name}
                   starRating={beatmap.star_rating}
                   beatmapsetId={beatmap.beatmapset_id}
                   onClick={() => toggleSelect(beatmap.id)}

@@ -491,6 +491,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                   keys={beatmap.keys}
                   creator={beatmap.downloads ? `${beatmap.creator} · ${beatmap.downloads} download${beatmap.downloads !== 1 ? 's' : ''}` : beatmap.creator}
                   creatorPrefix="mapped by"
+                  difficultyName={beatmap.difficulty_name}
                   starRating={beatmap.star_rating}
                   beatmapsetId={beatmap.beatmapset_id}
                   density="compact"
