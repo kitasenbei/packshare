@@ -63,6 +63,28 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
   signing_protocol                  = "sigv4"
 }
 
+# CloudFront Function for SPA routing (only applies to S3 origin)
+# Rewrites paths without file extensions to /index.html so React Router handles them.
+# This replaces custom_error_response which incorrectly intercepted API 404s too.
+resource "aws_cloudfront_function" "spa_rewrite" {
+  name    = "${var.environment}-packshare-spa-rewrite"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  code    = <<-EOF
+    function handler(event) {
+      var request = event.request;
+      var uri = request.uri;
+      // If the URI has a file extension, serve it as-is (JS, CSS, images, etc.)
+      if (uri.includes('.')) {
+        return request;
+      }
+      // Otherwise rewrite to index.html for SPA routing
+      request.uri = '/index.html';
+      return request;
+    }
+  EOF
+}
+
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
@@ -105,6 +127,12 @@ resource "aws_cloudfront_distribution" "frontend" {
       cookies {
         forward = "none"
       }
+    }
+
+    # SPA rewrite — only runs on S3 origin, not API
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_rewrite.arn
     }
 
     min_ttl     = 0
@@ -160,21 +188,6 @@ resource "aws_cloudfront_distribution" "frontend" {
       default_ttl = 0
       max_ttl     = 0
     }
-  }
-
-  # SPA routing - return index.html for all paths
-  custom_error_response {
-    error_code            = 404
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 10
-  }
-
-  custom_error_response {
-    error_code            = 403
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 10
   }
 
   restrictions {
