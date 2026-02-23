@@ -24,6 +24,15 @@ var validPermissions = map[string]bool{
 	"delete": true,
 }
 
+// keyJWTExpiry returns the JWT expiry timestamp matching the key's expiration,
+// or 1 year from now if the key never expires.
+func keyJWTExpiry(expiresAt *time.Time) int64 {
+	if expiresAt != nil {
+		return expiresAt.Unix()
+	}
+	return time.Now().Add(365 * 24 * time.Hour).Unix()
+}
+
 type AccessKeyHandler struct {
 	db        *gorm.DB
 	jwtSecret string
@@ -219,7 +228,7 @@ func (h *AccessKeyHandler) KeyLogin(c *fiber.Ctx) error {
 		"avatar_url":   accessKey.User.AvatarURL,
 		"key_name":     accessKey.Name,
 		"permissions":  permissions,
-		"exp":          time.Now().Add(30 * 24 * time.Hour).Unix(),
+		"exp":          keyJWTExpiry(accessKey.ExpiresAt),
 	})
 
 	tokenString, err := token.SignedString([]byte(h.jwtSecret))
