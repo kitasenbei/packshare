@@ -139,16 +139,27 @@ export async function browsePacks(
 
 // Get a pack by its share code
 export async function getPack(code: string): Promise<Pack> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}/api/packs/${code}`);
-  } catch {
-    throw new Error('network_error');
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/packs/${code}`);
+    } catch {
+      if (attempt < maxRetries) { await new Promise(r => setTimeout(r, 500)); continue; }
+      throw new Error('network_error');
+    }
+    // CloudFront may intercept API errors and return HTML — detect and retry
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      if (attempt < maxRetries) { await new Promise(r => setTimeout(r, 500)); continue; }
+      throw new Error('network_error');
+    }
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
   }
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-  return response.json();
+  throw new Error('network_error');
 }
 
 // Get current user's packs
