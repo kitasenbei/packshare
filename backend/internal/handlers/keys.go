@@ -219,7 +219,7 @@ func (h *AccessKeyHandler) KeyLogin(c *fiber.Ctx) error {
 		"avatar_url":   accessKey.User.AvatarURL,
 		"key_name":     accessKey.Name,
 		"permissions":  permissions,
-		"exp":          time.Now().Add(24 * time.Hour).Unix(),
+		"exp":          time.Now().Add(30 * 24 * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(h.jwtSecret))

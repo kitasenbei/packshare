@@ -125,6 +125,16 @@ export function getPermissions(): string[] {
   return [];
 }
 
+// Check if a JWT is expired by decoding the payload
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp ? payload.exp * 1000 < Date.now() : false;
+  } catch {
+    return true;
+  }
+}
+
 // Verify token and get user data
 export async function verifyToken(token: string): Promise<User | null> {
   try {
@@ -198,9 +208,9 @@ export async function initAuth(): Promise<AuthState> {
     const authMode = getAuthMode();
 
     if (authMode === 'key') {
-      // For key sessions, we trust the stored user data (no /auth/verify for key JWTs)
+      // For key sessions, check JWT expiration client-side
       const user = getStoredUser();
-      if (user) {
+      if (user && !isTokenExpired(storedToken)) {
         return {
           token: storedToken,
           user,
@@ -209,7 +219,7 @@ export async function initAuth(): Promise<AuthState> {
           permissions: getPermissions(),
         };
       }
-      // Stored data corrupt, clear everything
+      // Expired or corrupt, clear everything
       removeToken();
     } else {
       // Verify OAuth token
