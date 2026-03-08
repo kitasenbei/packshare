@@ -40,6 +40,13 @@ const BLUE_HOVER = '#3a8eef';
 
 const DARK_MODE_KEY = 'packshare_dark_mode';
 
+// Palette: gunmetal, shadow-grey, bone, taupe-grey, parchment
+const GUNMETAL = '#474448';
+const SHADOW_GREY = '#2d232e';
+const BONE = '#e0ddcf';
+const TAUPE_GREY = '#534b52';
+const PARCHMENT = '#f1f0ea';
+
 function makeTheme(accent: string, accentHover: string, darkMode: boolean) {
   return createTheme({
     palette: {
@@ -49,16 +56,13 @@ function makeTheme(accent: string, accentHover: string, darkMode: boolean) {
         dark: accentHover,
       },
       background: {
-        default: darkMode ? '#1a1a2a' : '#ffffff',
-        paper: darkMode ? '#242438' : '#ffffff',
+        default: darkMode ? SHADOW_GREY : PARCHMENT,
+        paper: darkMode ? GUNMETAL : '#ffffff',
       },
-      ...(darkMode && {
-        text: {
-          primary: '#e8e8ec',
-          secondary: '#9898a8',
-        },
-        divider: 'rgba(255,255,255,0.12)',
-      }),
+      text: darkMode
+        ? { primary: BONE, secondary: '#9e9a96' }
+        : { primary: SHADOW_GREY, secondary: TAUPE_GREY },
+      divider: darkMode ? 'rgba(224,221,207,0.12)' : 'rgba(45,35,46,0.12)',
     },
     components: {
       MuiButton: {
