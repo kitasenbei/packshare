@@ -22,6 +22,7 @@ import Explore from './components/Explore';
 import Tournaments from './components/Tournaments';
 import TournamentMappool from './components/TournamentMappool';
 import KeyManager from './components/KeyManager';
+import Dashboard from './components/Dashboard';
 import Sidebar, { TOPNAV_HEIGHT } from './components/Sidebar';
 import {
   initAuth,
@@ -241,6 +242,7 @@ function App() {
                 <Container maxWidth="lg" sx={{ py: 4 }}>
                   <Routes>
                     <Route path="/" element={<Home user={user} />} />
+                    <Route path="/dashboard" element={<Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
                     <Route path="/create" element={<PackCreator user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
                     <Route path="/my-packs" element={<MyPacks user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
                     <Route path="/explore" element={<Explore />} />
