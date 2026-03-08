@@ -25,7 +25,6 @@ import {
 } from '@mui/material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import HomeIcon from '@mui/icons-material/Home';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import ExploreIcon from '@mui/icons-material/Explore';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -99,10 +98,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
     { path: '/', label: 'HOME', icon: <HomeIcon /> },
     { path: '/explore', label: 'EXPLORE', icon: <ExploreIcon /> },
     { path: '/tournaments', label: 'TOURNAMENTS', icon: <EmojiEventsIcon />, disabled: user?.username !== 'Kaiinu', soon: user?.username !== 'Kaiinu' },
-    ...(user ? [
-      { path: '/dashboard', label: 'MY PAGE', icon: <DashboardIcon /> },
-      { path: '/my-packs', label: 'MY PACKS', icon: <FolderIcon /> },
-    ] : []),
+    ...(user ? [{ path: '/my-packs', label: 'MY PACKS', icon: <FolderIcon /> }] : []),
   ];
 
   // Shared menus & dialogs (rendered once)
@@ -180,6 +176,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
           )
         )}
         <Divider />
+        <MenuItem onClick={() => { setAnchorEl(null); navigate('/dashboard'); }}>My Page</MenuItem>
         <MenuItem onClick={() => { setAnchorEl(null); navigate('/my-packs'); }}>My Packs</MenuItem>
         {!isKey && (
           <MenuItem onClick={() => { setAnchorEl(null); navigate('/keys'); }}>
