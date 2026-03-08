@@ -34,11 +34,12 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import MenuIcon from '@mui/icons-material/Menu';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
+import Tooltip from '@mui/material/Tooltip';
 import type { User, AuthMode } from '../features/auth/api/auth';
 import { getLoginUrl } from '../features/auth/api/auth';
 
 import {
-  ACCENT, ACCENT_HOVER, KEY_ACCENT, KEY_ACCENT_HOVER,
+  ACCENT, KEY_ACCENT,
 } from '../shared/theme/palette';
 
 export const TOPNAV_HEIGHT = 56;
@@ -70,7 +71,6 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
 
   const isKey = authMode === 'key';
   const accent = isKey ? KEY_ACCENT : ACCENT;
-  const accentHover = isKey ? KEY_ACCENT_HOVER : ACCENT_HOVER;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -243,7 +243,6 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
             onClick={handleKeyLoginSubmit}
             variant="contained"
             disabled={keyLoading || !keyInput.trim()}
-            sx={{ backgroundColor: KEY_ACCENT, '&:hover': { backgroundColor: KEY_ACCENT_HOVER } }}
           >
             {keyLoading ? <CircularProgress size={20} /> : 'Sign In'}
           </Button>
@@ -277,27 +276,23 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
           </IconButton>
           <Logo accent={accent} />
           <Box sx={{ flex: 1 }} />
-          <Button
-            onClick={onToggleDarkMode}
-            size="small"
-            startIcon={darkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
-            sx={{ mr: 1, color: 'text.secondary', fontSize: 12, minWidth: 0 }}
-          >
-            Toggle Theme
-          </Button>
+          <Tooltip title={darkMode ? 'Light mode' : 'Dark mode'}>
+            <IconButton size="small" onClick={onToggleDarkMode} sx={{ mr: 0.5, color: 'text.secondary' }}>
+              {darkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
           {user ? (
-            <Avatar
-              src={user.avatar_url}
-              onClick={(e) => setAnchorEl(e.currentTarget)}
-              sx={{ width: 32, height: 32, border: `2px solid ${accent}`, cursor: 'pointer' }}
-            />
+            <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)}>
+              <Avatar src={user.avatar_url} sx={{ width: 28, height: 28 }} />
+            </IconButton>
           ) : (
             <Button
+              variant="outlined"
               size="small"
               onClick={(e) => setLoginAnchor(e.currentTarget)}
-              sx={{ color: 'text.primary', fontWeight: 600, fontSize: 13 }}
+              sx={{ px: 2 }}
             >
-              SIGN IN
+              Sign in
             </Button>
           )}
         </Box>
@@ -338,7 +333,6 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => { navigate('/create'); setMobileDrawer(false); }}
-                sx={{ backgroundColor: accent, '&:hover': { backgroundColor: accentHover } }}
               >
                 Create Pack
               </Button>
@@ -420,33 +414,23 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
 
         <Box sx={{ flex: 1 }} />
 
-        {/* Right: create, supporter, account */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        {/* Right: actions */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {/* Dark mode toggle */}
-          <Button
-            onClick={onToggleDarkMode}
-            size="small"
-            startIcon={darkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
-            sx={{ color: 'text.secondary', fontSize: 12, minWidth: 0 }}
-          >
-            Toggle Theme
-          </Button>
+          <Tooltip title={darkMode ? 'Light mode' : 'Dark mode'}>
+            <IconButton size="small" onClick={onToggleDarkMode} sx={{ color: 'text.secondary' }}>
+              {darkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
 
           {/* Supporter heart */}
-          <Box
-            onClick={(e) => setSupporterAnchor(e.currentTarget)}
-            sx={{
-              cursor: 'pointer',
-              opacity: 0.35,
-              transition: 'opacity 0.2s',
-              display: 'flex',
-              '&:hover': { opacity: 1 },
-            }}
-          >
-            <FavoriteIcon sx={{ fontSize: 18, color: accent }} />
-          </Box>
+          <Tooltip title="Support packshare">
+            <IconButton size="small" onClick={(e) => setSupporterAnchor(e.currentTarget)} sx={{ color: 'text.secondary' }}>
+              <FavoriteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
 
-          {/* Create Pack */}
+          {/* Create Pack — primary CTA */}
           {(!isKey || permissions.includes('create')) && (
             <Button
               component={Link}
@@ -454,12 +438,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
               variant="contained"
               startIcon={<AddIcon />}
               size="small"
-              sx={{
-                backgroundColor: accent,
-                color: 'white',
-                '&:hover': { backgroundColor: accentHover },
-                px: 2,
-              }}
+              sx={{ px: 2 }}
             >
               Create Pack
             </Button>
@@ -467,20 +446,11 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
 
           {/* User / Sign in */}
           {user ? (
-            <Box
+            <Button
+              variant="outlined"
+              size="small"
               onClick={(e) => setAnchorEl(e.currentTarget)}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                cursor: 'pointer',
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'divider',
-                '&:hover': { borderColor: accent },
-              }}
+              sx={{ gap: 1, px: 1.5, py: 0.5 }}
             >
               <Typography variant="body2" fontWeight={600} sx={{ color: 'text.primary' }}>
                 {user.username}
@@ -493,16 +463,17 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
                   sx={{
                     height: 18,
                     fontSize: 9,
-                    backgroundColor: KEY_ACCENT,
+                    backgroundColor: 'primary.main',
                     color: 'white',
                     '& .MuiChip-icon': { color: 'white' },
                   }}
                 />
               )}
               <Avatar src={user.avatar_url} sx={{ width: 28, height: 28 }} />
-            </Box>
+            </Button>
           ) : (
             <Button
+              variant="outlined"
               size="small"
               onClick={(e) => setLoginAnchor(e.currentTarget)}
               startIcon={
@@ -512,15 +483,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
                   sx={{ width: 16, height: 16 }}
                 />
               }
-              sx={{
-                color: 'text.primary',
-                fontWeight: 600,
-                fontSize: 13,
-                border: '1px solid',
-                borderColor: 'divider',
-                px: 2,
-                '&:hover': { borderColor: accent },
-              }}
+              sx={{ px: 2 }}
             >
               Sign in
             </Button>

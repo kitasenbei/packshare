@@ -317,7 +317,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
             ? 'Could not reach the server. If you\'re using an ad blocker or VPN, try disabling it and refreshing.'
             : 'This pack may have been deleted or the link is invalid.'}
         </Typography>
-        <Button variant="outlined" onClick={loadPack} sx={{ borderRadius: 99, mt: 1 }}>
+        <Button variant="outlined" onClick={loadPack} sx={{ mt: 1 }}>
           Try again
         </Button>
       </Box>
@@ -401,7 +401,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
               variant="contained"
               startIcon={<DownloadIcon />}
               onClick={handleDownloadSelected}
-              sx={{ borderRadius: 99, px: 3 }}
+              sx={{ px: 3 }}
             >
               {selectedIds.size === 0
                 ? 'Download Whole Pack'
@@ -414,7 +414,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
               startIcon={<FolderZipIcon />}
               onClick={handleDownloadZip}
               disabled={zipping}
-              sx={{ borderRadius: 99, px: 3 }}
+              sx={{ px: 3 }}
             >
               {zipping
                 ? `Zipping ${zipProgress.done}/${zipProgress.total}...`
@@ -427,7 +427,6 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 onClick={handleSaveAllToStash}
                 disabled={allInStash}
                 sx={{
-                  borderRadius: 99,
                   px: 3,
                   borderColor: allInStash ? 'divider' : undefined,
                   color: allInStash ? 'text.disabled' : undefined,
@@ -441,7 +440,6 @@ export default function SharedPack({ packId }: SharedPackProps) {
               startIcon={<ShareIcon />}
               onClick={handleShare}
               sx={{
-                borderRadius: 99,
                 px: 3,
                 color: 'text.secondary',
                 borderColor: 'divider',

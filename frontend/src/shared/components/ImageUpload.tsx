@@ -137,7 +137,7 @@ export default function ImageUpload({ label = 'Upload Image', value, onChange, a
                 position: 'absolute',
                 top: 8,
                 right: 8,
-                color: '#4caf50',
+                color: 'success.main',
                 backgroundColor: 'white',
                 borderRadius: '50%',
               }}

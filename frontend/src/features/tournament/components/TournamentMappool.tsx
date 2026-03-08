@@ -787,7 +787,6 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                         <DownloadButton
                           downloadUrl={`https://api.nerinyan.moe/d/${map.beatmapset_id}`}
                           downloadName={`${map.artist} - ${map.title}`}
-                          variant="dark"
                           stashData={{
                             id: map.beatmapset_id,
                             beatmapsetId: map.beatmapset_id,

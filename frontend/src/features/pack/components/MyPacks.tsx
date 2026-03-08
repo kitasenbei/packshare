@@ -401,7 +401,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                 fontSize: 12,
                 color: 'text.disabled',
                 mr: 1,
-                '&:hover': { color: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)' },
+                '&:hover': { color: 'error.main' },
               }}
             >
               Clear
@@ -583,7 +583,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                     )}
                     {hasPerm(permissions, isKeySession, 'delete') && (
                       <Tooltip title="Delete">
-                        <IconButton size="small" onClick={() => handleDeleteClick(pack)} sx={{ color: '#ff6b6b' }}>
+                        <IconButton size="small" onClick={() => handleDeleteClick(pack)} sx={{ color: 'error.main' }}>
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>

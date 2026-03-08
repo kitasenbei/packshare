@@ -668,7 +668,7 @@ function PackDetailSection({
           size="small"
           startIcon={<DownloadIcon />}
           onClick={handleDownload}
-          sx={{ borderRadius: 99, px: 2, textTransform: 'none' }}
+          sx={{ px: 2, textTransform: 'none' }}
         >
           {hasSelection ? `Download (${selectedIds.size})` : 'Download All'}
         </Button>
@@ -680,7 +680,6 @@ function PackDetailSection({
           sx={{
             color: 'text.secondary',
             borderColor: 'divider',
-            borderRadius: 99,
             px: 2,
             textTransform: 'none',
             '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
@@ -698,7 +697,6 @@ function PackDetailSection({
           sx={{
             color: 'text.secondary',
             borderColor: 'divider',
-            borderRadius: 99,
             px: 2,
             textTransform: 'none',
             '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
@@ -714,7 +712,6 @@ function PackDetailSection({
           sx={{
             color: 'text.secondary',
             borderColor: 'divider',
-            borderRadius: 99,
             px: 2,
             textTransform: 'none',
             '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
@@ -731,7 +728,6 @@ function PackDetailSection({
             sx={{
               color: 'error.main',
               borderColor: 'divider',
-              borderRadius: 99,
               px: 2,
               textTransform: 'none',
               '&:hover': { borderColor: 'error.main', backgroundColor: 'transparent' },
@@ -745,7 +741,6 @@ function PackDetailSection({
             size="small"
             onClick={onDelete}
             sx={{
-              borderRadius: 99,
               px: 2,
               textTransform: 'none',
               backgroundColor: 'error.main',
@@ -1301,7 +1296,7 @@ function SettingsSection({ user, packs }: { user: User; packs: Pack[] }) {
           variant="outlined"
           onClick={() => window.open(`https://osu.ppy.sh/users/${user.osu_id}`, '_blank')}
           startIcon={<OpenInNewIcon />}
-          sx={{ textTransform: 'none', borderRadius: 99, borderColor: 'divider', color: 'text.secondary' }}
+          sx={{ textTransform: 'none', borderColor: 'divider', color: 'text.secondary' }}
         >
           View osu! Profile
         </Button>

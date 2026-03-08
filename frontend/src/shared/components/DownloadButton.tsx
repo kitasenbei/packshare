@@ -8,13 +8,11 @@ import type { StashBeatmap } from '../types/beatmap';
 interface DownloadButtonProps {
   downloadUrl: string;
   downloadName?: string;
-  variant?: 'light' | 'dark';
   stashData?: Omit<StashBeatmap, 'addedAt'>;
   onDownloaded?: () => void;
 }
 
-export default function DownloadButton({ downloadUrl, downloadName, variant = 'light', stashData, onDownloaded }: DownloadButtonProps) {
-  const isDark = variant === 'dark';
+export default function DownloadButton({ downloadUrl, downloadName, stashData, onDownloaded }: DownloadButtonProps) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'info' | 'success' | 'error' }>({
@@ -93,9 +91,11 @@ export default function DownloadButton({ downloadUrl, downloadName, variant = 'l
     <>
       <Button
         size="small"
+        color="success"
+        variant="text"
         startIcon={
           loading ? (
-            <CircularProgress size={14} sx={{ color: isDark ? '#66ff99' : '#4caf50' }} />
+            <CircularProgress size={14} color="success" />
           ) : (
             <DownloadIcon sx={{ fontSize: 16 }} />
           )
@@ -106,14 +106,9 @@ export default function DownloadButton({ downloadUrl, downloadName, variant = 'l
           textTransform: 'none',
           fontSize: 12,
           fontWeight: 600,
-          color: isDark ? '#66ff99' : '#4caf50',
-          backgroundColor: isDark ? 'rgba(102,255,153,0.08)' : 'rgba(76,175,80,0.06)',
           minWidth: 'auto',
           px: 1,
           py: 0.25,
-          '&:hover': {
-            backgroundColor: isDark ? 'rgba(102,255,153,0.16)' : 'rgba(76,175,80,0.12)',
-          },
         }}
       >
         {loading ? `${progressLabel || 'Downloading...'}` : 'Download'}

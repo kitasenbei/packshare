@@ -157,9 +157,6 @@ export default function PackViewer({ packId }: PackViewerProps) {
             startIcon={<DownloadIcon />}
             onClick={handleDownload}
             sx={{
-              backgroundColor: hasSelection ? '#64b5f6' : 'primary.main',
-              '&:hover': { backgroundColor: hasSelection ? '#42a5f5' : 'primary.dark' },
-              borderRadius: 99,
               px: 2,
               textTransform: 'none',
             }}
@@ -174,7 +171,6 @@ export default function PackViewer({ packId }: PackViewerProps) {
             sx={{
               color: 'text.secondary',
               borderColor: 'divider',
-              borderRadius: 99,
               px: 2,
               textTransform: 'none',
               '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
@@ -191,7 +187,6 @@ export default function PackViewer({ packId }: PackViewerProps) {
             sx={{
               color: 'text.secondary',
               borderColor: 'divider',
-              borderRadius: 99,
               px: 2,
               textTransform: 'none',
               '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
@@ -224,7 +219,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
               <Button
                 size="small"
                 onClick={() => setSelectedIds(new Set())}
-                sx={{ color: '#64b5f6', textTransform: 'none', fontSize: 13, minWidth: 0, p: 0 }}
+                sx={{ textTransform: 'none', fontSize: 13, minWidth: 0, p: 0 }}
               >
                 Deselect {selectedIds.size}
               </Button>
