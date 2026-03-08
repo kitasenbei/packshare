@@ -38,10 +38,9 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import type { User, AuthMode } from '../api/auth';
 import { getLoginUrl } from '../api/auth';
 
-const ACCENT = '#534b52';       // taupe-grey
-const ACCENT_HOVER = '#474448'; // gunmetal
-const KEY_ACCENT = '#e0ddcf';       // bone
-const KEY_ACCENT_HOVER = '#d4d0c0';
+import {
+  ACCENT, ACCENT_HOVER, KEY_ACCENT, KEY_ACCENT_HOVER,
+} from '../theme/palette';
 
 export const TOPNAV_HEIGHT = 56;
 

@@ -18,12 +18,12 @@ export default function OsuButton({ onClick, variant = 'light' }: OsuButtonProps
         fontSize: 12,
         fontWeight: 600,
         color: isDark ? 'primary.light' : 'primary.main',
-        backgroundColor: isDark ? 'rgba(83,75,82,0.2)' : 'rgba(83,75,82,0.08)',
+        backgroundColor: isDark ? 'rgba(132,169,140,0.15)' : 'rgba(82,121,111,0.08)',
         minWidth: 'auto',
         px: 1,
         py: 0.25,
         '&:hover': {
-          backgroundColor: isDark ? 'rgba(83,75,82,0.35)' : 'rgba(83,75,82,0.15)',
+          backgroundColor: isDark ? 'rgba(132,169,140,0.25)' : 'rgba(82,121,111,0.15)',
         },
       }}
     >

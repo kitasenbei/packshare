@@ -33,36 +33,25 @@ import {
   type AuthMode,
 } from './api/auth';
 
-// Palette: gunmetal, shadow-grey, bone, taupe-grey, parchment
-const GUNMETAL = '#474448';
-const SHADOW_GREY = '#2d232e';
-const BONE = '#e0ddcf';
-const TAUPE_GREY = '#534b52';
-const PARCHMENT = '#f1f0ea';
-
-const ACCENT = TAUPE_GREY;
-const ACCENT_HOVER = GUNMETAL;
-const KEY_ACCENT = BONE;
-const KEY_ACCENT_HOVER = '#d4d0c0';
+import {
+  ACCENT, ACCENT_HOVER, KEY_ACCENT, KEY_ACCENT_HOVER,
+  backgrounds, text as themeText, divider as themeDivider,
+} from './theme/palette';
 
 const DARK_MODE_KEY = 'packshare_dark_mode';
 
 function makeTheme(accent: string, accentHover: string, darkMode: boolean) {
+  const mode = darkMode ? 'dark' : 'light';
   return createTheme({
     palette: {
-      mode: darkMode ? 'dark' : 'light',
+      mode,
       primary: {
         main: accent,
         dark: accentHover,
       },
-      background: {
-        default: darkMode ? SHADOW_GREY : PARCHMENT,
-        paper: darkMode ? GUNMETAL : '#ffffff',
-      },
-      text: darkMode
-        ? { primary: BONE, secondary: '#9e9a96' }
-        : { primary: SHADOW_GREY, secondary: TAUPE_GREY },
-      divider: darkMode ? 'rgba(224,221,207,0.12)' : 'rgba(45,35,46,0.12)',
+      background: backgrounds[mode],
+      text: themeText[mode],
+      divider: themeDivider[mode],
     },
     components: {
       MuiButton: {

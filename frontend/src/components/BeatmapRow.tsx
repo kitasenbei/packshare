@@ -120,9 +120,9 @@ export default function BeatmapRow({
           mb: 1,
           borderRadius: 1,
           '&:hover': {
-            backgroundColor: stashHighlight ? 'rgba(83,75,82,0.15)' : hoverBg,
+            backgroundColor: stashHighlight ? 'rgba(132,169,140,0.15)' : hoverBg,
           },
-          border: stashHighlight ? '1px solid rgba(83,75,82,0.3)' : undefined,
+          border: stashHighlight ? '1px solid rgba(132,169,140,0.3)' : undefined,
           cursor: onClick ? 'pointer' : undefined,
           ...sx,
         }}
