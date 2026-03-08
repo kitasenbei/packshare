@@ -103,7 +103,6 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
         onClick={handleClick}
         disabled={loading}
         sx={{
-          textTransform: 'none',
           fontSize: 12,
           fontWeight: 600,
           minWidth: 'auto',

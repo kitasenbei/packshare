@@ -397,7 +397,6 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
               startIcon={<DeleteIcon />}
               onClick={(e) => { e.stopPropagation(); handleClearStash(); }}
               sx={{
-                textTransform: 'none',
                 fontSize: 12,
                 color: 'text.disabled',
                 mr: 1,
@@ -791,10 +790,10 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                 {pendingBeatmapset.artist} - {pendingBeatmapset.title}
               </Typography>
               <Button
-                variant="outlined"
+                variant="contained"
                 fullWidth
                 onClick={() => handleSelectDifficulty('all')}
-                sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                sx={{ justifyContent: 'flex-start' }}
               >
                 Add all {pendingBeatmapset.beatmaps.length} difficulties
               </Button>
@@ -805,7 +804,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                   variant="outlined"
                   fullWidth
                   onClick={() => handleSelectDifficulty(index)}
-                  sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                  sx={{ justifyContent: 'flex-start' }}
                 >
                   <Box
                     sx={{

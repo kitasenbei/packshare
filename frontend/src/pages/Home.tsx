@@ -83,7 +83,7 @@ export default function Home({ user }: HomeProps) {
                 <Button
                   size="small"
                   onClick={(e) => setStatsAnchor(e.currentTarget)}
-                  sx={{ color: 'text.secondary', textTransform: 'none', p: 0, minWidth: 0, fontSize: 13, '&:hover': { color: 'primary.main', backgroundColor: 'transparent' } }}
+                  sx={{ color: 'text.secondary', p: 0, minWidth: 0, fontSize: 13, '&:hover': { color: 'primary.main', backgroundColor: 'transparent' } }}
                 >
                   See stats
                 </Button>

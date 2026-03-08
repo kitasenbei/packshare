@@ -14,7 +14,6 @@ export default function OsuButton({ onClick, variant = 'light' }: OsuButtonProps
       startIcon={<img src={osuLogo} alt="" style={{ width: 16, height: 16 }} />}
       onClick={onClick}
       sx={{
-        textTransform: 'none',
         fontSize: 12,
         fontWeight: 600,
         color: isDark ? 'primary.light' : 'primary.main',

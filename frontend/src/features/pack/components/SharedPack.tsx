@@ -436,15 +436,9 @@ export default function SharedPack({ packId }: SharedPackProps) {
               </Button>
             )}
             <Button
-              variant="outlined"
+              variant="text"
               startIcon={<ShareIcon />}
               onClick={handleShare}
-              sx={{
-                px: 3,
-                color: 'text.secondary',
-                borderColor: 'divider',
-                '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
-              }}
             >
               Share
             </Button>
@@ -534,7 +528,6 @@ export default function SharedPack({ packId }: SharedPackProps) {
                           onClick={(e) => { e.stopPropagation(); handleToggleSelect(beatmap.id); }}
                           sx={{
                             color: 'primary.main',
-                            textTransform: 'none',
                             minWidth: 'auto',
                           }}
                         >

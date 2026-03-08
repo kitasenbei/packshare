@@ -158,23 +158,15 @@ export default function PackViewer({ packId }: PackViewerProps) {
             onClick={handleDownload}
             sx={{
               px: 2,
-              textTransform: 'none',
             }}
           >
             {hasSelection ? `Download (${selectedIds.size})` : 'Download All'}
           </Button>
           <Button
-            variant="outlined"
+            variant="text"
             size="small"
             startIcon={<ShareIcon />}
             onClick={handleShare}
-            sx={{
-              color: 'text.secondary',
-              borderColor: 'divider',
-              px: 2,
-              textTransform: 'none',
-              '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
-            }}
           >
             Share
           </Button>
@@ -184,13 +176,6 @@ export default function PackViewer({ packId }: PackViewerProps) {
             component={Link}
             to={`/s/${pack.share_code}`}
             startIcon={<OpenInNewIcon />}
-            sx={{
-              color: 'text.secondary',
-              borderColor: 'divider',
-              px: 2,
-              textTransform: 'none',
-              '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
-            }}
           >
             Shared Page
           </Button>
@@ -219,7 +204,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
               <Button
                 size="small"
                 onClick={() => setSelectedIds(new Set())}
-                sx={{ textTransform: 'none', fontSize: 13, minWidth: 0, p: 0 }}
+                sx={{ fontSize: 13, minWidth: 0, p: 0 }}
               >
                 Deselect {selectedIds.size}
               </Button>

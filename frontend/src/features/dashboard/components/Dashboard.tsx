@@ -157,7 +157,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
           flexDirection: 'column',
           position: 'fixed',
           top: 80,
-          bottom: 0,
+          bottom: 16,
           overflowY: 'auto',
         }}
       >
@@ -254,10 +254,11 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
             )}
             <Button
               size="small"
+              variant="contained"
               startIcon={<EmojiEventsIcon />}
               fullWidth
               onClick={() => { setSection('tournaments'); setSelectedPack(null); setEditing(false); setTournamentView('create'); setSelectedTournament(null); }}
-              sx={{ justifyContent: 'flex-start', px: 1.5, textTransform: 'none' }}
+              sx={{ justifyContent: 'flex-start', px: 1.5 }}
             >
               New Tournament
             </Button>
@@ -296,7 +297,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
                 size="small"
                 variant={section === item.key ? 'contained' : 'outlined'}
                 onClick={() => setSection(item.key)}
-                sx={{ flexShrink: 0, textTransform: 'none' }}
+                sx={{ flexShrink: 0 }}
               >
                 {item.label}
               </Button>
@@ -528,7 +529,7 @@ function PacksSection({
                 size="small"
                 variant={sortBy === s.key ? 'contained' : 'text'}
                 onClick={() => setSortBy(s.key)}
-                sx={{ minWidth: 0, px: 1.5, fontSize: 12, textTransform: 'none' }}
+                sx={{ minWidth: 0, px: 1.5, fontSize: 12 }}
               >
                 {s.label}
               </Button>
@@ -668,22 +669,15 @@ function PackDetailSection({
           size="small"
           startIcon={<DownloadIcon />}
           onClick={handleDownload}
-          sx={{ px: 2, textTransform: 'none' }}
+          sx={{ px: 2 }}
         >
           {hasSelection ? `Download (${selectedIds.size})` : 'Download All'}
         </Button>
         <Button
-          variant="outlined"
+          variant="text"
           size="small"
           startIcon={<ShareIcon />}
           onClick={handleShare}
-          sx={{
-            color: 'text.secondary',
-            borderColor: 'divider',
-            px: 2,
-            textTransform: 'none',
-            '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
-          }}
         >
           Share
         </Button>
@@ -694,13 +688,6 @@ function PackDetailSection({
           to={`/s/${pack.share_code}`}
           target="_blank"
           startIcon={<OpenInNewIcon />}
-          sx={{
-            color: 'text.secondary',
-            borderColor: 'divider',
-            px: 2,
-            textTransform: 'none',
-            '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
-          }}
         >
           Public Page
         </Button>
@@ -709,29 +696,16 @@ function PackDetailSection({
           size="small"
           startIcon={<EditIcon />}
           onClick={onEdit}
-          sx={{
-            color: 'text.secondary',
-            borderColor: 'divider',
-            px: 2,
-            textTransform: 'none',
-            '&:hover': { borderColor: 'primary.main', color: 'primary.main', backgroundColor: 'transparent' },
-          }}
         >
           Edit
         </Button>
         {!confirmDelete ? (
           <Button
-            variant="outlined"
+            variant="text"
+            color="error"
             size="small"
             startIcon={<DeleteIcon />}
             onClick={() => setConfirmDelete(true)}
-            sx={{
-              color: 'error.main',
-              borderColor: 'divider',
-              px: 2,
-              textTransform: 'none',
-              '&:hover': { borderColor: 'error.main', backgroundColor: 'transparent' },
-            }}
           >
             Delete
           </Button>
@@ -742,7 +716,6 @@ function PackDetailSection({
             onClick={onDelete}
             sx={{
               px: 2,
-              textTransform: 'none',
               backgroundColor: 'error.main',
               '&:hover': { backgroundColor: 'error.dark' },
             }}
@@ -770,7 +743,7 @@ function PackDetailSection({
               <Button
                 size="small"
                 onClick={() => setSelectedIds(new Set())}
-                sx={{ textTransform: 'none', fontSize: 13, minWidth: 0, p: 0 }}
+                sx={{ fontSize: 13, minWidth: 0, p: 0 }}
               >
                 Deselect {selectedIds.size}
               </Button>
@@ -1160,10 +1133,10 @@ function PackEditSection({
                 {pendingBeatmapset.artist} - {pendingBeatmapset.title}
               </Typography>
               <Button
-                variant="outlined"
+                variant="contained"
                 fullWidth
                 onClick={() => handleSelectDifficulty('all')}
-                sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                sx={{ justifyContent: 'flex-start' }}
               >
                 Add all {pendingBeatmapset.beatmaps.length} difficulties
               </Button>
@@ -1174,7 +1147,7 @@ function PackEditSection({
                   variant="outlined"
                   fullWidth
                   onClick={() => handleSelectDifficulty(index)}
-                  sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                  sx={{ justifyContent: 'flex-start' }}
                 >
                   <Box
                     sx={{
@@ -1296,7 +1269,6 @@ function SettingsSection({ user, packs }: { user: User; packs: Pack[] }) {
           variant="outlined"
           onClick={() => window.open(`https://osu.ppy.sh/users/${user.osu_id}`, '_blank')}
           startIcon={<OpenInNewIcon />}
-          sx={{ textTransform: 'none', borderColor: 'divider', color: 'text.secondary' }}
         >
           View osu! Profile
         </Button>

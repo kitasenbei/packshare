@@ -15,7 +15,6 @@ export default function RemoveButton({ onClick, label = 'Remove' }: RemoveButton
       startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
       onClick={onClick}
       sx={{
-        textTransform: 'none',
         fontSize: 12,
         fontWeight: 600,
         minWidth: 'auto',

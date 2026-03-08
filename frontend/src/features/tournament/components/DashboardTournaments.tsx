@@ -956,7 +956,7 @@ function TournamentDetailSection({
           mb: 0, minHeight: 40,
           borderBottom: '1px solid', borderColor: 'divider',
           '& .MuiTab-root': {
-            textTransform: 'none', fontWeight: 600, fontSize: 13,
+            fontWeight: 600, fontSize: 13,
             minHeight: 40, py: 0, px: 2,
             gap: 0.75,
           },
@@ -983,7 +983,7 @@ function TournamentDetailSection({
                     scrollButtons="auto"
                     sx={{
                       flex: 1, minHeight: 32,
-                      '& .MuiTab-root': { textTransform: 'none', minHeight: 32, py: 0, fontSize: 13 },
+                      '& .MuiTab-root': { minHeight: 32, py: 0, fontSize: 13 },
                       '& .MuiTabs-indicator': { height: 2 },
                     }}
                   >
@@ -1011,7 +1011,7 @@ function TournamentDetailSection({
                         variant="contained"
                         startIcon={<AddIcon />}
                         onClick={() => setAddMapOpen(true)}
-                        sx={{ textTransform: 'none', flexShrink: 0, fontSize: 12 }}
+                        sx={{ flexShrink: 0, fontSize: 12 }}
                       >
                         Add Map
                       </Button>
@@ -1312,7 +1312,6 @@ function TournamentDetailSection({
                         onClick={handleDelete}
                         disabled={deleting}
                         sx={{
-                          textTransform: 'none',
                           backgroundColor: 'error.main',
                           '&:hover': { backgroundColor: 'error.dark' },
                         }}
@@ -1604,7 +1603,7 @@ function TournamentDetailSection({
                 variant="contained"
                 fullWidth
                 startIcon={<StarIcon />}
-                sx={{ textTransform: 'none', fontWeight: 'bold' }}
+                sx={{ fontWeight: 'bold' }}
               >
                 Upgrade to Pro
               </Button>
@@ -1647,7 +1646,7 @@ function TournamentDetailSection({
                 variant="outlined"
                 fullWidth
                 sx={{
-                  textTransform: 'none', fontWeight: 'bold',
+                  fontWeight: 'bold',
                   borderColor: '#f5c842', color: '#f5c842',
                   '&:hover': { backgroundColor: 'rgba(245,200,66,0.08)', borderColor: '#f5c842' },
                 }}
@@ -1662,7 +1661,7 @@ function TournamentDetailSection({
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 4, pb: 3, justifyContent: 'center' }}>
-          <Button onClick={() => setShowPaywall(false)} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+          <Button onClick={() => setShowPaywall(false)} sx={{ color: 'text.secondary' }}>
             Maybe later
           </Button>
         </DialogActions>

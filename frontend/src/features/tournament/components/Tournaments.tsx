@@ -132,7 +132,6 @@ export default function Tournaments({ user }: TournamentsProps) {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setDialogOpen(true)}
-            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
           >
             Create Tournament
           </Button>
@@ -268,7 +267,6 @@ export default function Tournaments({ user }: TournamentsProps) {
             variant="contained"
             onClick={handleSubmit}
             disabled={!canSubmit || submitting}
-            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
           >
             {submitting ? <CircularProgress size={20} /> : 'Create'}
           </Button>
