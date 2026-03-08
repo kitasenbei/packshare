@@ -20,8 +20,8 @@ import ExploreIcon from '@mui/icons-material/Explore';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
 import { useSearchParams } from 'react-router-dom';
-import { browsePacks, getUsers, type BrowsePacksResult, type UserInfo } from '../api/packs';
-import PackCard from './PackCard';
+import { browsePacks, getUsers, type BrowsePacksResult, type UserInfo } from '../features/pack/api/packs';
+import PackCard from '../features/pack/components/PackCard';
 
 const PACKS_PER_PAGE = 12;
 

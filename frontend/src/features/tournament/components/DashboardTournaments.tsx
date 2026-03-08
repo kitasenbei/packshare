@@ -67,8 +67,8 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import SettingsIcon from '@mui/icons-material/Settings';
-import type { User, BeatmapsetInfo } from '../api/auth';
-import { getBeatmapset } from '../api/auth';
+import type { User, BeatmapsetInfo } from '../../auth/api/auth';
+import { getBeatmapset } from '../../auth/api/auth';
 import {
   listTournaments,
   createTournament,
@@ -81,11 +81,11 @@ import {
   type TournamentMap,
   type CreateTournamentInput,
 } from '../api/tournaments';
-import BeatmapRow from './BeatmapRow';
-import DownloadButton from './DownloadButton';
-import OsuButton from './OsuButton';
-import RemoveButton from './RemoveButton';
-import ImageUpload from './ImageUpload';
+import BeatmapRow from '../../../shared/components/BeatmapRow';
+import DownloadButton from '../../../shared/components/DownloadButton';
+import OsuButton from '../../../shared/components/OsuButton';
+import RemoveButton from '../../../shared/components/RemoveButton';
+import ImageUpload from '../../../shared/components/ImageUpload';
 import TournamentBracket from './TournamentBracket';
 
 // ── Constants ──

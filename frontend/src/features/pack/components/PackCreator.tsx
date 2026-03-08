@@ -23,15 +23,15 @@ import { useNavigate } from 'react-router-dom';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import BackButton from './BackButton';
+import BackButton from '../../../shared/components/BackButton';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
-import { type User, getBeatmapset, type BeatmapsetInfo } from '../api/auth';
+import { type User, getBeatmapset, type BeatmapsetInfo } from '../../auth/api/auth';
 import { createPack } from '../api/packs';
-import BeatmapRow from './BeatmapRow';
-import DownloadButton from './DownloadButton';
-import OsuButton from './OsuButton';
-import RemoveButton from './RemoveButton';
+import BeatmapRow from '../../../shared/components/BeatmapRow';
+import DownloadButton from '../../../shared/components/DownloadButton';
+import OsuButton from '../../../shared/components/OsuButton';
+import RemoveButton from '../../../shared/components/RemoveButton';
 
 interface PackCreatorProps {
   user?: User | null;

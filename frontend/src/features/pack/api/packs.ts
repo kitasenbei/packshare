@@ -1,5 +1,5 @@
-import { API_BASE_URL } from './config';
-import { getStoredToken } from './auth';
+import { API_BASE_URL } from '../../../shared/config';
+import { getStoredToken } from '../../auth/api/auth';
 
 export interface PackBeatmap {
   id: number;

@@ -1,4 +1,4 @@
-import { AUTH_BASE_URL, API_BASE_URL } from './config';
+import { AUTH_BASE_URL, API_BASE_URL } from '../../../shared/config';
 
 const TOKEN_KEY = 'packshare_token';
 const USER_KEY = 'packshare_user';

@@ -18,11 +18,11 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import BackButton from './BackButton';
+import BackButton from '../../../shared/components/BackButton';
 import { getPack, trackDownload, type Pack } from '../api/packs';
-import BeatmapRow from './BeatmapRow';
-import DownloadButton from './DownloadButton';
-import OsuButton from './OsuButton';
+import BeatmapRow from '../../../shared/components/BeatmapRow';
+import DownloadButton from '../../../shared/components/DownloadButton';
+import OsuButton from '../../../shared/components/OsuButton';
 import PackBanner from './PackBanner';
 
 const MAPS_PER_PAGE = 10;

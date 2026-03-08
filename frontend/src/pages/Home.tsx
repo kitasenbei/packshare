@@ -19,10 +19,10 @@ import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FolderIcon from '@mui/icons-material/Folder';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import type { User } from '../api/auth';
-import { getLoginUrl } from '../api/auth';
-import { getMyPacks, browsePacks, type Pack, type BrowsePacksResult } from '../api/packs';
-import PackCard from './PackCard';
+import type { User } from '../features/auth/api/auth';
+import { getLoginUrl } from '../features/auth/api/auth';
+import { getMyPacks, browsePacks, type Pack, type BrowsePacksResult } from '../features/pack/api/packs';
+import PackCard from '../features/pack/components/PackCard';
 
 interface HomeProps {
   user?: User | null;

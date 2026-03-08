@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { User } from '../api/auth';
+import type { User } from '../../auth/api/auth';
 import type { Tournament } from '../api/tournaments';
 import { listTournaments, createTournament, deleteTournament } from '../api/tournaments';
 

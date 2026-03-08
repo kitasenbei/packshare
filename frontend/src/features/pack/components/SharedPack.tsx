@@ -21,13 +21,13 @@ import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LibraryAddIcon from '@mui/icons-material/LibraryAdd';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import JSZip from 'jszip';
-import type { StashBeatmap } from '../types/beatmap';
+import type { StashBeatmap } from '../../../shared/types/beatmap';
 import { getPack, trackDownload, type Pack } from '../api/packs';
-import { getStoredToken } from '../api/auth';
-import BeatmapRow from './BeatmapRow';
-import DownloadButton from './DownloadButton';
-import OsuButton from './OsuButton';
-import { STASH_STORAGE_KEY } from '../utils/stash';
+import { getStoredToken } from '../../auth/api/auth';
+import BeatmapRow from '../../../shared/components/BeatmapRow';
+import DownloadButton from '../../../shared/components/DownloadButton';
+import OsuButton from '../../../shared/components/OsuButton';
+import { STASH_STORAGE_KEY } from '../../../shared/utils/stash';
 
 interface SharedPackProps {
   packId?: string;

@@ -1,5 +1,5 @@
 import { Button } from '@mui/material';
-import osuLogo from '../assets/osu-logo.svg';
+import osuLogo from '../../assets/osu-logo.svg';
 
 interface OsuButtonProps {
   onClick: () => void;

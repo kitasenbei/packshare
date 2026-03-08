@@ -13,17 +13,17 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
-import PackCreator from './components/PackCreator';
-import PackViewer from './components/PackViewer';
-import SharedPack from './components/SharedPack';
-import MyPacks from './components/MyPacks';
-import Home from './components/Home';
-import Explore from './components/Explore';
-import Tournaments from './components/Tournaments';
-import TournamentMappool from './components/TournamentMappool';
-import KeyManager from './components/KeyManager';
-import Dashboard from './components/Dashboard';
-import Sidebar, { TOPNAV_HEIGHT } from './components/Sidebar';
+import PackCreator from './features/pack/components/PackCreator';
+import PackViewer from './features/pack/components/PackViewer';
+import SharedPack from './features/pack/components/SharedPack';
+import MyPacks from './features/pack/components/MyPacks';
+import Home from './pages/Home';
+import Explore from './pages/Explore';
+import Tournaments from './features/tournament/components/Tournaments';
+import TournamentMappool from './features/tournament/components/TournamentMappool';
+import KeyManager from './features/auth/components/KeyManager';
+import Dashboard from './features/dashboard/components/Dashboard';
+import Sidebar, { TOPNAV_HEIGHT } from './pages/Sidebar';
 import {
   initAuth,
   logout as authLogout,
@@ -31,12 +31,12 @@ import {
   getAuthError,
   type User,
   type AuthMode,
-} from './api/auth';
+} from './features/auth/api/auth';
 
 import {
   ACCENT, ACCENT_HOVER, KEY_ACCENT, KEY_ACCENT_HOVER,
   backgrounds, text as themeText, divider as themeDivider,
-} from './theme/palette';
+} from './shared/theme/palette';
 
 const DARK_MODE_KEY = 'packshare_dark_mode';
 

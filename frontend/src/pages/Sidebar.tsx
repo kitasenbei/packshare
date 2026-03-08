@@ -34,12 +34,12 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import MenuIcon from '@mui/icons-material/Menu';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
-import type { User, AuthMode } from '../api/auth';
-import { getLoginUrl } from '../api/auth';
+import type { User, AuthMode } from '../features/auth/api/auth';
+import { getLoginUrl } from '../features/auth/api/auth';
 
 import {
   ACCENT, ACCENT_HOVER, KEY_ACCENT, KEY_ACCENT_HOVER,
-} from '../theme/palette';
+} from '../shared/theme/palette';
 
 export const TOPNAV_HEIGHT = 56;
 

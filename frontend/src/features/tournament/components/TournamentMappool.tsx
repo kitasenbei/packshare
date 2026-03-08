@@ -32,17 +32,17 @@ import LinkIcon from '@mui/icons-material/Link';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
-import type { StashBeatmap } from '../types/beatmap';
-import type { User } from '../api/auth';
-import { getBeatmapset } from '../api/auth';
+import type { StashBeatmap } from '../../../shared/types/beatmap';
+import type { User } from '../../auth/api/auth';
+import { getBeatmapset } from '../../auth/api/auth';
 import type { Tournament, TournamentMap } from '../api/tournaments';
 import { getTournament, addMapToStage, removeMap, updateTournament } from '../api/tournaments';
-import BeatmapRow from './BeatmapRow';
-import DownloadButton from './DownloadButton';
-import OsuButton from './OsuButton';
-import RemoveButton from './RemoveButton';
-import ImageUpload from './ImageUpload';
-import { STASH_STORAGE_KEY } from '../utils/stash';
+import BeatmapRow from '../../../shared/components/BeatmapRow';
+import DownloadButton from '../../../shared/components/DownloadButton';
+import OsuButton from '../../../shared/components/OsuButton';
+import RemoveButton from '../../../shared/components/RemoveButton';
+import ImageUpload from '../../../shared/components/ImageUpload';
+import { STASH_STORAGE_KEY } from '../../../shared/utils/stash';
 
 // Slot colors (map categories)
 const slotColors: Record<string, string> = {
