@@ -33,19 +33,19 @@ import {
   type AuthMode,
 } from './api/auth';
 
-const PINK = '#ff66ab';
-const PINK_HOVER = '#ff4499';
-const BLUE = '#4a9eff';
-const BLUE_HOVER = '#3a8eef';
-
-const DARK_MODE_KEY = 'packshare_dark_mode';
-
 // Palette: gunmetal, shadow-grey, bone, taupe-grey, parchment
 const GUNMETAL = '#474448';
 const SHADOW_GREY = '#2d232e';
 const BONE = '#e0ddcf';
 const TAUPE_GREY = '#534b52';
 const PARCHMENT = '#f1f0ea';
+
+const ACCENT = TAUPE_GREY;
+const ACCENT_HOVER = GUNMETAL;
+const KEY_ACCENT = BONE;
+const KEY_ACCENT_HOVER = '#d4d0c0';
+
+const DARK_MODE_KEY = 'packshare_dark_mode';
 
 function makeTheme(accent: string, accentHover: string, darkMode: boolean) {
   return createTheme({
@@ -150,9 +150,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const accent = authMode === 'key' ? BLUE : PINK;
+  const accent = authMode === 'key' ? KEY_ACCENT : ACCENT;
 
-  const accentHover = authMode === 'key' ? BLUE_HOVER : PINK_HOVER;
+  const accentHover = authMode === 'key' ? KEY_ACCENT_HOVER : ACCENT_HOVER;
   const theme = useMemo(() => makeTheme(accent, accentHover, darkMode), [accent, accentHover, darkMode]);
 
   const toggleDarkMode = () => {

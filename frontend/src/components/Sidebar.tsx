@@ -38,10 +38,10 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import type { User, AuthMode } from '../api/auth';
 import { getLoginUrl } from '../api/auth';
 
-const PINK = '#ff66ab';
-const PINK_HOVER = '#ff4499';
-const BLUE = '#4a9eff';
-const BLUE_HOVER = '#3a8eef';
+const ACCENT = '#534b52';       // taupe-grey
+const ACCENT_HOVER = '#474448'; // gunmetal
+const KEY_ACCENT = '#e0ddcf';       // bone
+const KEY_ACCENT_HOVER = '#d4d0c0';
 
 export const TOPNAV_HEIGHT = 56;
 
@@ -71,8 +71,8 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
   const [mobileDrawer, setMobileDrawer] = useState(false);
 
   const isKey = authMode === 'key';
-  const accent = isKey ? BLUE : PINK;
-  const accentHover = isKey ? BLUE_HOVER : PINK_HOVER;
+  const accent = isKey ? KEY_ACCENT : ACCENT;
+  const accentHover = isKey ? KEY_ACCENT_HOVER : ACCENT_HOVER;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -247,7 +247,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
             onClick={handleKeyLoginSubmit}
             variant="contained"
             disabled={keyLoading || !keyInput.trim()}
-            sx={{ backgroundColor: BLUE, '&:hover': { backgroundColor: BLUE_HOVER } }}
+            sx={{ backgroundColor: KEY_ACCENT, '&:hover': { backgroundColor: KEY_ACCENT_HOVER } }}
           >
             {keyLoading ? <CircularProgress size={20} /> : 'Sign In'}
           </Button>
@@ -497,7 +497,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
                   sx={{
                     height: 18,
                     fontSize: 9,
-                    backgroundColor: BLUE,
+                    backgroundColor: KEY_ACCENT,
                     color: 'white',
                     '& .MuiChip-icon': { color: 'white' },
                   }}
