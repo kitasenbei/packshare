@@ -89,7 +89,7 @@ export default function ImageUpload({ label = 'Upload Image', value, onChange, a
           border: '2px dashed',
           borderColor: error ? 'error.main' : dragOver ? 'primary.main' : 'divider',
           borderRadius: 2,
-          backgroundColor: dragOver ? 'rgba(255,102,171,0.05)' : 'background.paper',
+          backgroundColor: dragOver ? 'rgba(83,75,82,0.08)' : 'background.paper',
           cursor: value ? 'default' : 'pointer',
           overflow: 'hidden',
           transition: 'all 0.2s',
