@@ -187,20 +187,17 @@ export default function PackViewer({ packId }: PackViewerProps) {
         {/* Left column — Beatmap list */}
         <Paper sx={{ overflow: 'hidden', flex: 1, minWidth: 0, borderRadius: 2 }}>
           {/* Info bar */}
-          <Box sx={{
-            p: 1.5,
-            px: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: 'action.hover',
-          }}>
-            <Typography variant="body2" fontWeight={600}>
-              {pack.beatmaps.length} beatmaps
-            </Typography>
-            {hasSelection && (
+          {hasSelection && (
+            <Box sx={{
+              p: 1.5,
+              px: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: 'action.hover',
+            }}>
               <Button
                 size="small"
                 onClick={() => setSelectedIds(new Set())}
@@ -208,8 +205,8 @@ export default function PackViewer({ packId }: PackViewerProps) {
               >
                 Deselect {selectedIds.size}
               </Button>
-            )}
-          </Box>
+            </Box>
+          )}
 
           {/* Beatmap rows */}
           <Box sx={{ p: 1 }}>

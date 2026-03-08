@@ -1,29 +1,30 @@
 import { useState, useEffect } from 'react';
 import {
-  Autocomplete,
   Avatar,
   Box,
   Grid,
-  Paper,
+  Card,
   Typography,
   CircularProgress,
   Alert,
   Pagination,
-  ToggleButtonGroup,
-  ToggleButton,
-  Chip,
   Stack,
-  TextField,
-  InputAdornment,
 } from '@mui/material';
 import ExploreIcon from '@mui/icons-material/Explore';
-import SearchIcon from '@mui/icons-material/Search';
-import PersonIcon from '@mui/icons-material/Person';
 import { useSearchParams } from 'react-router-dom';
 import { browsePacks, getUsers, type BrowsePacksResult, type UserInfo } from '../features/pack/api/packs';
 import PackCard from '../features/pack/components/PackCard';
+import SearchField from '../shared/components/SearchField';
+import UserFilter from '../shared/components/UserFilter';
+import SortToggle from '../shared/components/SortToggle';
 
 const PACKS_PER_PAGE = 12;
+
+const SORT_OPTIONS = [
+  { value: 'recent', label: 'Recent' },
+  { value: 'popular', label: 'Popular' },
+  { value: 'views', label: 'Most Viewed' },
+];
 
 export default function Explore() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,13 +75,6 @@ export default function Explore() {
     return () => clearTimeout(timer);
   }, [searchInput, search]);
 
-  const handleSortChange = (_: React.MouseEvent<HTMLElement>, newSort: 'recent' | 'popular' | 'views' | null) => {
-    if (newSort) {
-      setSort(newSort);
-      setPage(1);
-    }
-  };
-
   const pageCount = data ? Math.ceil(data.total / PACKS_PER_PAGE) : 0;
 
   return (
@@ -98,34 +92,20 @@ export default function Explore() {
         <Typography variant="h5" fontWeight="bold">
           {selectedUser ? `Packs by ${selectedUser.username}` : 'Explore'}
         </Typography>
-        {data && (
-          <Chip label={`${data.total} packs`} size="small" />
-        )}
       </Box>
 
       {/* Search & Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      <Card sx={{ p: 2, mb: 3, backgroundColor: 'action.hover' }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-          <TextField
-            placeholder="Search packs..."
-            size="small"
+          <SearchField
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            sx={{ flex: 1, minWidth: 200 }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
-              },
-            }}
+            onChange={setSearchInput}
+            placeholder="Search packs..."
           />
-          <Autocomplete
-            options={users}
+          <UserFilter
+            users={users}
             value={selectedUser}
-            onChange={(_, user) => {
+            onChange={(user) => {
               if (user) {
                 setSearchParams({ user_id: user.id.toString() });
               } else {
@@ -133,54 +113,18 @@ export default function Explore() {
               }
               setPage(1);
             }}
-            getOptionLabel={(option) => option.username}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderOption={(props, option) => (
-              <Box component="li" {...props} key={option.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar src={option.avatar_url} alt={option.username} sx={{ width: 24, height: 24 }} />
-                <span>{option.username}</span>
-                <Chip label={option.pack_count} size="small" sx={{ ml: 'auto' }} />
-              </Box>
-            )}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder="Filter by user..."
-                size="small"
-                slotProps={{
-                  input: {
-                    ...params.InputProps,
-                    startAdornment: (
-                      <>
-                        <InputAdornment position="start">
-                          <PersonIcon sx={{ color: 'text.secondary' }} />
-                        </InputAdornment>
-                        {params.InputProps.startAdornment}
-                      </>
-                    ),
-                  },
-                }}
-              />
-            )}
-            sx={{ minWidth: 200 }}
-            size="small"
           />
-          <ToggleButtonGroup
+          <SortToggle
             value={sort}
-            exclusive
-            onChange={handleSortChange}
-            size="small"
-          >
-            <ToggleButton value="recent">Recent</ToggleButton>
-            <ToggleButton value="popular">Popular</ToggleButton>
-            <ToggleButton value="views">Most Viewed</ToggleButton>
-          </ToggleButtonGroup>
+            onChange={(v) => { setSort(v as 'recent' | 'popular' | 'views'); setPage(1); }}
+            options={SORT_OPTIONS}
+          />
         </Stack>
-      </Paper>
+      </Card>
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress sx={{ color: 'primary.main' }} />
+          <CircularProgress color="primary" />
         </Box>
       )}
 
@@ -191,7 +135,7 @@ export default function Explore() {
       )}
 
       {!loading && !error && data && data.packs.length === 0 && (
-        <Paper sx={{ p: 6, textAlign: 'center' }}>
+        <Card variant="outlined" sx={{ p: 6, textAlign: 'center' }}>
           <ExploreIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" gutterBottom>
             {search ? 'No packs found' : 'No packs yet'}
@@ -199,7 +143,7 @@ export default function Explore() {
           <Typography color="text.secondary">
             {search ? 'Try a different search term' : 'Be the first to create a pack!'}
           </Typography>
-        </Paper>
+        </Card>
       )}
 
       {!loading && !error && data && data.packs.length > 0 && (
