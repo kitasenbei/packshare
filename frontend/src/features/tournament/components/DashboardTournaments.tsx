@@ -29,8 +29,6 @@ import {
   Card,
   CardHeader,
   CardContent,
-  ToggleButtonGroup,
-  ToggleButton,
   List,
   ListItem,
   ListItemIcon,
@@ -87,6 +85,7 @@ import OsuButton from '../../../shared/components/OsuButton';
 import RemoveButton from '../../../shared/components/RemoveButton';
 import ImageUpload from '../../../shared/components/ImageUpload';
 import TournamentBracket from './TournamentBracket';
+import TournamentStatus, { statusColors } from './TournamentStatus';
 
 // ── Constants ──
 
@@ -120,11 +119,6 @@ const DEFAULT_STAGES = [
   'Qualifiers', 'Round of 16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals',
 ];
 
-const statusColors: Record<string, string> = {
-  upcoming: '#4488ff',
-  live: '#ff4444',
-  completed: '#44bb44',
-};
 
 // ── Exports ──
 
@@ -1127,42 +1121,7 @@ function TournamentDetailSection({
           <Stack spacing={2}>
             {/* Status */}
             {isOwner && (
-              <Card variant="outlined">
-                <CardHeader
-                  avatar={<FiberManualRecordIcon sx={{ fontSize: 14, color: statusColors[tournament.status] }} />}
-                  title="Tournament Status"
-                  slotProps={{ title: { variant: 'subtitle2', fontWeight: 'bold' } }}
-                  sx={{ pb: 0 }}
-                />
-                <CardContent>
-                  <ToggleButtonGroup
-                    value={tournament.status}
-                    exclusive
-                    onChange={(_, val) => val && handleStatusChange(val)}
-                    fullWidth
-                    size="small"
-                    sx={{ '& .MuiToggleButton-root': { textTransform: 'capitalize', fontWeight: 600, fontSize: 13 } }}
-                  >
-                    {(['upcoming', 'live', 'completed'] as const).map((s) => (
-                      <ToggleButton
-                        key={s}
-                        value={s}
-                        sx={{
-                          '&.Mui-selected': {
-                            backgroundColor: `${statusColors[s]}22`,
-                            color: statusColors[s],
-                            borderColor: statusColors[s],
-                            '&:hover': { backgroundColor: `${statusColors[s]}33` },
-                          },
-                        }}
-                      >
-                        <FiberManualRecordIcon sx={{ fontSize: 8, mr: 1, color: statusColors[s] }} />
-                        {s}
-                      </ToggleButton>
-                    ))}
-                  </ToggleButtonGroup>
-                </CardContent>
-              </Card>
+              <TournamentStatus value={tournament.status as 'upcoming' | 'live' | 'completed'} onChange={handleStatusChange} />
             )}
 
             {/* Branding */}
