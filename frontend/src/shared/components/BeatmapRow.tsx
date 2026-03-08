@@ -157,7 +157,7 @@ export default function BeatmapRow({
                   justifyContent: 'center',
                   gap: 0.25,
                   py: 0.25,
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)',
+                  backgroundColor: 'rgba(0,0,0,0.7)',
                   color: '#f5c842',
                   fontSize: 10,
                   fontWeight: 700,

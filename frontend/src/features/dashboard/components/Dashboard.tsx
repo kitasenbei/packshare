@@ -47,6 +47,7 @@ import type { User, BeatmapsetInfo } from '../../auth/api/auth';
 import { getBeatmapset } from '../../auth/api/auth';
 import { getMyPacks, trackDownload, deletePack, updatePack, type Pack, type PackBeatmap } from '../../pack/api/packs';
 import PackCard from '../../pack/components/PackCard';
+import SortButtons from '../../../shared/components/SortButtons';
 import PackBanner from '../../pack/components/PackBanner';
 import BeatmapRow from '../../../shared/components/BeatmapRow';
 import DownloadButton from '../../../shared/components/DownloadButton';
@@ -516,25 +517,17 @@ function PacksSection({
             slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18 }} /></InputAdornment> } }}
             sx={{ flex: 1, minWidth: 200 }}
           />
-          <Stack direction="row" spacing={0.5}>
-            {([
+          <SortButtons
+            value={sortBy}
+            onChange={(v) => setSortBy(v as typeof sortBy)}
+            options={[
               { key: 'newest', label: 'Newest' },
               { key: 'oldest', label: 'Oldest' },
               { key: 'name', label: 'A-Z' },
               { key: 'views', label: 'Views' },
               { key: 'maps', label: 'Maps' },
-            ] as const).map((s) => (
-              <Button
-                key={s.key}
-                size="small"
-                variant={sortBy === s.key ? 'contained' : 'text'}
-                onClick={() => setSortBy(s.key)}
-                sx={{ minWidth: 0, px: 1.5, fontSize: 12 }}
-              >
-                {s.label}
-              </Button>
-            ))}
-          </Stack>
+            ]}
+          />
         </Box>
       )}
 

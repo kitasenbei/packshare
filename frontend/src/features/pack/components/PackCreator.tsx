@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   Box,
-  Paper,
+  Card,
+  CardHeader,
   Typography,
   TextField,
   Button,
@@ -16,6 +17,10 @@ import {
   Stack,
   CircularProgress,
   Stepper,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
   Step,
   StepLabel,
 } from '@mui/material';
@@ -23,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import PreviewIcon from '@mui/icons-material/Preview';
 import BackButton from '../../../shared/components/BackButton';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
@@ -91,8 +97,9 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
     return null;
   };
 
-  const handleAddBeatmap = async () => {
-    const id = extractBeatmapId(beatmapInput);
+  const handleAddBeatmap = async (input?: string) => {
+    const value = input ?? beatmapInput;
+    const id = extractBeatmapId(value);
     if (!id) {
       setError('Invalid beatmap ID or URL');
       return;
@@ -228,6 +235,24 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const pasted = e.clipboardData.getData('text').trim();
+    if (pasted && extractBeatmapId(pasted) && !loading) {
+      e.preventDefault();
+      setBeatmapInput(pasted);
+      handleAddBeatmap(pasted);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const dropped = e.dataTransfer.getData('text').trim();
+    if (dropped && extractBeatmapId(dropped) && !loading) {
+      setBeatmapInput(dropped);
+      handleAddBeatmap(dropped);
+    }
+  };
+
   const canAdvance = (s: number) => {
     if (s === 0) return packName.trim().length > 0;
     if (s === 1) return beatmaps.length > 0;
@@ -251,52 +276,40 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
   });
 
   const renderStepDetails = () => (
-    <Paper sx={{ overflow: 'hidden' }}>
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
-          Pack Details
-        </Typography>
-
-        <Stack spacing={2}>
-          <TextField
-            placeholder="Pack name..."
-            fullWidth
-            value={packName}
-            onChange={(e) => setPackName(e.target.value)}
-            variant="outlined"
-            slotProps={{
-              input: {
-                sx: {
-                  fontSize: 24,
-                  fontWeight: 'bold',
-                },
-              },
-            }}
-          />
-          <TextField
-            placeholder="Description (optional)..."
-            fullWidth
-            multiline
-            rows={2}
-            value={packDescription}
-            onChange={(e) => setPackDescription(e.target.value)}
-            variant="outlined"
-          />
-        </Stack>
-      </Box>
-    </Paper>
+    <Card variant="outlined" sx={{ p: 3 }}>
+      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
+        Pack Details
+      </Typography>
+      <Stack spacing={2}>
+        <TextField
+          placeholder="Pack name..."
+          fullWidth
+          value={packName}
+          onChange={(e) => setPackName(e.target.value)}
+          slotProps={{
+            input: {
+              sx: { fontSize: 24, fontWeight: 'bold' },
+            },
+          }}
+        />
+        <TextField
+          placeholder="Description (optional)..."
+          fullWidth
+          multiline
+          rows={2}
+          value={packDescription}
+          onChange={(e) => setPackDescription(e.target.value)}
+        />
+      </Stack>
+    </Card>
   );
 
   const renderStepBeatmaps = () => (
     <>
       {/* Add Beatmap Section */}
-      <Paper sx={{ overflow: 'hidden', mb: 3 }}>
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="subtitle1" fontWeight="bold">
-            Add Beatmaps
-          </Typography>
-        </Box>
-        <Box sx={{ p: 2 }}>
+      <Card variant="outlined" sx={{ mb: 3 }}>
+        <CardHeader title="Add Beatmaps" slotProps={{ title: { variant: 'subtitle1', fontWeight: 'bold' } }} />
+        <Box sx={{ p: 2, pt: 0 }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
               placeholder="Paste beatmap ID or osu! URL..."
@@ -304,6 +317,9 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
               value={beatmapInput}
               onChange={(e) => setBeatmapInput(e.target.value)}
               onKeyDown={handleKeyPress}
+              onPaste={handlePaste}
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
               size="small"
               disabled={loading}
               slotProps={{
@@ -318,15 +334,11 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             />
             <Button
               variant="contained"
-              onClick={handleAddBeatmap}
+              onClick={() => handleAddBeatmap()}
               disabled={!beatmapInput.trim() || loading}
-              sx={{
-                minWidth: 100,
-                backgroundColor: 'primary.main',
-                '&:hover': { backgroundColor: 'primary.dark' },
-              }}
+              sx={{ minWidth: 100 }}
             >
-              {loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Add'}
+              {loading ? <CircularProgress size={20} color="inherit" /> : 'Add'}
             </Button>
           </Box>
           {error && (
@@ -338,35 +350,29 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             Supports osu.ppy.sh and nerinyan.moe links, or direct beatmapset IDs
           </Typography>
         </Box>
-      </Paper>
+      </Card>
 
       {/* Inline Difficulty Selection */}
       {pendingBeatmapset && (
-        <Paper sx={{ overflow: 'hidden', mb: 3 }}>
-          <Box sx={{ p: 2, borderBottom: '1px solid',
-            borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="subtitle1" fontWeight="bold">
-                Select Difficulties
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {pendingBeatmapset.artist} - {pendingBeatmapset.title}
-              </Typography>
-            </Box>
-            <Button
-              size="small"
-              onClick={() => {
-                const allIds = pendingBeatmapset.beatmaps.map((d) => d.beatmap_id);
-                setSelectedDiffs((prev) =>
-                  prev.size === allIds.length ? new Set() : new Set(allIds),
-                );
-              }}
-              sx={{ color: 'primary.main' }}
-            >
-              {selectedDiffs.size === pendingBeatmapset.beatmaps.length ? 'Deselect all' : 'Select all'}
-            </Button>
-          </Box>
-          <Box sx={{ p: 2 }}>
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardHeader
+            title="Select Difficulties"
+            subheader={`${pendingBeatmapset.artist} - ${pendingBeatmapset.title}`}
+            action={
+              <Button
+                size="small"
+                onClick={() => {
+                  const allIds = pendingBeatmapset.beatmaps.map((d) => d.beatmap_id);
+                  setSelectedDiffs((prev) =>
+                    prev.size === allIds.length ? new Set() : new Set(allIds),
+                  );
+                }}
+              >
+                {selectedDiffs.size === pendingBeatmapset.beatmaps.length ? 'Deselect all' : 'Select all'}
+              </Button>
+            }
+          />
+          <Box sx={{ px: 2, pb: 1 }}>
             {pendingBeatmapset.beatmaps.map((diff) => (
               <BeatmapRow
                 key={diff.beatmap_id}
@@ -388,55 +394,39 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             ))}
           </Box>
           <Box sx={{ p: 2, pt: 0, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button onClick={() => setPendingBeatmapset(null)}>
+            <Button variant="outlined" onClick={() => setPendingBeatmapset(null)}>
               Cancel
             </Button>
             <Button
               variant="contained"
               onClick={handleConfirmDifficulty}
               disabled={selectedDiffs.size === 0}
-              sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
             >
               Add {selectedDiffs.size > 0 ? `(${selectedDiffs.size})` : ''}
             </Button>
           </Box>
-        </Paper>
+        </Card>
       )}
 
       {/* Beatmap List */}
-      <Paper sx={{ overflow: 'hidden' }}>
-        <Box
-          sx={{
-            p: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <Box>
-            <Typography variant="h6" fontWeight="bold">
-              Beatmaps
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {beatmaps.length} {beatmaps.length === 1 ? 'map' : 'maps'} added
-            </Typography>
-          </Box>
-        </Box>
+      <Card variant="outlined">
+        <CardHeader
+          title="Beatmaps"
+          subheader={`${beatmaps.length} ${beatmaps.length === 1 ? 'map' : 'maps'} added`}
+        />
 
         {beatmaps.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-            <MusicNoteIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
-            <Typography variant="h6" sx={{ opacity: 0.7 }}>
+            <MusicNoteIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary">
               No beatmaps yet
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" color="text.secondary">
               Paste a beatmap ID or osu! URL above to get started
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ p: 2, pt: 0 }}>
             {beatmaps.map((beatmap, index) => (
               <BeatmapRow
                 key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}
@@ -471,67 +461,102 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             ))}
           </Box>
         )}
-      </Paper>
+      </Card>
     </>
   );
 
-  const renderStepReview = () => (
-    <>
-      {/* Pack Info Summary */}
-      <Paper sx={{ overflow: 'hidden', mb: 3 }}>
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h5" fontWeight="bold">
-            {packName}
-          </Typography>
-          {packDescription && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {packDescription}
-            </Typography>
-          )}
-        </Box>
-      </Paper>
+  const renderStepReview = () => {
+    const uniqueArtists = new Set(beatmaps.map((b) => b.artist)).size;
+    const keysCounts = beatmaps.reduce<Record<number, number>>((acc, b) => {
+      if (b.keys) acc[b.keys] = (acc[b.keys] || 0) + 1;
+      return acc;
+    }, {});
 
-      {/* Read-only Beatmap List */}
-      <Paper sx={{ overflow: 'hidden' }}>
-        <Box
-          sx={{
-            p: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
-          <Typography variant="h6" fontWeight="bold">
-            Beatmaps
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {beatmaps.length} {beatmaps.length === 1 ? 'map' : 'maps'}
-          </Typography>
-        </Box>
-
-        <Box sx={{ p: 2 }}>
-          {beatmaps.map((beatmap, index) => (
-            <BeatmapRow
-              key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}
-              beatmapsetId={beatmap.beatmapset_id}
-              title={beatmap.title}
-              artist={beatmap.artist}
-              keys={beatmap.keys}
-              creator={beatmap.creator}
-              creatorPrefix="mapped by"
-              difficultyName={beatmap.difficulty_name}
-              starRating={beatmap.star_rating}
-            />
-          ))}
-        </Box>
-      </Paper>
-
-      {error && (
-        <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError('')}>
-          {error}
+    return (
+      <>
+        <Alert severity="info" icon={<PreviewIcon />} sx={{ mb: 3 }}>
+          Review your pack before creating. You can go back to make changes.
         </Alert>
-      )}
-    </>
-  );
+
+        {/* Summary table */}
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardHeader
+            title="Summary"
+            action={
+              <Button size="small" onClick={() => setStep(0)}>
+                Edit
+              </Button>
+            }
+          />
+          <Table size="small">
+            <TableBody>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', width: 120 }}>Name</TableCell>
+                <TableCell>{packName}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Description</TableCell>
+                <TableCell sx={{ color: packDescription ? 'text.primary' : 'text.disabled', fontStyle: packDescription ? undefined : 'italic' }}>
+                  {packDescription || 'None'}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Beatmaps</TableCell>
+                <TableCell>{beatmaps.length}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Artists</TableCell>
+                <TableCell>{uniqueArtists}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Keys</TableCell>
+                <TableCell>
+                  {Object.entries(keysCounts)
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([k, count]) => `${k}K (${count})`)
+                    .join(', ')}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </Card>
+
+        {/* Beatmap list */}
+        <Card variant="outlined">
+          <CardHeader
+            title={`Beatmaps (${beatmaps.length})`}
+            action={
+              <Button size="small" onClick={() => setStep(1)}>
+                Edit
+              </Button>
+            }
+          />
+          <Box sx={{ px: 2, pb: 1 }}>
+            {beatmaps.map((beatmap, index) => (
+              <BeatmapRow
+                key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}
+                beatmapsetId={beatmap.beatmapset_id}
+                title={beatmap.title}
+                artist={beatmap.artist}
+                keys={beatmap.keys}
+                creator={beatmap.creator}
+                creatorPrefix="mapped by"
+                difficultyName={beatmap.difficulty_name}
+                starRating={beatmap.star_rating}
+                density="compact"
+              />
+            ))}
+          </Box>
+        </Card>
+
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+        )}
+      </>
+    );
+  };
 
   return (
     <Box sx={{ maxWidth: 800, margin: '0 auto' }}>
@@ -548,14 +573,7 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
       </Typography>
 
       {/* Stepper */}
-      <Stepper
-        activeStep={step}
-        sx={{
-          mb: 3,
-          '& .MuiStepIcon-root.Mui-active': { color: 'primary.main' },
-          '& .MuiStepIcon-root.Mui-completed': { color: 'primary.main' },
-        }}
-      >
+      <Stepper activeStep={step} sx={{ mb: 3 }}>
         {STEPS.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
@@ -574,7 +592,6 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
           startIcon={<NavigateBeforeIcon />}
           onClick={() => { setError(''); setStep((s) => s - 1); }}
           disabled={step === 0}
-          sx={{ color: 'text.secondary' }}
         >
           Back
         </Button>
@@ -585,10 +602,6 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             endIcon={<NavigateNextIcon />}
             onClick={() => { setError(''); setStep((s) => s + 1); }}
             disabled={!canAdvance(step)}
-            sx={{
-              backgroundColor: 'primary.main',
-              '&:hover': { backgroundColor: 'primary.dark' },
-            }}
           >
             Next
           </Button>
@@ -598,10 +611,6 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
             startIcon={<ShareIcon />}
             onClick={handleGenerateLink}
             disabled={creating || !user}
-            sx={{
-              backgroundColor: 'primary.main',
-              '&:hover': { backgroundColor: 'primary.dark' },
-            }}
           >
             {creating ? 'Creating...' : 'Create & Share'}
           </Button>
@@ -654,11 +663,10 @@ export default function PackCreator({ user, permissions, isKeySession }: PackCre
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setShareDialogOpen(false)}>Close</Button>
+          <Button variant="outlined" onClick={() => setShareDialogOpen(false)}>Close</Button>
           <Button
             variant="contained"
             onClick={() => navigate(`/s/${generatedLink.split('/').pop()}`)}
-            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
           >
             View Pack
           </Button>

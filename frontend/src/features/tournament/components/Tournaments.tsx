@@ -4,11 +4,7 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  Chip,
   Stack,
-  Avatar,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -19,13 +15,11 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  IconButton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 import type { User } from '../../auth/api/auth';
-import type { Tournament } from '../api/tournaments';
 import { listTournaments, createTournament, deleteTournament } from '../api/tournaments';
+import TournamentCard from './TournamentCard';
 
 const DEFAULT_STAGES = ['Qualifiers', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals'];
 
@@ -98,14 +92,7 @@ export default function Tournaments({ user }: TournamentsProps) {
     }
   };
 
-  const isOwner = (tournament: Tournament) => tournament.user?.osu_id === user?.osu_id;
   const canSubmit = tournamentName.trim().length > 0 && abbreviation.trim().length > 0;
-
-  const statusColors: Record<string, string> = {
-    live: '#ff4444',
-    upcoming: '#4488ff',
-    completed: '#44bb44',
-  };
 
   if (loading) {
     return (
@@ -147,78 +134,13 @@ export default function Tournaments({ user }: TournamentsProps) {
       ) : (
         <Stack spacing={2}>
           {tournaments.map((tournament) => (
-            <Card
+            <TournamentCard
               key={tournament.id}
+              tournament={tournament}
+              isOwner={tournament.user?.osu_id === user?.osu_id}
               onClick={() => navigate(`/t/${tournament.abbreviation}`)}
-              sx={{
-                overflow: 'hidden',
-                cursor: 'pointer',
-                '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
-                transition: 'all 0.2s',
-              }}
-            >
-              {/* Banner */}
-              <Box
-                sx={{
-                  height: 100,
-                  backgroundImage: tournament.banner_url
-                    ? `linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.3)), url(${tournament.banner_url})`
-                    : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  px: 3,
-                  gap: 2,
-                }}
-              >
-                {tournament.logo_url && (
-                  <Avatar
-                    src={tournament.logo_url}
-                    sx={{ width: 64, height: 64, border: '3px solid white' }}
-                  />
-                )}
-                <Box sx={{ flex: 1 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-                      {tournament.name}
-                    </Typography>
-                    <Chip
-                      label={tournament.status.toUpperCase()}
-                      size="small"
-                      sx={{ backgroundColor: statusColors[tournament.status] || '#666', color: 'white', fontWeight: 'bold', fontSize: 10 }}
-                    />
-                  </Stack>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                    {tournament.format} · {tournament.stages?.length || 0} stages
-                  </Typography>
-                </Box>
-                {isOwner(tournament) && (
-                  <IconButton
-                    onClick={(e) => handleDelete(tournament.abbreviation, e)}
-                    sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#ff4444' } }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                )}
-              </Box>
-
-              {/* Stages */}
-              {tournament.stages && tournament.stages.length > 0 && (
-                <CardContent sx={{ py: 2 }}>
-                  <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 1 }}>
-                    {tournament.stages.map((stage) => (
-                      <Chip
-                        key={stage.id}
-                        label={stage.name}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Stack>
-                </CardContent>
-              )}
-            </Card>
+              onDelete={(e) => handleDelete(tournament.abbreviation, e)}
+            />
           ))}
         </Stack>
       )}

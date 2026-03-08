@@ -16,14 +16,14 @@ import { browsePacks, getUsers, type BrowsePacksResult, type UserInfo } from '..
 import PackCard from '../features/pack/components/PackCard';
 import SearchField from '../shared/components/SearchField';
 import UserFilter from '../shared/components/UserFilter';
-import SortToggle from '../shared/components/SortToggle';
+import SortButtons from '../shared/components/SortButtons';
 
 const PACKS_PER_PAGE = 12;
 
 const SORT_OPTIONS = [
-  { value: 'recent', label: 'Recent' },
-  { value: 'popular', label: 'Popular' },
-  { value: 'views', label: 'Most Viewed' },
+  { key: 'recent', label: 'Recent' },
+  { key: 'popular', label: 'Popular' },
+  { key: 'views', label: 'Most Viewed' },
 ];
 
 export default function Explore() {
@@ -114,9 +114,9 @@ export default function Explore() {
               setPage(1);
             }}
           />
-          <SortToggle
+          <SortButtons
             value={sort}
-            onChange={(v) => { setSort(v as 'recent' | 'popular' | 'views'); setPage(1); }}
+            onChange={(v) => { setSort(v as typeof sort); setPage(1); }}
             options={SORT_OPTIONS}
           />
         </Stack>

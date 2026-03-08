@@ -24,6 +24,11 @@ export interface TournamentStage {
   maps?: TournamentMap[];
 }
 
+export interface SlotConfig {
+  label: string;
+  color: string;
+}
+
 export interface Tournament {
   id: number;
   name: string;
@@ -32,6 +37,7 @@ export interface Tournament {
   banner_url: string;
   logo_url: string;
   status: 'upcoming' | 'live' | 'completed';
+  slot_configs?: string;
   user_id: number;
   user?: {
     id: number;
@@ -59,6 +65,7 @@ export interface UpdateTournamentInput {
   banner_url?: string;
   logo_url?: string;
   status?: string;
+  slot_configs?: string;
 }
 
 export interface AddMapInput {
@@ -165,6 +172,43 @@ export async function removeMap(abbrev: string, mapId: number): Promise<void> {
   });
   if (!response.ok) {
     throw new Error(`Failed to remove map: ${response.statusText}`);
+  }
+}
+
+export async function addStage(abbrev: string, name: string): Promise<TournamentStage> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/stages`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to add stage');
+  }
+  return response.json();
+}
+
+export async function renameStage(abbrev: string, stageId: number, name: string): Promise<TournamentStage> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/stages/${stageId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to rename stage');
+  }
+  return response.json();
+}
+
+export async function deleteStage(abbrev: string, stageId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/stages/${stageId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to delete stage');
   }
 }
 

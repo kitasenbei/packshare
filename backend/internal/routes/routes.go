@@ -79,6 +79,9 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client,
 	protected.Post("/tournaments", tournamentHandler.CreateTournament)
 	protected.Put("/tournaments/:abbrev", tournamentHandler.UpdateTournament)
 	protected.Delete("/tournaments/:abbrev", tournamentHandler.DeleteTournament)
+	protected.Post("/tournaments/:abbrev/stages", tournamentHandler.AddStage)
+	protected.Put("/tournaments/:abbrev/stages/:stageId", tournamentHandler.RenameStage)
+	protected.Delete("/tournaments/:abbrev/stages/:stageId", tournamentHandler.DeleteStage)
 	protected.Post("/tournaments/:abbrev/stages/:stageId/maps", tournamentHandler.AddMapToStage)
 	protected.Delete("/tournaments/:abbrev/maps/:mapId", tournamentHandler.RemoveMapFromStage)
 

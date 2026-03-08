@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Placeholder assets (local dev only)
+src/assets/tournament_placeholder.png
+src/assets/tournament_logo_placeholder.png

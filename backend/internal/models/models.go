@@ -53,6 +53,7 @@ type Tournament struct {
 	BannerURL    string            `json:"banner_url"`
 	LogoURL      string            `json:"logo_url"`
 	Status       string            `gorm:"not null;default:upcoming" json:"status"`
+	SlotConfigs  string            `gorm:"type:text" json:"slot_configs"`
 	UserID       uint              `gorm:"not null" json:"user_id"`
 	User         User              `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Stages       []TournamentStage `gorm:"foreignKey:TournamentID" json:"stages,omitempty"`

@@ -4,78 +4,24 @@ import {
   Typography,
   Button,
   Stack,
-  TextField,
-  IconButton,
   Chip,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
   Card,
-  CardHeader,
-  CardContent,
   Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Tooltip,
   Divider,
   Badge,
   LinearProgress,
+  FormControl,
+  Select,
+  MenuItem,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import ShuffleIcon from '@mui/icons-material/Shuffle';
-import CloseIcon from '@mui/icons-material/Close';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import GroupIcon from '@mui/icons-material/Group';
-import UploadIcon from '@mui/icons-material/Upload';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import SportsScoreIcon from '@mui/icons-material/SportsScore';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
-import PersonIcon from '@mui/icons-material/Person';
 import StarIcon from '@mui/icons-material/Star';
-
-// ── Types ──
-
-interface Player {
-  id: string;
-  name: string;
-  seed: number;
-}
-
-interface Match {
-  id: string;
-  round: number;
-  position: number; // position within round (0-indexed)
-  player1: string | null; // player id or null (TBD)
-  player2: string | null;
-  score1: number;
-  score2: number;
-  winner: string | null;
-}
-
-interface BracketData {
-  players: Player[];
-  matches: Match[];
-  bestOf: number;
-  generated: boolean;
-}
-
-const STORAGE_PREFIX = 'packshare_bracket_';
-
-function loadBracket(tournamentAbbrev: string): BracketData {
-  const saved = localStorage.getItem(`${STORAGE_PREFIX}${tournamentAbbrev}`);
-  if (saved) {
-    try { return JSON.parse(saved); } catch { /* fall through */ }
-  }
-  return { players: [], matches: [], bestOf: 7, generated: false };
-}
-
-function saveBracket(tournamentAbbrev: string, data: BracketData) {
-  localStorage.setItem(`${STORAGE_PREFIX}${tournamentAbbrev}`, JSON.stringify(data));
-}
+import { loadBracket, saveBracket, type BracketData, type Player } from './TournamentPlayers';
 
 // ── Bracket Generation ──
 
@@ -92,20 +38,17 @@ function generateBracket(players: Player[], bestOf: number): BracketData {
   const size = nextPowerOf2(n);
   const totalRounds = Math.log2(size);
 
-  // Seed ordering for proper bracket placement
   const seeded = [...players].sort((a, b) => a.seed - b.seed);
   const slots: (string | null)[] = new Array(size).fill(null);
 
-  // Standard seeding: 1v(size), 2v(size-1), etc. with proper bracket placement
   const seedOrder = buildSeedOrder(size);
   for (let i = 0; i < seeded.length; i++) {
     slots[seedOrder[i]] = seeded[i].id;
   }
 
-  const matches: Match[] = [];
+  const matches: BracketData['matches'] = [];
   let matchId = 0;
 
-  // Round 1
   for (let i = 0; i < size / 2; i++) {
     const p1 = slots[i * 2];
     const p2 = slots[i * 2 + 1];
@@ -118,15 +61,13 @@ function generateBracket(players: Player[], bestOf: number): BracketData {
       player2: p2,
       score1: 0,
       score2: 0,
-      winner: isBye ? (p1 || p2) : null, // auto-advance byes
+      winner: isBye ? (p1 || p2) : null,
     });
   }
 
-  // Subsequent rounds (empty, filled by winners)
   for (let r = 1; r < totalRounds; r++) {
     const matchesInRound = size / Math.pow(2, r + 1);
     for (let i = 0; i < matchesInRound; i++) {
-      // Check if both source matches are byes
       const src1 = matches.find((m) => m.round === r - 1 && m.position === i * 2);
       const src2 = matches.find((m) => m.round === r - 1 && m.position === i * 2 + 1);
       const p1 = src1?.winner || null;
@@ -168,10 +109,7 @@ interface TournamentBracketProps {
 
 export default function TournamentBracket({ tournamentAbbrev, isOwner }: TournamentBracketProps) {
   const [data, setData] = useState<BracketData>(() => loadBracket(tournamentAbbrev));
-  const [playerInput, setPlayerInput] = useState('');
-  const [bulkImportOpen, setBulkImportOpen] = useState(false);
-  const [bulkInput, setBulkInput] = useState('');
-  const [scoreDialog, setScoreDialog] = useState<Match | null>(null);
+  const [scoreDialog, setScoreDialog] = useState<BracketData['matches'][0] | null>(null);
   const [editScore1, setEditScore1] = useState(0);
   const [editScore2, setEditScore2] = useState(0);
 
@@ -179,57 +117,6 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
     setData(next);
     saveBracket(tournamentAbbrev, next);
   }, [tournamentAbbrev]);
-
-  // ── Player Management ──
-
-  const addPlayer = () => {
-    const name = playerInput.trim();
-    if (!name) return;
-    if (data.players.some((p) => p.name.toLowerCase() === name.toLowerCase())) return;
-    const player: Player = {
-      id: `p${Date.now()}`,
-      name,
-      seed: data.players.length + 1,
-    };
-    persist({ ...data, players: [...data.players, player] });
-    setPlayerInput('');
-  };
-
-  const removePlayer = (id: string) => {
-    const next = data.players.filter((p) => p.id !== id)
-      .map((p, i) => ({ ...p, seed: i + 1 }));
-    persist({ ...data, players: next, generated: false, matches: [] });
-  };
-
-  const bulkImport = () => {
-    const names = bulkInput
-      .split('\n')
-      .map((n) => n.trim())
-      .filter((n) => n && !data.players.some((p) => p.name.toLowerCase() === n.toLowerCase()));
-    if (names.length === 0) return;
-    const newPlayers: Player[] = names.map((name, i) => ({
-      id: `p${Date.now()}_${i}`,
-      name,
-      seed: data.players.length + i + 1,
-    }));
-    persist({ ...data, players: [...data.players, ...newPlayers], generated: false, matches: [] });
-    setBulkInput('');
-    setBulkImportOpen(false);
-  };
-
-  const shuffleSeeds = () => {
-    const shuffled = [...data.players];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    persist({
-      ...data,
-      players: shuffled.map((p, i) => ({ ...p, seed: i + 1 })),
-      generated: false,
-      matches: [],
-    });
-  };
 
   const handleGenerate = () => {
     const bracket = generateBracket(data.players, data.bestOf);
@@ -242,7 +129,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
 
   // ── Match Scoring ──
 
-  const openScoreDialog = (match: Match) => {
+  const openScoreDialog = (match: BracketData['matches'][0]) => {
     setScoreDialog(match);
     setEditScore1(match.score1);
     setEditScore2(match.score2);
@@ -262,7 +149,6 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
       return m;
     });
 
-    // Advance winner to next round
     if (winner) {
       const nextRound = scoreDialog.round + 1;
       const nextPosition = Math.floor(scoreDialog.position / 2);
@@ -272,7 +158,6 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
       if (nextMatch) {
         if (isTop) nextMatch.player1 = winner;
         else nextMatch.player2 = winner;
-        // Clear next match result if players changed
         nextMatch.score1 = 0;
         nextMatch.score2 = 0;
         nextMatch.winner = null;
@@ -307,199 +192,55 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
     return `Round ${round + 1}`;
   };
 
-  // Find the finals winner
   const finalsMatch = data.matches.find((m) => m.round === totalRounds - 1 && m.position === 0);
   const champion = finalsMatch?.winner;
-
   const winsNeeded = Math.ceil(data.bestOf / 2);
 
   return (
     <Box>
-      {/* Players & Setup */}
+      {/* Controls */}
       {isOwner && (
-        <Box sx={{ mb: 3 }}>
-          {!data.generated && (
-            <Stack spacing={2}>
-              {/* Player roster card */}
-              <Card variant="outlined">
-                <CardHeader
-                  avatar={
-                    <Badge badgeContent={data.players.length} color="primary" showZero
-                      sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 18, minWidth: 18 } }}>
-                      <Avatar sx={{ width: 34, height: 34, bgcolor: 'action.hover' }}>
-                        <GroupIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                      </Avatar>
-                    </Badge>
-                  }
-                  title="Player Roster"
-                  subheader="Add players and set seeds before generating the bracket"
-                  slotProps={{
-                    title: { variant: 'subtitle2', fontWeight: 'bold' },
-                    subheader: { variant: 'caption' },
-                  }}
-                  action={
-                    <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
-                      <Tooltip title="Bulk import from list">
-                        <Button size="small" variant="outlined" startIcon={<UploadIcon />}
-                          onClick={() => setBulkImportOpen(true)} sx={{ fontSize: 12 }}>
-                          Import
-                        </Button>
-                      </Tooltip>
-                      {data.players.length > 1 && (
-                        <Tooltip title="Randomize seed order">
-                          <IconButton size="small" onClick={shuffleSeeds}>
-                            <ShuffleIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Stack>
-                  }
-                  sx={{ pb: 0 }}
-                />
-                <CardContent sx={{ pt: 1.5 }}>
-                  {/* Add player input */}
-                  <Stack direction="row" spacing={1} sx={{ mb: data.players.length > 0 ? 1.5 : 0 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Player name..."
-                      value={playerInput}
-                      onChange={(e) => setPlayerInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
-                      fullWidth
-                      slotProps={{
-                        input: {
-                          startAdornment: <PersonIcon sx={{ fontSize: 18, color: 'text.disabled', mr: 0.75 }} />,
-                        },
-                      }}
-                    />
-                    <Button size="small" variant="contained" onClick={addPlayer} disabled={!playerInput.trim()}
-                      sx={{ minWidth: 40, px: 1 }}>
-                      <AddIcon sx={{ fontSize: 20 }} />
-                    </Button>
-                  </Stack>
+        <Stack spacing={1.5} sx={{ mb: 2 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
+              Best of
+            </Typography>
+            <FormControl size="small" fullWidth>
+              <Select
+                value={data.bestOf}
+                onChange={(e) => persist({ ...data, bestOf: e.target.value as number, generated: false, matches: [] })}
+                sx={{ fontSize: 13 }}
+              >
+                {[3, 5, 7, 9, 11, 13].map((bo) => (
+                  <MenuItem key={bo} value={bo} sx={{ fontSize: 13 }}>{bo}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
 
-                  {/* Player list */}
-                  {data.players.length > 0 && (
-                    <List dense disablePadding sx={{
-                      border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
-                    }}>
-                      {data.players.map((player, i) => (
-                        <ListItem
-                          key={player.id}
-                          divider={i < data.players.length - 1}
-                          sx={{ py: 0.25 }}
-                        >
-                          <ListItemAvatar sx={{ minWidth: 36 }}>
-                            <Avatar sx={{
-                              width: 26, height: 26, fontSize: 11, fontWeight: 'bold',
-                              bgcolor: player.seed <= 3 ? 'primary.main' : 'action.hover',
-                              color: player.seed <= 3 ? 'white' : 'text.secondary',
-                            }}>
-                              {player.seed}
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={player.name}
-                            slotProps={{ primary: { variant: 'body2' } }}
-                          />
-                          <IconButton size="small" edge="end" onClick={() => removePlayer(player.id)}
-                            sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                            <CloseIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-
-                  {data.players.length === 0 && (
-                    <Box sx={{ py: 3, textAlign: 'center' }}>
-                      <PersonIcon sx={{ fontSize: 36, color: 'text.disabled', mb: 0.5 }} />
-                      <Typography variant="body2" color="text.disabled">
-                        No players added yet
-                      </Typography>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Settings + Generate card */}
-              <Card variant="outlined">
-                <CardHeader
-                  avatar={
-                    <Avatar sx={{ width: 34, height: 34, bgcolor: 'action.hover' }}>
-                      <SportsScoreIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                    </Avatar>
-                  }
-                  title="Match Settings"
-                  slotProps={{ title: { variant: 'subtitle2', fontWeight: 'bold' } }}
-                  sx={{ pb: 0 }}
-                />
-                <CardContent>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                    Win condition
-                  </Typography>
-                  <Stack direction="row" spacing={0.75} sx={{ mb: 2.5, flexWrap: 'wrap' }}>
-                    {[3, 5, 7, 9, 11, 13].map((bo) => (
-                      <Chip
-                        key={bo}
-                        label={`Bo${bo}`}
-                        size="small"
-                        onClick={() => persist({ ...data, bestOf: bo })}
-                        sx={{
-                          cursor: 'pointer', fontWeight: 'bold',
-                          backgroundColor: data.bestOf === bo ? 'primary.main' : 'action.hover',
-                          color: data.bestOf === bo ? 'white' : 'text.primary',
-                          transition: 'all 0.15s',
-                          '&:hover': { transform: 'scale(1.05)' },
-                        }}
-                      />
-                    ))}
-                  </Stack>
-
-                  <Divider sx={{ mb: 2 }} />
-
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                    startIcon={<EmojiEventsIcon />}
-                    onClick={handleGenerate}
-                    disabled={data.players.length < 2}
-                    sx={{ py: 1.25, fontWeight: 'bold', fontSize: 14 }}
-                  >
-                    Generate Bracket ({data.players.length} players)
-                  </Button>
-
-                  {data.players.length < 2 && data.players.length > 0 && (
-                    <Alert severity="info" sx={{ mt: 1.5 }} icon={<GroupIcon sx={{ fontSize: 18 }} />}>
-                      Need at least 2 players to generate a bracket
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            </Stack>
+          {data.players.length < 2 && (
+            <Typography variant="caption" color="text.disabled">
+              Add at least 2 players in the Players tab to generate a bracket
+            </Typography>
           )}
 
-          {data.generated && (
-            <Card variant="outlined" sx={{ mb: 2, px: 2, py: 1.5 }}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Button size="small" variant="outlined" startIcon={<RestartAltIcon />} onClick={handleReset}
-                  sx={{ fontSize: 12 }}>
-                  Reset
-                </Button>
-                <Divider orientation="vertical" flexItem />
-                <Stack direction="row" spacing={0.75} alignItems="center">
-                  <Chip label={`${data.players.length} players`} size="small" variant="outlined"
-                    sx={{ height: 22, fontSize: 11, borderColor: 'divider' }} />
-                  <Chip label={`Bo${data.bestOf}`} size="small" variant="outlined"
-                    sx={{ height: 22, fontSize: 11, borderColor: 'divider' }} />
-                  <Chip label="Single Elimination" size="small" variant="outlined"
-                    sx={{ height: 22, fontSize: 11, borderColor: 'divider' }} />
-                </Stack>
-              </Stack>
-            </Card>
+          {!data.generated ? (
+            <Button
+              variant="contained"
+              startIcon={<EmojiEventsIcon />}
+              onClick={handleGenerate}
+              disabled={data.players.length < 2}
+              sx={{ alignSelf: 'flex-end' }}
+            >
+              Generate Bracket
+            </Button>
+          ) : (
+            <Button variant="outlined" startIcon={<RestartAltIcon />} onClick={handleReset}
+              sx={{ alignSelf: 'flex-end' }}>
+              Reset Bracket
+            </Button>
           )}
-        </Box>
+        </Stack>
       )}
 
       {/* Champion banner */}
@@ -510,7 +251,6 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
           background: 'linear-gradient(135deg, rgba(245,200,66,0.12) 0%, rgba(245,200,66,0.03) 100%)',
         }}>
           <Box sx={{ textAlign: 'center', py: 3, position: 'relative' }}>
-            {/* Decorative stars */}
             <StarIcon sx={{ position: 'absolute', top: 12, left: '20%', fontSize: 14, color: 'rgba(245,200,66,0.3)', transform: 'rotate(-15deg)' }} />
             <StarIcon sx={{ position: 'absolute', top: 20, right: '25%', fontSize: 10, color: 'rgba(245,200,66,0.25)', transform: 'rotate(20deg)' }} />
             <StarIcon sx={{ position: 'absolute', bottom: 16, left: '30%', fontSize: 12, color: 'rgba(245,200,66,0.2)', transform: 'rotate(10deg)' }} />
@@ -593,7 +333,6 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
                             mb: 1,
                           }}
                         >
-                          {/* Progress bar showing match completion */}
                           {!isBye && match.player1 && match.player2 && (
                             <LinearProgress
                               variant="determinate"
@@ -650,117 +389,123 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
         </Card>
       )}
 
-      {/* Bulk Import Dialog */}
-      <Dialog open={bulkImportOpen} onClose={() => setBulkImportOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <UploadIcon sx={{ fontSize: 20, color: 'primary.main' }} />
-          Bulk Import Players
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Paste player names, one per line
-          </Typography>
-          <TextField
-            multiline
-            rows={8}
-            fullWidth
-            placeholder={"Player1\nPlayer2\nPlayer3"}
-            value={bulkInput}
-            onChange={(e) => setBulkInput(e.target.value)}
-            autoFocus
-          />
-          {bulkInput.trim() && (
-            <Chip
-              label={`${bulkInput.split('\n').filter((n) => n.trim()).length} players to import`}
-              size="small"
-              color="primary"
-              variant="outlined"
-              sx={{ mt: 1.5, height: 24, fontSize: 11 }}
-            />
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setBulkImportOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={bulkImport} disabled={!bulkInput.trim()}
-            startIcon={<UploadIcon />}>
-            Import
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Score Dialog */}
-      <Dialog open={!!scoreDialog} onClose={() => setScoreDialog(null)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ textAlign: 'center', pb: 0 }}>
-          <SportsScoreIcon sx={{ fontSize: 24, color: 'primary.main', mb: 0.5, display: 'block', mx: 'auto' }} />
-          Match Score
-        </DialogTitle>
-        <DialogContent>
-          {scoreDialog && (
-            <Stack spacing={2.5} sx={{ mt: 1 }}>
-              <Chip
-                label={`Best of ${data.bestOf} — First to ${winsNeeded}`}
-                size="small"
-                variant="outlined"
-                sx={{ alignSelf: 'center', height: 24, fontSize: 11, borderColor: 'divider' }}
-              />
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center' }}>
-                <Box sx={{ textAlign: 'center', flex: 1 }}>
-                  <Chip
-                    label={getPlayerName(scoreDialog.player1)}
-                    size="small"
-                    sx={{
-                      mb: 1.5, fontWeight: 600, maxWidth: '100%',
-                      ...(editScore1 >= winsNeeded ? { bgcolor: 'primary.main', color: 'white' } : {}),
-                    }}
-                  />
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={editScore1}
-                    onChange={(e) => setEditScore1(Math.max(0, Math.min(winsNeeded, parseInt(e.target.value) || 0)))}
-                    slotProps={{ input: { style: { textAlign: 'center', fontSize: 28, fontWeight: 'bold' } } }}
-                    sx={{ width: 80 }}
-                  />
-                </Box>
-                <Typography variant="h5" color="text.disabled" sx={{ fontWeight: 300 }}>:</Typography>
-                <Box sx={{ textAlign: 'center', flex: 1 }}>
-                  <Chip
-                    label={getPlayerName(scoreDialog.player2)}
-                    size="small"
-                    sx={{
-                      mb: 1.5, fontWeight: 600, maxWidth: '100%',
-                      ...(editScore2 >= winsNeeded ? { bgcolor: 'primary.main', color: 'white' } : {}),
-                    }}
-                  />
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={editScore2}
-                    onChange={(e) => setEditScore2(Math.max(0, Math.min(winsNeeded, parseInt(e.target.value) || 0)))}
-                    slotProps={{ input: { style: { textAlign: 'center', fontSize: 28, fontWeight: 'bold' } } }}
-                    sx={{ width: 80 }}
-                  />
-                </Box>
+      <Dialog open={!!scoreDialog} onClose={() => setScoreDialog(null)} maxWidth="xs" fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3, overflow: 'hidden' } } }}>
+        {scoreDialog && (() => {
+          const p1Name = getPlayerName(scoreDialog.player1);
+          const p2Name = getPlayerName(scoreDialog.player2);
+          const p1Wins = editScore1 >= winsNeeded;
+          const p2Wins = editScore2 >= winsNeeded;
+          const hasWinner = p1Wins || p2Wins;
+
+          return (
+            <>
+              {/* Header with Bo info */}
+              <Box sx={{ px: 3, pt: 2.5, pb: 1.5, textAlign: 'center' }}>
+                <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>
+                  Best of {data.bestOf} · First to {winsNeeded}
+                </Typography>
               </Box>
-              {editScore1 >= winsNeeded && (
-                <Alert severity="success" icon={<EmojiEventsIcon sx={{ fontSize: 18 }} />}>
-                  <strong>{getPlayerName(scoreDialog.player1)}</strong> wins the match!
-                </Alert>
-              )}
-              {editScore2 >= winsNeeded && (
-                <Alert severity="success" icon={<EmojiEventsIcon sx={{ fontSize: 18 }} />}>
-                  <strong>{getPlayerName(scoreDialog.player2)}</strong> wins the match!
-                </Alert>
-              )}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setScoreDialog(null)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveScore} startIcon={<SportsScoreIcon />}>
-            Save Score
-          </Button>
-        </DialogActions>
+
+              <DialogContent sx={{ px: 3, pt: 0, pb: 2 }}>
+                {/* Scoreboard */}
+                <Box sx={{
+                  display: 'flex', alignItems: 'center', gap: 1,
+                  border: '1px solid', borderColor: hasWinner ? 'primary.main' : 'divider',
+                  borderRadius: 2, overflow: 'hidden',
+                  transition: 'border-color 0.2s',
+                }}>
+                  {/* Player 1 */}
+                  <Box sx={{
+                    flex: 1, py: 2, px: 2,
+                    textAlign: 'center',
+                    backgroundColor: p1Wins ? 'rgba(132,169,140,0.08)' : 'transparent',
+                    transition: 'background-color 0.2s',
+                  }}>
+                    <Typography variant="body2" fontWeight={p1Wins ? 700 : 500} noWrap
+                      sx={{ color: p1Wins ? 'primary.main' : 'text.primary', mb: 1.5 }}>
+                      {p1Name}
+                    </Typography>
+                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                      <Button size="small" variant="outlined" onClick={() => setEditScore1(Math.max(0, editScore1 - 1))}
+                        disabled={editScore1 <= 0}
+                        sx={{ minWidth: 32, width: 32, height: 32, p: 0, fontSize: 18, fontWeight: 300 }}>
+                        −
+                      </Button>
+                      <Typography variant="body1" sx={{
+                        minWidth: 40, textAlign: 'center', fontSize: 32, fontWeight: 700,
+                        color: p1Wins ? 'primary.main' : 'text.primary',
+                      }}>
+                        {editScore1}
+                      </Typography>
+                      <Button size="small" variant="outlined" onClick={() => setEditScore1(Math.min(winsNeeded, editScore1 + 1))}
+                        disabled={editScore1 >= winsNeeded}
+                        sx={{ minWidth: 32, width: 32, height: 32, p: 0, fontSize: 18, fontWeight: 300 }}>
+                        +
+                      </Button>
+                    </Stack>
+                  </Box>
+
+                  {/* Divider */}
+                  <Divider orientation="vertical" flexItem />
+
+                  {/* Player 2 */}
+                  <Box sx={{
+                    flex: 1, py: 2, px: 2,
+                    textAlign: 'center',
+                    backgroundColor: p2Wins ? 'rgba(132,169,140,0.08)' : 'transparent',
+                    transition: 'background-color 0.2s',
+                  }}>
+                    <Typography variant="body2" fontWeight={p2Wins ? 700 : 500} noWrap
+                      sx={{ color: p2Wins ? 'primary.main' : 'text.primary', mb: 1.5 }}>
+                      {p2Name}
+                    </Typography>
+                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                      <Button size="small" variant="outlined" onClick={() => setEditScore2(Math.max(0, editScore2 - 1))}
+                        disabled={editScore2 <= 0}
+                        sx={{ minWidth: 32, width: 32, height: 32, p: 0, fontSize: 18, fontWeight: 300 }}>
+                        −
+                      </Button>
+                      <Typography variant="body1" sx={{
+                        minWidth: 40, textAlign: 'center', fontSize: 32, fontWeight: 700,
+                        color: p2Wins ? 'primary.main' : 'text.primary',
+                      }}>
+                        {editScore2}
+                      </Typography>
+                      <Button size="small" variant="outlined" onClick={() => setEditScore2(Math.min(winsNeeded, editScore2 + 1))}
+                        disabled={editScore2 >= winsNeeded}
+                        sx={{ minWidth: 32, width: 32, height: 32, p: 0, fontSize: 18, fontWeight: 300 }}>
+                        +
+                      </Button>
+                    </Stack>
+                  </Box>
+                </Box>
+
+                {/* Winner banner */}
+                {hasWinner && (
+                  <Box sx={{
+                    mt: 2, py: 1, px: 2, borderRadius: 1.5,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                    backgroundColor: 'rgba(132,169,140,0.1)',
+                  }}>
+                    <EmojiEventsIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                    <Typography variant="body2" fontWeight={600} color="primary.main">
+                      {p1Wins ? p1Name : p2Name} wins
+                    </Typography>
+                  </Box>
+                )}
+              </DialogContent>
+
+              <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                <Button onClick={() => setScoreDialog(null)} sx={{ color: 'text.secondary' }}>Cancel</Button>
+                <Button variant="contained" onClick={handleSaveScore}>
+                  Save
+                </Button>
+              </DialogActions>
+            </>
+          );
+        })()}
       </Dialog>
     </Box>
   );

@@ -57,6 +57,8 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
 import LiveTvIcon from '@mui/icons-material/LiveTv';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CodeIcon from '@mui/icons-material/Code';
 import DnsIcon from '@mui/icons-material/Dns';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
@@ -66,6 +68,9 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import SettingsIcon from '@mui/icons-material/Settings';
 import type { User, BeatmapsetInfo } from '../../auth/api/auth';
+import { palette } from '../../../shared/theme/palette';
+import placeholderBanner from '../../../assets/tournament_placeholder.png';
+import placeholderLogo from '../../../assets/tournament_logo_placeholder.png';
 import { getBeatmapset } from '../../auth/api/auth';
 import {
   listTournaments,
@@ -75,8 +80,12 @@ import {
   deleteTournament,
   addMapToStage,
   removeMap,
+  addStage,
+  renameStage,
+  deleteStage,
   type Tournament,
   type TournamentMap,
+  type SlotConfig,
   type CreateTournamentInput,
 } from '../api/tournaments';
 import BeatmapRow from '../../../shared/components/BeatmapRow';
@@ -84,20 +93,40 @@ import DownloadButton from '../../../shared/components/DownloadButton';
 import OsuButton from '../../../shared/components/OsuButton';
 import RemoveButton from '../../../shared/components/RemoveButton';
 import ImageUpload from '../../../shared/components/ImageUpload';
+import TournamentPlayers from './TournamentPlayers';
 import TournamentBracket from './TournamentBracket';
 import TournamentStatus, { statusColors } from './TournamentStatus';
 
 // ── Constants ──
 
-const slotColors: Record<string, string> = {
+const statusIcons: Record<string, React.ReactElement> = {
+  upcoming: <ScheduleIcon />,
+  live: <LiveTvIcon />,
+  completed: <CheckCircleIcon />,
+};
+
+const defaultSlotColors: Record<string, string> = {
   RC: '#4a90d9', LN: '#4ad98f', HB: '#b44ad9', TECH: '#f5c842',
   JACK: '#d94a4a', SPEED: '#4ad9d9', STAM: '#d9a44a', SV: '#ff66ab', TB: '#ff4444',
 };
 
-const slotLabels: Record<string, string> = {
+const defaultSlotLabels: Record<string, string> = {
   RC: 'Rice', LN: 'Long Notes', HB: 'Hybrid', TECH: 'Technical',
   JACK: 'Jack', SPEED: 'Speed', STAM: 'Stamina', SV: 'Slider Velocity', TB: 'Tiebreaker',
 };
+
+function parseSlotConfigs(raw?: string): Record<string, SlotConfig> {
+  if (!raw) return {};
+  try { return JSON.parse(raw); } catch { return {}; }
+}
+
+function getSlotLabel(slot: string, configs: Record<string, SlotConfig>): string {
+  return configs[slot]?.label || defaultSlotLabels[slot] || slot;
+}
+
+function getSlotColor(slot: string, configs: Record<string, SlotConfig>): string {
+  return configs[slot]?.color || defaultSlotColors[slot] || '#888';
+}
 
 const modColors: Record<string, string> = {
   NM: '#666666', HD: '#f5c842', HR: '#d94a4a', DT: '#b44ad9', FM: '#4ad98f', FL: '#1a1a3e',
@@ -238,9 +267,6 @@ function TournamentListSection({
 }
 
 function TournamentCard({ tournament, onClick }: { tournament: Tournament; onClick: () => void }) {
-  const totalMaps = tournament.stages?.reduce((sum, s) => sum + (s.maps?.length ?? 0), 0) ?? 0;
-  const stageCount = tournament.stages?.length ?? 0;
-
   return (
     <Card
       variant="outlined"
@@ -250,91 +276,47 @@ function TournamentCard({ tournament, onClick }: { tournament: Tournament; onCli
         cursor: 'pointer',
         transition: 'all 0.2s',
         '&:hover': { borderColor: 'primary.main', boxShadow: 3, transform: 'translateY(-1px)' },
+        position: 'relative',
+        height: 140,
       }}
     >
-      {/* Banner or colored header strip */}
-      {tournament.banner_url ? (
-        <Box sx={{ height: 90, position: 'relative', overflow: 'hidden' }}>
-          <Box
-            component="img"
-            src={tournament.banner_url}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-          <Box sx={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%)',
-          }} />
-          {/* Status pill on banner */}
+      {/* Full banner background */}
+      <Box
+        component="img"
+        src={tournament.banner_url || placeholderBanner}
+        sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+      />
+      <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.2) 100%)' }} />
+
+      {/* Content overlay */}
+      <Box sx={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'flex-end', p: 2, gap: 2 }}>
+        {/* Logo bottom-left */}
+        <Avatar
+          src={tournament.logo_url || placeholderLogo}
+          variant="rounded"
+          sx={{ width: 56, height: 56, flexShrink: 0 }}
+        />
+
+        {/* Text */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', lineHeight: 1.2 }} noWrap>
+            {tournament.name}
+          </Typography>
           <Chip
-            icon={<FiberManualRecordIcon sx={{ fontSize: '8px !important', color: 'white !important' }} />}
+            icon={statusIcons[tournament.status]}
             label={tournament.status}
             size="small"
             sx={{
-              position: 'absolute', top: 8, right: 8,
               height: 22, fontSize: 10, fontWeight: 'bold', textTransform: 'capitalize',
               backgroundColor: `${statusColors[tournament.status]}dd`,
               color: 'white',
-              backdropFilter: 'blur(4px)',
+              mt: 0.5,
+              width: 'fit-content',
+              '& .MuiChip-icon': { color: 'white', fontSize: 12, ml: 0.5 },
             }}
           />
         </Box>
-      ) : (
-        <Box sx={{
-          height: 6,
-          background: `linear-gradient(90deg, ${statusColors[tournament.status]}, ${statusColors[tournament.status]}44)`,
-        }} />
-      )}
-
-      <CardHeader
-        avatar={
-          <Badge
-            overlap="circular"
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            badgeContent={
-              <FiberManualRecordIcon sx={{
-                fontSize: 10,
-                color: statusColors[tournament.status],
-                filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.4))',
-              }} />
-            }
-          >
-            <Avatar
-              src={tournament.logo_url || undefined}
-              variant="rounded"
-              sx={{ width: 44, height: 44, border: '2px solid', borderColor: 'divider' }}
-            >
-              <EmojiEventsIcon sx={{ fontSize: 20 }} />
-            </Avatar>
-          </Badge>
-        }
-        title={tournament.name}
-        subheader={
-          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.5, flexWrap: 'wrap' }}>
-            <Chip label={tournament.format} size="small" variant="outlined" sx={{ height: 18, fontSize: 10, borderColor: 'divider' }} />
-            <Chip label={`${stageCount} stages`} size="small" variant="outlined" sx={{ height: 18, fontSize: 10, borderColor: 'divider' }} />
-            <Chip label={`${totalMaps} maps`} size="small" variant="outlined" sx={{ height: 18, fontSize: 10, borderColor: 'divider' }} />
-            {!tournament.banner_url && (
-              <Chip
-                icon={<FiberManualRecordIcon sx={{ fontSize: '6px !important', color: `${statusColors[tournament.status]} !important` }} />}
-                label={tournament.status}
-                size="small"
-                variant="outlined"
-                sx={{ height: 18, fontSize: 10, textTransform: 'capitalize', borderColor: 'divider' }}
-              />
-            )}
-          </Stack>
-        }
-        slotProps={{
-          title: { variant: 'subtitle1', fontWeight: 'bold', noWrap: true },
-        }}
-        action={
-          <Tooltip title="Open">
-            <IconButton size="small" sx={{ mt: 0.5 }}>
-              <OpenInNewIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
-            </IconButton>
-          </Tooltip>
-        }
-      />
+      </Box>
     </Card>
   );
 }
@@ -606,6 +588,206 @@ function TournamentCreateSection({
   );
 }
 
+// ── Slots Editor ──
+
+interface SlotEntry {
+  key: string;
+  label: string;
+  color: string;
+}
+
+function SlotsEditor({
+  tournament,
+  slotConfigs,
+  isOwner,
+  onUpdated,
+  onError,
+}: {
+  tournament: Tournament;
+  slotConfigs: Record<string, SlotConfig>;
+  isOwner: boolean;
+  onUpdated: (t: Tournament) => void;
+  onError: (msg: string) => void;
+}) {
+  // Build initial slot list from saved configs, falling back to defaults
+  const [slots, setSlots] = useState<SlotEntry[]>(() => {
+    const savedKeys = Object.keys(slotConfigs);
+    if (savedKeys.length > 0) {
+      // Use saved config order, then append any defaults not already present
+      const entries: SlotEntry[] = savedKeys.map((key) => ({
+        key,
+        label: slotConfigs[key].label,
+        color: slotConfigs[key].color,
+      }));
+      for (const key of SLOTS) {
+        if (!savedKeys.includes(key)) {
+          entries.push({ key, label: defaultSlotLabels[key] || key, color: defaultSlotColors[key] || '#888' });
+        }
+      }
+      return entries;
+    }
+    // No saved config — use all defaults
+    return SLOTS.map((key) => ({
+      key,
+      label: defaultSlotLabels[key] || key,
+      color: defaultSlotColors[key] || '#888',
+    }));
+  });
+  const [saving, setSaving] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [newColor, setNewColor] = useState('#888888');
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const toSave: Record<string, SlotConfig> = {};
+      for (const slot of slots) {
+        toSave[slot.key] = { label: slot.label, color: slot.color };
+      }
+      const updated = await updateTournament(tournament.abbreviation, {
+        slot_configs: JSON.stringify(toSave),
+      });
+      onUpdated(updated);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to save slot configs');
+    }
+    setSaving(false);
+  };
+
+  const handleAdd = () => {
+    const key = newKey.trim().toUpperCase();
+    const label = newLabel.trim();
+    if (!key || !label) return;
+    if (slots.some((s) => s.key === key)) {
+      onError(`Slot "${key}" already exists`);
+      return;
+    }
+    setSlots((prev) => [...prev, { key, label, color: newColor }]);
+    setNewKey('');
+    setNewLabel('');
+    setNewColor('#888888');
+  };
+
+  const handleRemove = (key: string) => {
+    setSlots((prev) => prev.filter((s) => s.key !== key));
+  };
+
+  const updateSlot = (key: string, field: 'label' | 'color', value: string) => {
+    setSlots((prev) => prev.map((s) => s.key === key ? { ...s, [field]: value } : s));
+  };
+
+  if (!isOwner) {
+    return (
+      <Card variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
+        <Typography color="text.disabled">Only the tournament owner can edit slots.</Typography>
+      </Card>
+    );
+  }
+
+  return (
+    <Stack spacing={2}>
+      <Typography variant="body2" color="text.secondary">
+        Define the slot categories for your mappool. Each slot has a short key (e.g. RC, LN), a display name, and a color.
+      </Typography>
+
+      <List disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+        {slots.map((slot, i) => (
+          <ListItem key={slot.key} divider={i < slots.length - 1} sx={{ py: 1, px: 2, gap: 1.5 }}>
+            {/* Color picker */}
+            <Box
+              component="input"
+              type="color"
+              value={slot.color}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSlot(slot.key, 'color', e.target.value)}
+              sx={{
+                width: 28, height: 28, border: 'none', borderRadius: 1,
+                cursor: 'pointer', p: 0, background: 'none', flexShrink: 0,
+                '&::-webkit-color-swatch-wrapper': { p: 0 },
+                '&::-webkit-color-swatch': { borderRadius: 4, border: '1px solid rgba(0,0,0,0.2)' },
+              }}
+            />
+
+            {/* Slot key (read-only) */}
+            <Chip
+              label={slot.key}
+              size="small"
+              sx={{
+                fontWeight: 'bold', fontSize: 11, minWidth: 48,
+                backgroundColor: `${slot.color}20`, color: slot.color,
+              }}
+            />
+
+            {/* Editable label */}
+            <TextField
+              size="small"
+              value={slot.label}
+              onChange={(e) => updateSlot(slot.key, 'label', e.target.value)}
+              placeholder="Display name"
+              sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 14 } }}
+            />
+
+            {/* Delete */}
+            <Tooltip title="Remove slot">
+              <IconButton size="small" onClick={() => handleRemove(slot.key)}
+                sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+                <DeleteIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+          </ListItem>
+        ))}
+      </List>
+
+      {/* Add new slot */}
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Box
+          component="input"
+          type="color"
+          value={newColor}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewColor(e.target.value)}
+          sx={{
+            width: 28, height: 28, border: 'none', borderRadius: 1,
+            cursor: 'pointer', p: 0, background: 'none', flexShrink: 0,
+            '&::-webkit-color-swatch-wrapper': { p: 0 },
+            '&::-webkit-color-swatch': { borderRadius: 4, border: '1px solid rgba(0,0,0,0.2)' },
+          }}
+        />
+        <TextField
+          size="small"
+          value={newKey}
+          onChange={(e) => setNewKey(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10))}
+          placeholder="Key (e.g. RC)"
+          sx={{ width: 100, '& .MuiInputBase-input': { py: 0.5, fontSize: 13 } }}
+        />
+        <TextField
+          size="small"
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+          placeholder="Display name (e.g. Rice)"
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 13 } }}
+        />
+        <Button size="small" variant="outlined" onClick={handleAdd} disabled={!newKey.trim() || !newLabel.trim()}
+          startIcon={<AddIcon />}>
+          Add
+        </Button>
+      </Stack>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={handleSave}
+          disabled={saving}
+          startIcon={saving ? <CircularProgress size={14} sx={{ color: 'white' }} /> : <CheckIcon />}
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </Box>
+    </Stack>
+  );
+}
+
 // ── Detail ──
 
 function TournamentDetailSection({
@@ -624,7 +806,7 @@ function TournamentDetailSection({
   const [tournament, setTournament] = useState<Tournament>(initialTournament);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [detailTab, setDetailTab] = useState<'mappool' | 'bracket' | 'details'>('mappool');
+  const [detailTab, setDetailTab] = useState<'mappool' | 'players' | 'bracket' | 'slots' | 'details'>('mappool');
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -632,6 +814,13 @@ function TournamentDetailSection({
   const [editName, setEditName] = useState(tournament.name);
   const [savingName, setSavingName] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+
+  // Stage editing state
+  const [editingStages, setEditingStages] = useState(false);
+  const [newStageName, setNewStageName] = useState('');
+  const [stageToDelete, setStageToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [renamingStageId, setRenamingStageId] = useState<number | null>(null);
+  const [renameStageValue, setRenameStageValue] = useState('');
 
   // Add map state
   const [addMapOpen, setAddMapOpen] = useState(false);
@@ -660,6 +849,11 @@ function TournamentDetailSection({
   const stages = tournament.stages ?? [];
   const currentStage = stages[currentStageIndex];
   const isOwner = user.osu_id === tournament.user?.osu_id;
+  const slotConfigs = parseSlotConfigs(tournament.slot_configs);
+  // Available slots: use tournament config if set, otherwise defaults
+  const tournamentSlots = Object.keys(slotConfigs).length > 0
+    ? Object.keys(slotConfigs)
+    : SLOTS;
 
   // Group maps by slot type
   const mapsBySlot: Record<string, TournamentMap[]> = {};
@@ -841,44 +1035,28 @@ function TournamentDetailSection({
         </Typography>
       </Breadcrumbs>
 
-      {/* ── Hero card ── */}
-      <Card variant="outlined" sx={{ mb: 2.5, overflow: 'hidden' }}>
+      {/* ── Hero card (contains everything) ── */}
+      <Card variant="outlined" sx={{ overflow: 'hidden' }}>
         {/* Banner */}
-        {tournament.banner_url && (
-          <Box sx={{ height: 140, position: 'relative' }}>
-            <Box
-              component="img"
-              src={tournament.banner_url}
-              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-            <Box sx={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)',
-            }} />
-          </Box>
-        )}
+        <Box sx={{ height: 140, position: 'relative' }}>
+          <Box
+            component="img"
+            src={tournament.banner_url || placeholderBanner}
+            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          <Box sx={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)',
+          }} />
+        </Box>
 
         <CardHeader
           avatar={
-            <Badge
-              overlap="circular"
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              badgeContent={
-                <FiberManualRecordIcon sx={{
-                  fontSize: 12,
-                  color: statusColors[tournament.status],
-                  filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))',
-                }} />
-              }
-            >
-              <Avatar
-                src={tournament.logo_url || undefined}
-                variant="rounded"
-                sx={{ width: 48, height: 48, border: '2px solid', borderColor: 'divider' }}
-              >
-                <EmojiEventsIcon />
-              </Avatar>
-            </Badge>
+            <Avatar
+              src={tournament.logo_url || placeholderLogo}
+              variant="rounded"
+              sx={{ width: 48, height: 48 }}
+            />
           }
           title={
             editingName ? (
@@ -909,24 +1087,23 @@ function TournamentDetailSection({
                   </Tooltip>
                 )}
                 <Chip
-                  icon={<FiberManualRecordIcon sx={{ fontSize: '8px !important', color: `${statusColors[tournament.status]} !important` }} />}
+                  icon={statusIcons[tournament.status]}
                   label={tournament.status}
                   size="small"
-                  variant="outlined"
-                  sx={{ height: 22, fontSize: 11, textTransform: 'capitalize', borderColor: 'divider', ml: 0.5 }}
+                  sx={{
+                    height: 22, fontSize: 11, fontWeight: 'bold', textTransform: 'capitalize', ml: 0.5,
+                    backgroundColor: `${statusColors[tournament.status]}dd`,
+                    color: 'white',
+                    '& .MuiChip-icon': { color: 'white', fontSize: 12, ml: 0.5 },
+                  }}
                 />
               </Box>
             )
           }
           subheader={
-            <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.25 }}>
-              <Chip label={tournament.format} size="small" variant="outlined" sx={{ height: 20, fontSize: 10, borderColor: 'divider' }} />
-              <Chip label={`${stages.length} stages`} size="small" variant="outlined" sx={{ height: 20, fontSize: 10, borderColor: 'divider' }} />
-              <Chip label={`${totalMaps} maps`} size="small" variant="outlined" sx={{ height: 20, fontSize: 10, borderColor: 'divider' }} />
-              <Typography variant="caption" color="text.disabled" sx={{ fontFamily: 'monospace' }}>
-                /t/{tournament.abbreviation}
-              </Typography>
-            </Stack>
+            <Typography variant="caption" color="text.disabled" sx={{ fontFamily: 'monospace', mt: 0.25 }}>
+              /t/{tournament.abbreviation}
+            </Typography>
           }
           action={
             <ButtonGroup size="small" variant="outlined" sx={{ mt: 0.5 }}>
@@ -942,38 +1119,199 @@ function TournamentDetailSection({
               </Tooltip>
             </ButtonGroup>
           }
-          sx={{ pb: 1.5 }}
+          sx={{ pb: 0, background: `linear-gradient(135deg, ${palette.mid}15 0%, ${palette.light}08 100%)` }}
         />
-      </Card>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
 
-      {/* ── Tab bar ── */}
-      <Tabs
-        value={detailTab}
-        onChange={(_, v) => setDetailTab(v as typeof detailTab)}
-        sx={{
-          mb: 0, minHeight: 40,
-          borderBottom: '1px solid', borderColor: 'divider',
-          '& .MuiTab-root': {
-            fontWeight: 600, fontSize: 13,
-            minHeight: 40, py: 0, px: 2,
-            gap: 0.75,
-          },
-        }}
-      >
-        <Tab icon={<ViewListIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Mappool" value="mappool" />
-        <Tab icon={<AccountTreeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Bracket" value="bracket" />
-        <Tab icon={<SettingsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Settings" value="details" />
-      </Tabs>
+        {/* Tab bar */}
+        <Tabs
+          value={detailTab}
+          onChange={(_, v) => setDetailTab(v as typeof detailTab)}
+          sx={{
+            minHeight: 40, px: 2,
+            background: `linear-gradient(135deg, ${palette.mid}10 0%, ${palette.light}05 100%)`,
+            borderBottom: '1px solid', borderColor: 'divider',
+            '& .MuiTab-root': {
+              fontWeight: 600, fontSize: 13,
+              minHeight: 40, py: 0, px: 2,
+              gap: 0.75,
+            },
+          }}
+        >
+          <Tab icon={<ViewListIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Mappool" value="mappool" />
+          <Tab icon={<GroupIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Players" value="players" />
+          <Tab icon={<AccountTreeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Bracket" value="bracket" />
+          <Tab icon={<DnsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Slots" value="slots" />
+          <Tab icon={<SettingsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Settings" value="details" />
+        </Tabs>
 
-      {/* ── Tab content ── */}
-      <Box sx={{ pt: 2.5 }}>
+        {/* Tab content */}
+        <Box sx={{ p: 2.5 }}>
         {/* Mappool */}
         {detailTab === 'mappool' && (
           <>
             {stages.length > 0 ? (
               <Box>
+                {editingStages ? (
+                  /* ── Stage editor (replaces mappool content) ── */
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<ViewListIcon sx={{ fontSize: 16 }} />}
+                        onClick={() => { setEditingStages(false); setRenamingStageId(null); }}
+                        sx={{ fontSize: 12 }}
+                      >
+                        Back to Mappool
+                      </Button>
+                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                        Editing stages ({stages.length})
+                      </Typography>
+                    </Box>
+
+                    <List disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', mb: 2 }}>
+                      {stages.map((stage, i) => (
+                        <ListItem
+                          key={stage.id}
+                          divider={i < stages.length - 1}
+                          secondaryAction={
+                            <Tooltip title="Delete stage">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setStageToDelete({ id: stage.id, name: stage.name })}
+                              >
+                                <DeleteIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          }
+                          sx={{ py: 0.75, px: 1.5 }}
+                        >
+                          {renamingStageId === stage.id ? (
+                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flex: 1, mr: 4 }}>
+                              <TextField
+                                size="small"
+                                value={renameStageValue}
+                                onChange={(e) => setRenameStageValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && renameStageValue.trim()) {
+                                    renameStage(tournament.abbreviation, stage.id, renameStageValue.trim()).then(() => {
+                                      setTournament((prev) => ({
+                                        ...prev,
+                                        stages: prev.stages?.map((s) => s.id === stage.id ? { ...s, name: renameStageValue.trim() } : s),
+                                      }));
+                                      setRenamingStageId(null);
+                                    }).catch(() => setError('Failed to rename stage'));
+                                  }
+                                  if (e.key === 'Escape') setRenamingStageId(null);
+                                }}
+                                autoFocus
+                                sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 14 } }}
+                              />
+                              <IconButton size="small" onClick={() => {
+                                if (!renameStageValue.trim()) return;
+                                renameStage(tournament.abbreviation, stage.id, renameStageValue.trim()).then(() => {
+                                  setTournament((prev) => ({
+                                    ...prev,
+                                    stages: prev.stages?.map((s) => s.id === stage.id ? { ...s, name: renameStageValue.trim() } : s),
+                                  }));
+                                  setRenamingStageId(null);
+                                }).catch(() => setError('Failed to rename stage'));
+                              }}>
+                                <CheckIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                              <IconButton size="small" onClick={() => setRenamingStageId(null)}>
+                                <CloseIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Stack>
+                          ) : (
+                            <ListItemText
+                              primary={stage.name}
+                              secondary={`${stage.maps?.length ?? 0} maps`}
+                              slotProps={{ primary: { variant: 'body2', fontWeight: 500 }, secondary: { variant: 'caption' } }}
+                              onClick={() => { setRenamingStageId(stage.id); setRenameStageValue(stage.name); }}
+                              sx={{ cursor: 'pointer', '&:hover': { opacity: 0.7 } }}
+                            />
+                          )}
+                        </ListItem>
+                      ))}
+                    </List>
+
+                    <Stack direction="row" spacing={1}>
+                      <TextField
+                        size="small"
+                        placeholder="New stage name..."
+                        value={newStageName}
+                        onChange={(e) => setNewStageName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newStageName.trim()) {
+                            addStage(tournament.abbreviation, newStageName.trim()).then((stage) => {
+                              setTournament((prev) => ({
+                                ...prev,
+                                stages: [...(prev.stages || []), { ...stage, maps: [] }],
+                              }));
+                              setNewStageName('');
+                            }).catch(() => setError('Failed to add stage'));
+                          }
+                        }}
+                        sx={{ flex: 1 }}
+                      />
+                      <Button
+                        variant="contained"
+                        size="small"
+                        disabled={!newStageName.trim()}
+                        startIcon={<AddIcon />}
+                        onClick={() => {
+                          addStage(tournament.abbreviation, newStageName.trim()).then((stage) => {
+                            setTournament((prev) => ({
+                              ...prev,
+                              stages: [...(prev.stages || []), { ...stage, maps: [] }],
+                            }));
+                            setNewStageName('');
+                          }).catch(() => setError('Failed to add stage'));
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </Stack>
+
+                    {/* Delete stage confirmation */}
+                    <Dialog open={!!stageToDelete} onClose={() => setStageToDelete(null)} maxWidth="xs" fullWidth>
+                      <DialogTitle>Delete Stage</DialogTitle>
+                      <DialogContent>
+                        <Typography>
+                          Delete <strong>{stageToDelete?.name}</strong>? All maps in this stage will be removed. This cannot be undone.
+                        </Typography>
+                      </DialogContent>
+                      <DialogActions sx={{ px: 3, pb: 3 }}>
+                        <Button variant="outlined" onClick={() => setStageToDelete(null)}>Cancel</Button>
+                        <Button
+                          variant="contained"
+                          color="error"
+                          onClick={() => {
+                            if (!stageToDelete) return;
+                            deleteStage(tournament.abbreviation, stageToDelete.id).then(() => {
+                              setTournament((prev) => ({
+                                ...prev,
+                                stages: prev.stages?.filter((s) => s.id !== stageToDelete.id),
+                              }));
+                              if (currentStageIndex >= (stages.length - 1)) {
+                                setCurrentStageIndex(Math.max(0, stages.length - 2));
+                              }
+                              setStageToDelete(null);
+                            }).catch(() => setError('Failed to delete stage'));
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
+                  </>
+                ) : (
+                  /* ── Normal mappool view ── */
+                  <>
                 {/* Stage tabs + Add button */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <Tabs
@@ -1005,17 +1343,27 @@ function TournamentDetailSection({
                     ))}
                   </Tabs>
                   {isOwner && (
-                    <Tooltip title="Add map to stage">
-                      <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => setAddMapOpen(true)}
-                        sx={{ flexShrink: 0, fontSize: 12 }}
-                      >
-                        Add Map
-                      </Button>
-                    </Tooltip>
+                    <>
+                      <Tooltip title="Edit stages">
+                        <IconButton
+                          size="small"
+                          onClick={() => setEditingStages(true)}
+                        >
+                          <EditIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Add map to stage">
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<AddIcon />}
+                          onClick={() => setAddMapOpen(true)}
+                          sx={{ flexShrink: 0, fontSize: 12 }}
+                        >
+                          Add Map
+                        </Button>
+                      </Tooltip>
+                    </>
                   )}
                 </Box>
 
@@ -1042,26 +1390,18 @@ function TournamentDetailSection({
                   <Stack spacing={1.5}>
                     {slotOrder.map((slotType) => (
                       <Card key={slotType} variant="outlined" sx={{ overflow: 'hidden' }}>
-                        <CardHeader
-                          avatar={
-                            <Box sx={{
-                              width: 32, height: 32, borderRadius: 1,
-                              backgroundColor: slotColors[slotType] || '#888',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 'bold', fontSize: 11 }}>
-                                {slotType}
-                              </Typography>
-                            </Box>
-                          }
-                          title={slotLabels[slotType] || slotType}
-                          subheader={`${mapsBySlot[slotType].length} map${mapsBySlot[slotType].length !== 1 ? 's' : ''}`}
-                          slotProps={{
-                            title: { variant: 'body2', fontWeight: 'bold' },
-                            subheader: { variant: 'caption' },
-                          }}
-                          sx={{ py: 1, px: 2, backgroundColor: 'action.hover' }}
-                        />
+                        <Box sx={{
+                          py: 1, px: 2,
+                          backgroundColor: `${getSlotColor(slotType, slotConfigs)}20`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        }}>
+                          <Typography variant="body2" fontWeight="bold" sx={{ color: getSlotColor(slotType, slotConfigs) }}>
+                            {getSlotLabel(slotType, slotConfigs)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {mapsBySlot[slotType].length} map{mapsBySlot[slotType].length !== 1 ? 's' : ''}
+                          </Typography>
+                        </Box>
                         <CardContent sx={{ p: '4px !important' }}>
                           {mapsBySlot[slotType].map((map) => (
                             <BeatmapRow
@@ -1076,7 +1416,7 @@ function TournamentDetailSection({
                               beatmapsetId={map.beatmapset_id}
                               slotBadge={{
                                 label: `${map.slot_type}${map.slot_number}`,
-                                color: slotColors[map.slot_type] || '#888',
+                                color: getSlotColor(map.slot_type, slotConfigs),
                               }}
                               modChips={map.mod.match(/.{2}/g)?.map((m) => ({
                                 label: m,
@@ -1102,6 +1442,8 @@ function TournamentDetailSection({
                     ))}
                   </Stack>
                 )}
+                  </>
+                )}
               </Box>
             ) : (
               <Card variant="outlined" sx={{ p: 5, textAlign: 'center' }}>
@@ -1111,9 +1453,25 @@ function TournamentDetailSection({
           </>
         )}
 
+        {/* Players */}
+        {detailTab === 'players' && (
+          <TournamentPlayers tournamentAbbrev={tournament.abbreviation} isOwner={isOwner} />
+        )}
+
         {/* Bracket */}
         {detailTab === 'bracket' && (
           <TournamentBracket tournamentAbbrev={tournament.abbreviation} isOwner={isOwner} />
+        )}
+
+        {/* Slots */}
+        {detailTab === 'slots' && (
+          <SlotsEditor
+            tournament={tournament}
+            slotConfigs={slotConfigs}
+            isOwner={isOwner}
+            onUpdated={(updated) => { setTournament(updated); onUpdated(updated); }}
+            onError={(msg) => setSnackbar({ open: true, message: msg })}
+          />
         )}
 
         {/* Settings */}
@@ -1144,33 +1502,21 @@ function TournamentDetailSection({
                   </Typography>
                   <Card variant="outlined" sx={{ mb: 2.5, overflow: 'hidden' }}>
                     {/* Preview banner */}
-                    <Box sx={{
-                      height: 80, position: 'relative',
-                      backgroundColor: tournament.banner_url ? 'transparent' : 'action.hover',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {tournament.banner_url ? (
-                        <>
-                          <Box
-                            component="img"
-                            src={tournament.banner_url}
-                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                          <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }} />
-                        </>
-                      ) : (
-                        <Typography variant="caption" color="text.disabled">No banner</Typography>
-                      )}
+                    <Box sx={{ height: 80, position: 'relative' }}>
+                      <Box
+                        component="img"
+                        src={tournament.banner_url || placeholderBanner}
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }} />
                     </Box>
                     {/* Preview header */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5 }}>
                       <Avatar
-                        src={tournament.logo_url || undefined}
+                        src={tournament.logo_url || placeholderLogo}
                         variant="rounded"
                         sx={{ width: 36, height: 36 }}
-                      >
-                        <EmojiEventsIcon sx={{ fontSize: 18 }} />
-                      </Avatar>
+                      />
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography variant="body2" fontWeight="bold" noWrap>{tournament.name}</Typography>
                         <Stack direction="row" spacing={0.75} alignItems="center">
@@ -1334,6 +1680,7 @@ function TournamentDetailSection({
           </Stack>
         )}
       </Box>
+      </Card>
 
       {/* Add Map Dialog */}
       <Dialog
@@ -1438,15 +1785,15 @@ function TournamentDetailSection({
                     <Box>
                       <Typography variant="subtitle2" sx={{ mb: 1 }}>Slot Type</Typography>
                       <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                        {SLOTS.map((s) => (
+                        {tournamentSlots.map((s) => (
                           <Chip
                             key={s}
-                            label={s}
+                            label={`${s} — ${getSlotLabel(s, slotConfigs)}`}
                             size="small"
                             onClick={() => setSelectedSlot(s)}
                             sx={{
                               fontWeight: 'bold', cursor: 'pointer',
-                              backgroundColor: selectedSlot === s ? (slotColors[s] || '#888') : 'action.hover',
+                              backgroundColor: selectedSlot === s ? getSlotColor(s, slotConfigs) : 'action.hover',
                               color: selectedSlot === s ? 'white' : 'text.primary',
                               border: selectedSlot === s ? 'none' : '1px solid',
                               borderColor: 'divider',
