@@ -234,7 +234,7 @@ function App() {
               >
                 <Routes>
                   <Route path="/dashboard" element={
-                    <Box sx={{ py: 4, px: { xs: 2, md: 4 }, display: 'flex', flex: 1 }}>
+                    <Box sx={{ pt: 0, pb: 4, px: { xs: 2, md: 4 }, display: 'flex', flex: 1 }}>
                       <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} />
                     </Box>
                   } />
@@ -245,7 +245,7 @@ function App() {
                         <Route path="/create" element={<PackCreator user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
                         <Route path="/my-packs" element={<MyPacks user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
                         <Route path="/explore" element={<Explore />} />
-                        <Route path="/tournaments" element={<Tournaments user={user} />} />
+                        <Route path="/tournaments" element={user?.username === 'Kaiinu' ? <Tournaments user={user} /> : <NotFound />} />
                         <Route path="/keys" element={<KeyManager user={user} authMode={authMode} />} />
                         <Route path="/pack/:packId" element={<PackPage />} />
                         <Route path="*" element={<NotFound />} />

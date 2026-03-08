@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import type { User } from '../../auth/api/auth';
-import { listTournaments, createTournament, deleteTournament } from '../api/tournaments';
+import { listTournaments, createTournament, deleteTournament, type Tournament } from '../api/tournaments';
 import TournamentCard from './TournamentCard';
 
 const DEFAULT_STAGES = ['Qualifiers', 'RO16', 'Quarterfinals', 'Semifinals', 'Finals', 'Grand Finals'];

@@ -132,7 +132,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
   const navItems: { key: Section; label: string; icon: React.ReactNode; disabled?: boolean; badge?: string }[] = [
     { key: 'overview', label: 'Overview', icon: <HomeIcon /> },
     { key: 'packs', label: 'Packs', icon: <FolderIcon /> },
-    { key: 'tournaments', label: 'Tournaments', icon: <EmojiEventsIcon /> },
+    ...(user.username === 'Kaiinu' ? [{ key: 'tournaments' as Section, label: 'Tournaments', icon: <EmojiEventsIcon /> }] : []),
     { key: 'settings', label: 'Settings', icon: <SettingsIcon /> },
   ];
 
@@ -154,11 +154,16 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
           flexShrink: 0,
           border: '1px solid',
           borderColor: 'divider',
+          borderLeft: 'none',
+          borderTop: 'none',
+          borderBottom: 'none',
+          borderRadius: 0,
           display: { xs: 'none', md: 'flex' },
           flexDirection: 'column',
           position: 'fixed',
-          top: 80,
-          bottom: 16,
+          top: 56,
+          bottom: 0,
+          left: 0,
           overflowY: 'auto',
         }}
       >
@@ -253,22 +258,24 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
                 New Pack
               </Button>
             )}
-            <Button
-              size="small"
-              variant="contained"
-              startIcon={<EmojiEventsIcon />}
-              fullWidth
-              onClick={() => { setSection('tournaments'); setSelectedPack(null); setEditing(false); setTournamentView('create'); setSelectedTournament(null); }}
-              sx={{ justifyContent: 'flex-start', px: 1.5 }}
-            >
-              New Tournament
-            </Button>
+            {user.username === 'Kaiinu' && (
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<EmojiEventsIcon />}
+                fullWidth
+                onClick={() => { setSection('tournaments'); setSelectedPack(null); setEditing(false); setTournamentView('create'); setSelectedTournament(null); }}
+                sx={{ justifyContent: 'flex-start', px: 1.5 }}
+              >
+                New Tournament
+              </Button>
+            )}
           </Stack>
         </Box>
       </Paper>
 
       {/* Content Panel */}
-      <Box sx={{ flex: 1, minWidth: 0, ml: { xs: 0, md: `${SIDEBAR_WIDTH + 24}px` } }}>
+      <Box sx={{ flex: 1, minWidth: 0, ml: { xs: 0, md: `${SIDEBAR_WIDTH + 1}px` } }}>
         {/* Mobile profile header (hidden on desktop) */}
         {!selectedPack && tournamentView === 'list' && (
           <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: 3 }}>
