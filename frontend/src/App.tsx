@@ -232,19 +232,27 @@ function App() {
                   backgroundColor: 'background.default',
                 }}
               >
-                <Container maxWidth="lg" sx={{ py: 4 }}>
-                  <Routes>
-                    <Route path="/" element={<Home user={user} />} />
-                    <Route path="/dashboard" element={<Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
-                    <Route path="/create" element={<PackCreator user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
-                    <Route path="/my-packs" element={<MyPacks user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
-                    <Route path="/explore" element={<Explore />} />
-                    <Route path="/tournaments" element={<Tournaments user={user} />} />
-                    <Route path="/keys" element={<KeyManager user={user} authMode={authMode} />} />
-                    <Route path="/pack/:packId" element={<PackPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Container>
+                <Routes>
+                  <Route path="/dashboard" element={
+                    <Box sx={{ py: 4, px: { xs: 2, md: 4 }, display: 'flex', flex: 1 }}>
+                      <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} />
+                    </Box>
+                  } />
+                  <Route path="*" element={
+                    <Container maxWidth="lg" sx={{ py: 4 }}>
+                      <Routes>
+                        <Route path="/" element={<Home user={user} />} />
+                        <Route path="/create" element={<PackCreator user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
+                        <Route path="/my-packs" element={<MyPacks user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
+                        <Route path="/explore" element={<Explore />} />
+                        <Route path="/tournaments" element={<Tournaments user={user} />} />
+                        <Route path="/keys" element={<KeyManager user={user} authMode={authMode} />} />
+                        <Route path="/pack/:packId" element={<PackPage />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Container>
+                  } />
+                </Routes>
               </Box>
             </>
           } />
