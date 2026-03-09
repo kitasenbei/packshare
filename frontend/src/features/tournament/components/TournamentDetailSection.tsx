@@ -66,8 +66,7 @@ import CampaignIcon from '@mui/icons-material/Campaign';
 import ImageIcon from '@mui/icons-material/Image';
 import type { User, BeatmapsetInfo } from '../../auth/api/auth';
 import { palette } from '../../../shared/theme/palette';
-import placeholderBanner from '../../../assets/tournament_placeholder.png';
-import placeholderLogo from '../../../assets/tournament_logo_placeholder.png';
+import { placeholderBanner, placeholderLogo } from '../utils/placeholders';
 import { getBeatmapset } from '../../auth/api/auth';
 import {
   getTournament,

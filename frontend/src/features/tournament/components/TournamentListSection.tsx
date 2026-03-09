@@ -16,8 +16,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import LiveTvIcon from '@mui/icons-material/LiveTv';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import type { User } from '../../auth/api/auth';
-import placeholderBanner from '../../../assets/tournament_placeholder.png';
-import placeholderLogo from '../../../assets/tournament_logo_placeholder.png';
+import { placeholderBanner, placeholderLogo } from '../utils/placeholders';
 import {
   listTournaments,
   type Tournament,

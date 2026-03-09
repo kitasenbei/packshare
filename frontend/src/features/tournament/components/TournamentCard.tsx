@@ -11,8 +11,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { Tournament } from '../api/tournaments';
-import placeholderBanner from '../../../assets/tournament_placeholder.png';
-import placeholderLogo from '../../../assets/tournament_logo_placeholder.png';
+import { placeholderBanner, placeholderLogo } from '../utils/placeholders';
 
 const statusColors: Record<string, string> = {
   live: '#ff4444',
