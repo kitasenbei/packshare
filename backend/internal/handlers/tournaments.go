@@ -18,6 +18,11 @@ const (
 	maxStagesPerTourney   = 20
 	maxMapsPerStage       = 50
 	maxURLLen             = 2000
+	maxPlayersPerTourney  = 128
+	maxAnnouncementsPerTourney = 100
+	maxAnnouncementTitleLen    = 200
+	maxAnnouncementBodyLen     = 10000
+	maxBracketDataLen          = 100000
 )
 
 var abbreviationRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]*$`)
@@ -230,6 +235,10 @@ func (h *TournamentHandler) GetTournament(c *fiber.Ctx) error {
 		return db.Order("sort_order ASC")
 	}).Preload("Stages.Maps", func(db *gorm.DB) *gorm.DB {
 		return db.Order("slot_type ASC, slot_number ASC")
+	}).Preload("Players", func(db *gorm.DB) *gorm.DB {
+		return db.Order("seed ASC")
+	}).Preload("Announcements", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at DESC")
 	}).Where("abbreviation = ?", abbrev).First(&tournament).Error
 
 	if err == gorm.ErrRecordNotFound {
@@ -364,6 +373,12 @@ func (h *TournamentHandler) DeleteTournament(c *fiber.Ctx) error {
 			}
 		}
 		if err := tx.Where("tournament_id = ?", tournament.ID).Delete(&models.TournamentStage{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("tournament_id = ?", tournament.ID).Delete(&models.TournamentPlayer{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("tournament_id = ?", tournament.ID).Delete(&models.TournamentAnnouncement{}).Error; err != nil {
 			return err
 		}
 		return tx.Delete(tournament).Error
@@ -752,4 +767,542 @@ func (h *TournamentHandler) UpdateMap(c *fiber.Ctx) error {
 
 	h.db.First(&tournamentMap, mapID)
 	return c.JSON(tournamentMap)
+}
+
+// ── Players ──
+
+type AddPlayerRequest struct {
+	OsuID   int64  `json:"osu_id"`
+	Name    string `json:"name"`
+	Discord string `json:"discord"`
+}
+
+type BulkPlayersRequest struct {
+	Players []AddPlayerRequest `json:"players"`
+}
+
+type UpdatePlayerRequest struct {
+	Name    string `json:"name"`
+	Discord string `json:"discord"`
+	Seed    *int   `json:"seed"`
+}
+
+func (h *TournamentHandler) AddPlayer(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	var req AddPlayerRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if req.OsuID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "osu_id is required"})
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		name = fmt.Sprintf("Player %d", req.OsuID)
+	}
+
+	// Check duplicate
+	var count int64
+	h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ? AND osu_id = ?", tournament.ID, req.OsuID).Count(&count)
+	if count > 0 {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "player already in roster"})
+	}
+
+	// Check limit
+	var total int64
+	h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Count(&total)
+	if total >= maxPlayersPerTourney {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("maximum %d players", maxPlayersPerTourney)})
+	}
+
+	player := models.TournamentPlayer{
+		TournamentID: tournament.ID,
+		OsuID:        req.OsuID,
+		Name:         truncate(name, maxFieldLength),
+		Seed:         int(total) + 1,
+		Discord:      truncate(strings.TrimSpace(req.Discord), maxFieldLength),
+	}
+
+	if err := h.db.Create(&player).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add player"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(player)
+}
+
+func (h *TournamentHandler) BulkAddPlayers(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	var req BulkPlayersRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if len(req.Players) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no players provided"})
+	}
+
+	var existing int64
+	h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Count(&existing)
+
+	if existing+int64(len(req.Players)) > maxPlayersPerTourney {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("would exceed maximum %d players", maxPlayersPerTourney)})
+	}
+
+	// Get existing osu IDs to skip duplicates
+	var existingIDs []int64
+	h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Pluck("osu_id", &existingIDs)
+	existingSet := make(map[int64]bool, len(existingIDs))
+	for _, id := range existingIDs {
+		existingSet[id] = true
+	}
+
+	players := make([]models.TournamentPlayer, 0, len(req.Players))
+	seed := int(existing)
+	for _, p := range req.Players {
+		if p.OsuID <= 0 || existingSet[p.OsuID] {
+			continue
+		}
+		existingSet[p.OsuID] = true
+		seed++
+		name := strings.TrimSpace(p.Name)
+		if name == "" {
+			name = fmt.Sprintf("Player %d", p.OsuID)
+		}
+		players = append(players, models.TournamentPlayer{
+			TournamentID: tournament.ID,
+			OsuID:        p.OsuID,
+			Name:         truncate(name, maxFieldLength),
+			Seed:         seed,
+			Discord:      truncate(strings.TrimSpace(p.Discord), maxFieldLength),
+		})
+	}
+
+	if len(players) == 0 {
+		return c.JSON([]models.TournamentPlayer{})
+	}
+
+	if err := h.db.Create(&players).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add players"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(players)
+}
+
+func (h *TournamentHandler) UpdatePlayer(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	playerID, err := c.ParamsInt("playerId")
+	if err != nil || playerID < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid player ID"})
+	}
+
+	var player models.TournamentPlayer
+	if err := h.db.Where("id = ? AND tournament_id = ?", playerID, tournament.ID).First(&player).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "player not found"})
+	}
+
+	var req UpdatePlayerRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if name := strings.TrimSpace(req.Name); name != "" {
+		player.Name = truncate(name, maxFieldLength)
+	}
+	player.Discord = truncate(strings.TrimSpace(req.Discord), maxFieldLength)
+	if req.Seed != nil && *req.Seed > 0 {
+		player.Seed = *req.Seed
+	}
+
+	if err := h.db.Save(&player).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update player"})
+	}
+
+	return c.JSON(player)
+}
+
+func (h *TournamentHandler) RemovePlayer(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	playerID, err := c.ParamsInt("playerId")
+	if err != nil || playerID < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid player ID"})
+	}
+
+	var player models.TournamentPlayer
+	if err := h.db.Where("id = ? AND tournament_id = ?", playerID, tournament.ID).First(&player).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "player not found"})
+	}
+
+	txErr := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Delete(&player).Error; err != nil {
+			return err
+		}
+		// Renumber seeds
+		var remaining []models.TournamentPlayer
+		tx.Where("tournament_id = ?", tournament.ID).Order("seed ASC").Find(&remaining)
+		for i, p := range remaining {
+			if p.Seed != i+1 {
+				tx.Model(&p).Update("seed", i+1)
+			}
+		}
+		return nil
+	})
+
+	if txErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to remove player"})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *TournamentHandler) ClearPlayers(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	if err := h.db.Where("tournament_id = ?", tournament.ID).Delete(&models.TournamentPlayer{}).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to clear players"})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+type ReorderPlayersRequest struct {
+	PlayerIDs []uint `json:"player_ids"`
+}
+
+func (h *TournamentHandler) ReorderPlayers(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	var req ReorderPlayersRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	txErr := h.db.Transaction(func(tx *gorm.DB) error {
+		for i, pid := range req.PlayerIDs {
+			if err := tx.Model(&models.TournamentPlayer{}).
+				Where("id = ? AND tournament_id = ?", pid, tournament.ID).
+				Update("seed", i+1).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if txErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to reorder players"})
+	}
+
+	var players []models.TournamentPlayer
+	h.db.Where("tournament_id = ?", tournament.ID).Order("seed ASC").Find(&players)
+	return c.JSON(players)
+}
+
+// ── Bracket ──
+
+func (h *TournamentHandler) GetBracket(c *fiber.Ctx) error {
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	return c.JSON(fiber.Map{"bracket_data": tournament.BracketData})
+}
+
+type SaveBracketRequest struct {
+	BracketData string `json:"bracket_data"`
+}
+
+func (h *TournamentHandler) SaveBracket(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	var req SaveBracketRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if len(req.BracketData) > maxBracketDataLen {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "bracket data too large"})
+	}
+
+	tournament.BracketData = req.BracketData
+	if err := h.db.Model(tournament).Update("bracket_data", req.BracketData).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save bracket"})
+	}
+
+	return c.JSON(fiber.Map{"bracket_data": tournament.BracketData})
+}
+
+// ── Announcements ──
+
+type CreateAnnouncementRequest struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+	Image string `json:"image"`
+}
+
+func (h *TournamentHandler) CreateAnnouncement(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	var req CreateAnnouncementRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "title is required"})
+	}
+	if len(title) > maxAnnouncementTitleLen {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("title must be under %d characters", maxAnnouncementTitleLen)})
+	}
+	if len(req.Body) > maxAnnouncementBodyLen {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "body too long"})
+	}
+	if req.Image != "" && !isValidURL(req.Image) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid image URL"})
+	}
+
+	var count int64
+	h.db.Model(&models.TournamentAnnouncement{}).Where("tournament_id = ?", tournament.ID).Count(&count)
+	if count >= maxAnnouncementsPerTourney {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("maximum %d announcements", maxAnnouncementsPerTourney)})
+	}
+
+	announcement := models.TournamentAnnouncement{
+		TournamentID: tournament.ID,
+		Title:        title,
+		Body:         strings.TrimSpace(req.Body),
+		Image:        truncate(strings.TrimSpace(req.Image), maxURLLen),
+	}
+
+	if err := h.db.Create(&announcement).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create announcement"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(announcement)
+}
+
+func (h *TournamentHandler) UpdateAnnouncement(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	annID, err := c.ParamsInt("annId")
+	if err != nil || annID < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid announcement ID"})
+	}
+
+	var ann models.TournamentAnnouncement
+	if err := h.db.Where("id = ? AND tournament_id = ?", annID, tournament.ID).First(&ann).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "announcement not found"})
+	}
+
+	var req CreateAnnouncementRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "title is required"})
+	}
+	if len(title) > maxAnnouncementTitleLen {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("title must be under %d characters", maxAnnouncementTitleLen)})
+	}
+
+	ann.Title = title
+	ann.Body = strings.TrimSpace(req.Body)
+	ann.Image = truncate(strings.TrimSpace(req.Image), maxURLLen)
+
+	if err := h.db.Save(&ann).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update announcement"})
+	}
+
+	return c.JSON(ann)
+}
+
+func (h *TournamentHandler) DeleteAnnouncement(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	annID, err := c.ParamsInt("annId")
+	if err != nil || annID < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid announcement ID"})
+	}
+
+	var ann models.TournamentAnnouncement
+	if err := h.db.Where("id = ? AND tournament_id = ?", annID, tournament.ID).First(&ann).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "announcement not found"})
+	}
+
+	if err := h.db.Delete(&ann).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete announcement"})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }

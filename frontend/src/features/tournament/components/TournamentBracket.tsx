@@ -21,7 +21,8 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
 import StarIcon from '@mui/icons-material/Star';
-import { loadBracket, saveBracket, type BracketData, type Player } from './TournamentPlayers';
+import { saveBracket } from '../api/tournaments';
+import type { Player, BracketData, Match } from './TournamentPlayers';
 
 // ── Bracket Generation ──
 
@@ -33,20 +34,20 @@ function nextPowerOf2(n: number): number {
 
 function generateBracket(players: Player[], bestOf: number): BracketData {
   const n = players.length;
-  if (n < 2) return { players, matches: [], bestOf, generated: false };
+  if (n < 2) return { matches: [], bestOf, generated: false };
 
   const size = nextPowerOf2(n);
   const totalRounds = Math.log2(size);
 
   const seeded = [...players].sort((a, b) => a.seed - b.seed);
-  const slots: (string | null)[] = new Array(size).fill(null);
+  const slots: (number | null)[] = new Array(size).fill(null);
 
   const seedOrder = buildSeedOrder(size);
   for (let i = 0; i < seeded.length; i++) {
     slots[seedOrder[i]] = seeded[i].id;
   }
 
-  const matches: BracketData['matches'] = [];
+  const matches: Match[] = [];
   let matchId = 0;
 
   for (let i = 0; i < size / 2; i++) {
@@ -86,7 +87,7 @@ function generateBracket(players: Player[], bestOf: number): BracketData {
     }
   }
 
-  return { players, matches, bestOf, generated: true };
+  return { matches, bestOf, generated: true };
 }
 
 function buildSeedOrder(size: number): number[] {
@@ -105,32 +106,40 @@ function buildSeedOrder(size: number): number[] {
 interface TournamentBracketProps {
   tournamentAbbrev: string;
   isOwner: boolean;
+  players: Player[];
+  bracketData: BracketData;
+  onBracketChanged: (data: BracketData) => void;
 }
 
-export default function TournamentBracket({ tournamentAbbrev, isOwner }: TournamentBracketProps) {
-  const [data, setData] = useState<BracketData>(() => loadBracket(tournamentAbbrev));
-  const [scoreDialog, setScoreDialog] = useState<BracketData['matches'][0] | null>(null);
+export default function TournamentBracket({
+  tournamentAbbrev,
+  isOwner,
+  players,
+  bracketData,
+  onBracketChanged,
+}: TournamentBracketProps) {
+  const [scoreDialog, setScoreDialog] = useState<Match | null>(null);
   const [editScore1, setEditScore1] = useState(0);
   const [editScore2, setEditScore2] = useState(0);
-  const [editNoShow, setEditNoShow] = useState<string | null>(null);
+  const [editNoShow, setEditNoShow] = useState<number | null>(null);
 
-  const persist = useCallback((next: BracketData) => {
-    setData(next);
-    saveBracket(tournamentAbbrev, next);
-  }, [tournamentAbbrev]);
+  const persist = useCallback(async (next: BracketData) => {
+    onBracketChanged(next);
+    try { await saveBracket(tournamentAbbrev, JSON.stringify(next)); } catch { /* best effort */ }
+  }, [tournamentAbbrev, onBracketChanged]);
 
   const handleGenerate = () => {
-    const bracket = generateBracket(data.players, data.bestOf);
+    const bracket = generateBracket(players, bracketData.bestOf);
     persist(bracket);
   };
 
   const handleReset = () => {
-    persist({ ...data, matches: [], generated: false });
+    persist({ ...bracketData, matches: [], generated: false });
   };
 
   // ── Match Scoring ──
 
-  const openScoreDialog = (match: BracketData['matches'][0]) => {
+  const openScoreDialog = (match: Match) => {
     setScoreDialog(match);
     setEditScore1(match.score1);
     setEditScore2(match.score2);
@@ -139,12 +148,12 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
 
   const handleSaveScore = () => {
     if (!scoreDialog) return;
-    const winsNeeded = Math.ceil(data.bestOf / 2);
+    const winsNeeded = Math.ceil(bracketData.bestOf / 2);
     const winner = editScore1 >= winsNeeded ? scoreDialog.player1
       : editScore2 >= winsNeeded ? scoreDialog.player2
       : null;
 
-    const updatedMatches = data.matches.map((m) => {
+    const updatedMatches = bracketData.matches.map((m) => {
       if (m.id === scoreDialog.id) {
         return { ...m, score1: editScore1, score2: editScore2, winner, noShow: editNoShow };
       }
@@ -166,24 +175,24 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
       }
     }
 
-    persist({ ...data, matches: updatedMatches });
+    persist({ ...bracketData, matches: updatedMatches });
     setScoreDialog(null);
   };
 
   // ── Helpers ──
 
-  const getPlayerName = (id: string | null): string => {
-    if (!id) return 'TBD';
-    return data.players.find((p) => p.id === id)?.name || 'TBD';
+  const getPlayerName = (id: number | null): string => {
+    if (id === null) return 'TBD';
+    return players.find((p) => p.id === id)?.name || 'TBD';
   };
 
-  const getPlayerSeed = (id: string | null): number | null => {
-    if (!id) return null;
-    return data.players.find((p) => p.id === id)?.seed ?? null;
+  const getPlayerSeed = (id: number | null): number | null => {
+    if (id === null) return null;
+    return players.find((p) => p.id === id)?.seed ?? null;
   };
 
-  const totalRounds = data.matches.length > 0
-    ? Math.max(...data.matches.map((m) => m.round)) + 1
+  const totalRounds = bracketData.matches.length > 0
+    ? Math.max(...bracketData.matches.map((m) => m.round)) + 1
     : 0;
 
   const roundLabels = (round: number): string => {
@@ -194,9 +203,9 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
     return `Round ${round + 1}`;
   };
 
-  const finalsMatch = data.matches.find((m) => m.round === totalRounds - 1 && m.position === 0);
-  const champion = finalsMatch?.winner;
-  const winsNeeded = Math.ceil(data.bestOf / 2);
+  const finalsMatch = bracketData.matches.find((m) => m.round === totalRounds - 1 && m.position === 0);
+  const champion = finalsMatch?.winner ?? null;
+  const winsNeeded = Math.ceil(bracketData.bestOf / 2);
 
   return (
     <Box>
@@ -209,8 +218,8 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
             </Typography>
             <FormControl size="small" fullWidth>
               <Select
-                value={data.bestOf}
-                onChange={(e) => persist({ ...data, bestOf: e.target.value as number, generated: false, matches: [] })}
+                value={bracketData.bestOf}
+                onChange={(e) => persist({ ...bracketData, bestOf: e.target.value as number, generated: false, matches: [] })}
                 sx={{ fontSize: 13 }}
               >
                 {[3, 5, 7, 9, 11, 13].map((bo) => (
@@ -220,18 +229,18 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
             </FormControl>
           </Stack>
 
-          {data.players.length < 2 && (
+          {players.length < 2 && (
             <Typography variant="caption" color="text.disabled">
               Add at least 2 players in the Players tab to generate a bracket
             </Typography>
           )}
 
-          {!data.generated ? (
+          {!bracketData.generated ? (
             <Button
               variant="contained"
               startIcon={<EmojiEventsIcon />}
               onClick={handleGenerate}
-              disabled={data.players.length < 2}
+              disabled={players.length < 2}
               sx={{ alignSelf: 'flex-end' }}
             >
               Generate Bracket
@@ -246,7 +255,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
       )}
 
       {/* Champion banner */}
-      {champion && (
+      {champion !== null && (
         <Card variant="outlined" sx={{
           mb: 3, overflow: 'hidden',
           borderColor: 'rgba(245,200,66,0.4)',
@@ -284,11 +293,11 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
       )}
 
       {/* Bracket Visualization */}
-      {data.generated && totalRounds > 0 && (
+      {bracketData.generated && totalRounds > 0 && (
         <Box sx={{ overflowX: 'auto', pb: 2 }}>
           <Box sx={{ display: 'flex', gap: 0, minWidth: totalRounds * 240 }}>
             {Array.from({ length: totalRounds }, (_, round) => {
-              const roundMatches = data.matches
+              const roundMatches = bracketData.matches
                 .filter((m) => m.round === round)
                 .sort((a, b) => a.position - b.position);
               const isLast = round === totalRounds - 1;
@@ -309,7 +318,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
 
                   <Box sx={{
                     display: 'flex', flexDirection: 'column', justifyContent: 'space-around',
-                    height: roundMatches.length > 0 ? Math.max(roundMatches.length * 100, data.matches.filter((m) => m.round === 0).length * 100) : 'auto',
+                    height: roundMatches.length > 0 ? Math.max(roundMatches.length * 100, bracketData.matches.filter((m) => m.round === 0).length * 100) : 'auto',
                   }}>
                     {roundMatches.map((match) => {
                       const isBye = (match.player1 === null || match.player2 === null) && match.winner !== null && match.round === 0;
@@ -338,7 +347,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
                           {!isBye && match.player1 && match.player2 && (
                             <LinearProgress
                               variant="determinate"
-                              value={isFinished ? 100 : ((match.score1 + match.score2) / data.bestOf) * 100}
+                              value={isFinished ? 100 : ((match.score1 + match.score2) / bracketData.bestOf) * 100}
                               sx={{
                                 height: 2,
                                 bgcolor: 'transparent',
@@ -377,7 +386,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
       )}
 
       {/* Empty state */}
-      {!data.generated && !isOwner && (
+      {!bracketData.generated && !isOwner && (
         <Card variant="outlined" sx={{ textAlign: 'center', py: 5 }}>
           <Avatar sx={{ width: 56, height: 56, mx: 'auto', mb: 1.5, bgcolor: 'action.hover' }}>
             <EmojiEventsIcon sx={{ fontSize: 28, color: 'text.disabled' }} />
@@ -406,7 +415,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
               {/* Header with Bo info */}
               <Box sx={{ px: 3, pt: 2.5, pb: 1.5, textAlign: 'center' }}>
                 <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: 10, fontFamily: 'inherit' }}>
-                  Best of {data.bestOf} · First to {winsNeeded}
+                  Best of {bracketData.bestOf} · First to {winsNeeded}
                 </Typography>
               </Box>
 

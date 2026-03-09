@@ -35,11 +35,21 @@ import LinkIcon from '@mui/icons-material/Link';
 import CheckIcon from '@mui/icons-material/Check';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { getOsuUser } from '../../auth/api/auth';
+import {
+  addPlayer as apiAddPlayer,
+  bulkAddPlayers,
+  updatePlayer as apiUpdatePlayer,
+  removePlayer as apiRemovePlayer,
+  clearPlayers as apiClearPlayers,
+  reorderPlayers,
+  saveBracket,
+  type TournamentPlayer,
+} from '../api/tournaments';
 
 // ── Types (shared with TournamentBracket) ──
 
 export interface Player {
-  id: string;
+  id: number;
   osuId: number;
   name: string;
   seed: number;
@@ -47,7 +57,6 @@ export interface Player {
 }
 
 export interface BracketData {
-  players: Player[];
   matches: Match[];
   bestOf: number;
   generated: boolean;
@@ -57,26 +66,29 @@ export interface Match {
   id: string;
   round: number;
   position: number;
-  player1: string | null;
-  player2: string | null;
+  player1: number | null;
+  player2: number | null;
   score1: number;
   score2: number;
-  winner: string | null;
-  noShow?: string | null;
+  winner: number | null;
+  noShow?: number | null;
 }
 
-const STORAGE_PREFIX = 'packshare_bracket_';
-
-export function loadBracket(tournamentAbbrev: string): BracketData {
-  const saved = localStorage.getItem(`${STORAGE_PREFIX}${tournamentAbbrev}`);
-  if (saved) {
-    try { return JSON.parse(saved); } catch { /* fall through */ }
+export function parseBracketData(raw?: string): BracketData {
+  if (raw) {
+    try { return JSON.parse(raw); } catch { /* fall through */ }
   }
-  return { players: [], matches: [], bestOf: 7, generated: false };
+  return { matches: [], bestOf: 7, generated: false };
 }
 
-export function saveBracket(tournamentAbbrev: string, data: BracketData) {
-  localStorage.setItem(`${STORAGE_PREFIX}${tournamentAbbrev}`, JSON.stringify(data));
+export function toPlayers(apiPlayers?: TournamentPlayer[]): Player[] {
+  return (apiPlayers || []).map((p) => ({
+    id: p.id,
+    osuId: p.osu_id,
+    name: p.name,
+    seed: p.seed,
+    discord: p.discord,
+  }));
 }
 
 // ── Component ──
@@ -84,43 +96,51 @@ export function saveBracket(tournamentAbbrev: string, data: BracketData) {
 interface TournamentPlayersProps {
   tournamentAbbrev: string;
   isOwner: boolean;
+  players: Player[];
+  bracketData: BracketData;
+  onPlayersChanged: (players: Player[]) => void;
+  onBracketChanged: (data: BracketData) => void;
 }
 
-export default function TournamentPlayers({ tournamentAbbrev, isOwner }: TournamentPlayersProps) {
-  const [data, setData] = useState<BracketData>(() => loadBracket(tournamentAbbrev));
+export default function TournamentPlayers({
+  tournamentAbbrev,
+  isOwner,
+  players,
+  bracketData,
+  onPlayersChanged,
+  onBracketChanged,
+}: TournamentPlayersProps) {
   const [playerInput, setPlayerInput] = useState('');
   const [playerError, setPlayerError] = useState('');
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [bulkInput, setBulkInput] = useState('');
-  const [editingDiscord, setEditingDiscord] = useState<string | null>(null);
+  const [editingDiscord, setEditingDiscord] = useState<number | null>(null);
   const [discordInput, setDiscordInput] = useState('');
-  const [editingName, setEditingName] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<number | null>(null);
   const [nameInput, setNameInput] = useState('');
+  const [adding, setAdding] = useState(false);
 
-  const persist = useCallback((next: BracketData) => {
-    setData(next);
-    saveBracket(tournamentAbbrev, next);
-  }, [tournamentAbbrev]);
+  const resetBracket = useCallback(async () => {
+    const reset: BracketData = { matches: [], bestOf: bracketData.bestOf, generated: false };
+    onBracketChanged(reset);
+    try { await saveBracket(tournamentAbbrev, JSON.stringify(reset)); } catch { /* best effort */ }
+  }, [tournamentAbbrev, bracketData.bestOf, onBracketChanged]);
 
   const parseOsuId = (input: string): number | null => {
     const trimmed = input.trim();
-    // Direct numeric ID
     if (/^\d+$/.test(trimmed)) return parseInt(trimmed);
-    // osu profile link: https://osu.ppy.sh/users/12345 or https://osu.ppy.sh/users/12345/mania
     const match = trimmed.match(/osu\.ppy\.sh\/users\/(\d+)/);
     if (match) return parseInt(match[1]);
     return null;
   };
 
-  const [adding, setAdding] = useState(false);
-
-  const addPlayer = async () => {
+  const handleAddPlayer = async () => {
     const osuId = parseOsuId(playerInput);
     if (!osuId) {
       setPlayerError('Enter an osu! user ID or profile link');
       return;
     }
-    if (data.players.some((p) => p.osuId === osuId)) {
+    if (players.some((p) => p.osuId === osuId)) {
       setPlayerError(`Player with osu! ID ${osuId} is already in the roster`);
       return;
     }
@@ -132,89 +152,96 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
       if (user) name = user.username;
       else setPlayerError('osu! user not found');
     } catch { /* use fallback name */ }
-    if (!data.players.some((p) => p.osuId === osuId)) {
-      const player: Player = {
-        id: `p${Date.now()}`,
-        osuId,
-        name,
-        seed: data.players.length + 1,
-      };
-      persist({ ...data, players: [...data.players, player], generated: false, matches: [] });
+
+    try {
+      const added = await apiAddPlayer(tournamentAbbrev, { osu_id: osuId, name });
+      onPlayersChanged([...players, { id: added.id, osuId: added.osu_id, name: added.name, seed: added.seed, discord: added.discord }]);
       setPlayerInput('');
+      await resetBracket();
+    } catch (err) {
+      setPlayerError(err instanceof Error ? err.message : 'Failed to add player');
     }
     setAdding(false);
   };
 
-  const removePlayer = (id: string) => {
-    const next = data.players.filter((p) => p.id !== id)
-      .map((p, i) => ({ ...p, seed: i + 1 }));
-    persist({ ...data, players: next, generated: false, matches: [] });
+  const handleRemovePlayer = async (id: number) => {
+    try {
+      await apiRemovePlayer(tournamentAbbrev, id);
+      const next = players.filter((p) => p.id !== id).map((p, i) => ({ ...p, seed: i + 1 }));
+      onPlayersChanged(next);
+      await resetBracket();
+    } catch { /* silently fail */ }
   };
 
-  const bulkImport = () => {
+  const handleBulkImport = async () => {
     const lines = bulkInput.split('\n').map((n) => n.trim()).filter(Boolean);
-    const existingIds = new Set(data.players.map((p) => p.osuId));
-    const newPlayers: Player[] = [];
+    const existingIds = new Set(players.map((p) => p.osuId));
+    const newPlayers: { osu_id: number; name: string }[] = [];
     for (const line of lines) {
       const osuId = parseOsuId(line);
       if (!osuId || existingIds.has(osuId)) continue;
       existingIds.add(osuId);
-      newPlayers.push({
-        id: `p${Date.now()}_${newPlayers.length}`,
-        osuId,
-        name: `Player ${osuId}`,
-        seed: data.players.length + newPlayers.length + 1,
-      });
+      newPlayers.push({ osu_id: osuId, name: `Player ${osuId}` });
     }
     if (newPlayers.length === 0) return;
-    persist({ ...data, players: [...data.players, ...newPlayers], generated: false, matches: [] });
-    setBulkInput('');
-    setBulkImportOpen(false);
+
+    try {
+      const added = await bulkAddPlayers(tournamentAbbrev, newPlayers);
+      const mapped = added.map((p) => ({ id: p.id, osuId: p.osu_id, name: p.name, seed: p.seed, discord: p.discord }));
+      onPlayersChanged([...players, ...mapped]);
+      setBulkInput('');
+      setBulkImportOpen(false);
+      await resetBracket();
+    } catch { /* silently fail */ }
   };
 
-  const shuffleSeeds = () => {
-    const shuffled = [...data.players];
+  const shuffleSeeds = async () => {
+    const shuffled = [...players];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    persist({
-      ...data,
-      players: shuffled.map((p, i) => ({ ...p, seed: i + 1 })),
-      generated: false,
-      matches: [],
-    });
+    const reordered = shuffled.map((p, i) => ({ ...p, seed: i + 1 }));
+    onPlayersChanged(reordered);
+    try {
+      await reorderPlayers(tournamentAbbrev, reordered.map((p) => p.id));
+      await resetBracket();
+    } catch { /* best effort */ }
   };
 
-  const saveName = (playerId: string) => {
+  const saveName = async (playerId: number) => {
     const name = nameInput.trim();
     if (!name) return;
-    if (data.players.some((p) => p.id !== playerId && p.name.toLowerCase() === name.toLowerCase())) return;
-    persist({
-      ...data,
-      players: data.players.map((p) => p.id === playerId ? { ...p, name } : p),
-      generated: false, matches: [],
-    });
+    if (players.some((p) => p.id !== playerId && p.name.toLowerCase() === name.toLowerCase())) return;
+    onPlayersChanged(players.map((p) => p.id === playerId ? { ...p, name } : p));
     setEditingName(null);
     setNameInput('');
+    try {
+      await apiUpdatePlayer(tournamentAbbrev, playerId, { name });
+      await resetBracket();
+    } catch { /* best effort */ }
   };
 
-  const saveDiscord = (playerId: string) => {
+  const saveDiscord = async (playerId: number) => {
     const discord = discordInput.trim();
-    persist({
-      ...data,
-      players: data.players.map((p) => p.id === playerId ? { ...p, discord: discord || undefined } : p),
-    });
+    onPlayersChanged(players.map((p) => p.id === playerId ? { ...p, discord: discord || undefined } : p));
     setEditingDiscord(null);
     setDiscordInput('');
+    try {
+      await apiUpdatePlayer(tournamentAbbrev, playerId, { discord });
+    } catch { /* best effort */ }
   };
 
-  const clearAll = () => {
-    persist({ players: [], matches: [], bestOf: data.bestOf, generated: false });
+  const handleClearAll = async () => {
+    try {
+      await apiClearPlayers(tournamentAbbrev);
+      onPlayersChanged([]);
+      await resetBracket();
+    } catch { /* silently fail */ }
   };
 
   if (!isOwner) {
-    const playerCount = data.players.length;
+    const playerCount = players.length;
     return (
       <Card variant="outlined">
         <CardHeader
@@ -245,7 +272,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.players.map((player) => (
+                  {players.map((player) => (
                     <TableRow key={player.id} hover>
                       <TableCell sx={{ py: 0.5 }}>
                         <Avatar sx={{
@@ -293,7 +320,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
           placeholder="osu! user ID or profile link..."
           value={playerInput}
           onChange={(e) => { setPlayerInput(e.target.value); setPlayerError(''); }}
-          onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
           fullWidth
           error={!!playerError}
           helperText={playerError}
@@ -303,7 +330,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
             },
           }}
         />
-        <Button variant="contained" onClick={addPlayer} disabled={!playerInput.trim() || adding}
+        <Button variant="contained" onClick={handleAddPlayer} disabled={!playerInput.trim() || adding}
           sx={{ minWidth: 40, px: 1, height: 40 }}>
           {adding ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <AddIcon sx={{ fontSize: 20 }} />}
         </Button>
@@ -313,7 +340,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
             Import Players
           </Button>
         </Tooltip>
-        {data.players.length > 1 && (
+        {players.length > 1 && (
           <Button variant="outlined" startIcon={<ShuffleIcon />} onClick={shuffleSeeds}
             sx={{ fontSize: 12, flexShrink: 0, height: 40 }}>
             Randomize Seed
@@ -328,7 +355,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
               Editing players will reset the bracket
             </Typography>
           </Stack>
-          {data.players.length > 0 ? (
+          {players.length > 0 ? (
             <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
               <Table size="small">
                 <TableHead sx={{ bgcolor: 'action.hover' }}>
@@ -340,7 +367,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.players.map((player) => (
+                  {players.map((player) => (
                     <TableRow key={player.id} hover>
                       <TableCell sx={{ py: 0.5 }}>
                         <Avatar sx={{
@@ -403,7 +430,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
                         )}
                       </TableCell>
                       <TableCell sx={{ py: 0.5 }} align="right">
-                        <IconButton size="small" onClick={() => removePlayer(player.id)}
+                        <IconButton size="small" onClick={() => handleRemovePlayer(player.id)}
                           sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
                           <CloseIcon sx={{ fontSize: 14 }} />
                         </IconButton>
@@ -422,9 +449,9 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
             </Box>
           )}
 
-      {data.players.length > 0 && (
+      {players.length > 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button size="small" variant="text" color="error" onClick={clearAll} sx={{ fontSize: 12 }}>
+          <Button size="small" variant="text" color="error" onClick={handleClearAll} sx={{ fontSize: 12 }}>
             Clear all
           </Button>
         </Box>
@@ -461,7 +488,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setBulkImportOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={bulkImport} disabled={!bulkInput.trim()}
+          <Button variant="contained" onClick={handleBulkImport} disabled={!bulkInput.trim()}
             startIcon={<UploadIcon />}>
             Import
           </Button>

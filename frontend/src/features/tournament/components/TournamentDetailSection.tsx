@@ -93,8 +93,9 @@ import BeatmapRow from '../../../shared/components/BeatmapRow';
 import DownloadButton from '../../../shared/components/DownloadButton';
 import OsuButton from '../../../shared/components/OsuButton';
 import RemoveButton from '../../../shared/components/RemoveButton';
-import TournamentPlayers from './TournamentPlayers';
+import TournamentPlayers, { toPlayers, parseBracketData, type Player, type BracketData } from './TournamentPlayers';
 import TournamentBracket from './TournamentBracket';
+import { toAnnouncements, type Announcement } from './TournamentAnnouncements';
 import TournamentStatus, { statusColors } from './TournamentStatus';
 import SlotsEditor from './SlotsEditor';
 import TournamentAnnouncements from './TournamentAnnouncements';
@@ -185,6 +186,11 @@ export default function TournamentDetailSection({
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [cropUploading, setCropUploading] = useState(false);
 
+  // Players, bracket, announcements (from API, not localStorage)
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [bracketData, setBracketData] = useState<BracketData>({ matches: [], bestOf: 7, generated: false });
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+
   // Load full tournament data
   useEffect(() => {
     setLoading(true);
@@ -192,6 +198,9 @@ export default function TournamentDetailSection({
       .then((full) => {
         setTournament(full);
         setEditName(full.name);
+        setPlayers(toPlayers(full.players));
+        setBracketData(parseBracketData(full.bracket_data));
+        setAnnouncements(toAnnouncements(full.announcements));
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -875,12 +884,25 @@ export default function TournamentDetailSection({
 
         {/* Players */}
         {detailTab === 'players' && (
-          <TournamentPlayers tournamentAbbrev={tournament.abbreviation} isOwner={isOwner} />
+          <TournamentPlayers
+            tournamentAbbrev={tournament.abbreviation}
+            isOwner={isOwner}
+            players={players}
+            bracketData={bracketData}
+            onPlayersChanged={setPlayers}
+            onBracketChanged={setBracketData}
+          />
         )}
 
         {/* Bracket */}
         {detailTab === 'bracket' && (
-          <TournamentBracket tournamentAbbrev={tournament.abbreviation} isOwner={isOwner} />
+          <TournamentBracket
+            tournamentAbbrev={tournament.abbreviation}
+            isOwner={isOwner}
+            players={players}
+            bracketData={bracketData}
+            onBracketChanged={setBracketData}
+          />
         )}
 
         {/* Slots */}
@@ -896,7 +918,12 @@ export default function TournamentDetailSection({
 
         {/* News */}
         {detailTab === 'news' && (
-          <TournamentAnnouncements tournamentAbbrev={tournament.abbreviation} isOwner={isOwner} />
+          <TournamentAnnouncements
+            tournamentAbbrev={tournament.abbreviation}
+            isOwner={isOwner}
+            announcements={announcements}
+            onAnnouncementsChanged={setAnnouncements}
+          />
         )}
 
         {/* Settings */}

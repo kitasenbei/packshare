@@ -62,6 +62,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client,
 	apiGroup.Post("/auth/key", keyHandler.KeyLogin)
 	apiGroup.Get("/tournaments", tournamentHandler.ListTournaments)
 	apiGroup.Get("/tournaments/:abbrev", tournamentHandler.GetTournament)
+	apiGroup.Get("/tournaments/:abbrev/bracket", tournamentHandler.GetBracket)
 
 	// Upload routes (requires auth + S3 configuration)
 	if s3Client != nil && cfg.UploadsBucket != "" {
@@ -85,6 +86,19 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client,
 	protected.Post("/tournaments/:abbrev/stages/:stageId/maps", tournamentHandler.AddMapToStage)
 	protected.Delete("/tournaments/:abbrev/maps/:mapId", tournamentHandler.RemoveMapFromStage)
 	protected.Patch("/tournaments/:abbrev/maps/:mapId", tournamentHandler.UpdateMap)
+	// Players
+	protected.Post("/tournaments/:abbrev/players", tournamentHandler.AddPlayer)
+	protected.Post("/tournaments/:abbrev/players/bulk", tournamentHandler.BulkAddPlayers)
+	protected.Put("/tournaments/:abbrev/players/reorder", tournamentHandler.ReorderPlayers)
+	protected.Put("/tournaments/:abbrev/players/:playerId", tournamentHandler.UpdatePlayer)
+	protected.Delete("/tournaments/:abbrev/players/:playerId", tournamentHandler.RemovePlayer)
+	protected.Delete("/tournaments/:abbrev/players", tournamentHandler.ClearPlayers)
+	// Bracket
+	protected.Put("/tournaments/:abbrev/bracket", tournamentHandler.SaveBracket)
+	// Announcements
+	protected.Post("/tournaments/:abbrev/announcements", tournamentHandler.CreateAnnouncement)
+	protected.Put("/tournaments/:abbrev/announcements/:annId", tournamentHandler.UpdateAnnouncement)
+	protected.Delete("/tournaments/:abbrev/announcements/:annId", tournamentHandler.DeleteAnnouncement)
 
 	// OAuth-only routes (key management)
 	oauthOnly := apiGroup.Group("", middleware.OAuthOnlyMiddleware(cfg.JWTSecret))

@@ -46,19 +46,22 @@ type PackBeatmap struct {
 }
 
 type Tournament struct {
-	ID           uint              `gorm:"primaryKey" json:"id"`
-	Name         string            `gorm:"not null" json:"name"`
-	Abbreviation string            `gorm:"uniqueIndex;not null" json:"abbreviation"`
-	Format       string            `gorm:"not null" json:"format"`
-	BannerURL    string            `json:"banner_url"`
-	LogoURL      string            `json:"logo_url"`
-	Status       string            `gorm:"not null;default:upcoming" json:"status"`
-	SlotConfigs  string            `gorm:"type:text" json:"slot_configs"`
-	UserID       uint              `gorm:"not null" json:"user_id"`
-	User         User              `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Stages       []TournamentStage `gorm:"foreignKey:TournamentID" json:"stages,omitempty"`
-	CreatedAt    time.Time         `json:"created_at"`
-	UpdatedAt    time.Time         `json:"updated_at"`
+	ID            uint                     `gorm:"primaryKey" json:"id"`
+	Name          string                   `gorm:"not null" json:"name"`
+	Abbreviation  string                   `gorm:"uniqueIndex;not null" json:"abbreviation"`
+	Format        string                   `gorm:"not null" json:"format"`
+	BannerURL     string                   `json:"banner_url"`
+	LogoURL       string                   `json:"logo_url"`
+	Status        string                   `gorm:"not null;default:upcoming" json:"status"`
+	SlotConfigs   string                   `gorm:"type:text" json:"slot_configs"`
+	BracketData   string                   `gorm:"type:text" json:"bracket_data,omitempty"`
+	UserID        uint                     `gorm:"not null" json:"user_id"`
+	User          User                     `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Stages        []TournamentStage        `gorm:"foreignKey:TournamentID" json:"stages,omitempty"`
+	Players       []TournamentPlayer       `gorm:"foreignKey:TournamentID" json:"players,omitempty"`
+	Announcements []TournamentAnnouncement `gorm:"foreignKey:TournamentID" json:"announcements,omitempty"`
+	CreatedAt     time.Time                `json:"created_at"`
+	UpdatedAt     time.Time                `json:"updated_at"`
 }
 
 type TournamentStage struct {
@@ -84,6 +87,26 @@ type TournamentMap struct {
 	StarRating     *float64 `json:"star_rating,omitempty"`
 	DifficultyName string   `json:"difficulty_name,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type TournamentPlayer struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	TournamentID uint      `gorm:"not null;index" json:"tournament_id"`
+	OsuID        int64     `gorm:"not null" json:"osu_id"`
+	Name         string    `gorm:"not null" json:"name"`
+	Seed         int       `gorm:"not null" json:"seed"`
+	Discord      string    `json:"discord,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+type TournamentAnnouncement struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	TournamentID uint      `gorm:"not null;index" json:"tournament_id"`
+	Title        string    `gorm:"not null" json:"title"`
+	Body         string    `gorm:"type:text" json:"body"`
+	Image        string    `json:"image,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type AccessKey struct {

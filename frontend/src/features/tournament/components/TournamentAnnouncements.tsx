@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -20,50 +20,54 @@ import EditIcon from '@mui/icons-material/Edit';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import ImageIcon from '@mui/icons-material/Image';
 import CloseIcon from '@mui/icons-material/Close';
-import { uploadImage } from '../api/tournaments';
+import {
+  uploadImage,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  type TournamentAnnouncement,
+} from '../api/tournaments';
 
 export interface Announcement {
-  id: string;
+  id: number;
   title: string;
   body: string;
   image?: string;
   createdAt: string;
 }
 
-const STORAGE_PREFIX = 'packshare_announcements_';
-
-function loadAnnouncements(abbrev: string): Announcement[] {
-  const saved = localStorage.getItem(`${STORAGE_PREFIX}${abbrev}`);
-  if (saved) {
-    try { return JSON.parse(saved); } catch { /* fall through */ }
-  }
-  return [];
-}
-
-function saveAnnouncements(abbrev: string, data: Announcement[]) {
-  localStorage.setItem(`${STORAGE_PREFIX}${abbrev}`, JSON.stringify(data));
+export function toAnnouncements(apiAnnouncements?: TournamentAnnouncement[]): Announcement[] {
+  return (apiAnnouncements || []).map((a) => ({
+    id: a.id,
+    title: a.title,
+    body: a.body,
+    image: a.image,
+    createdAt: a.created_at,
+  }));
 }
 
 interface TournamentAnnouncementsProps {
   tournamentAbbrev: string;
   isOwner: boolean;
+  announcements: Announcement[];
+  onAnnouncementsChanged: (announcements: Announcement[]) => void;
 }
 
-export default function TournamentAnnouncements({ tournamentAbbrev, isOwner }: TournamentAnnouncementsProps) {
-  const [announcements, setAnnouncements] = useState<Announcement[]>(() => loadAnnouncements(tournamentAbbrev));
+export default function TournamentAnnouncements({
+  tournamentAbbrev,
+  isOwner,
+  announcements,
+  onAnnouncementsChanged,
+}: TournamentAnnouncementsProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [image, setImage] = useState<string | undefined>(undefined);
   const [uploading, setUploading] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-
-  const persist = useCallback((next: Announcement[]) => {
-    setAnnouncements(next);
-    saveAnnouncements(tournamentAbbrev, next);
-  }, [tournamentAbbrev]);
 
   const handleOpenNew = () => {
     setEditingId(null);
@@ -93,30 +97,48 @@ export default function TournamentAnnouncements({ tournamentAbbrev, isOwner }: T
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
     if (!trimmedTitle) return;
 
-    if (editingId) {
-      persist(announcements.map((a) =>
-        a.id === editingId ? { ...a, title: trimmedTitle, body: trimmedBody, image } : a
-      ));
-    } else {
-      const newAnnouncement: Announcement = {
-        id: `ann_${Date.now()}`,
-        title: trimmedTitle,
-        body: trimmedBody,
-        image,
-        createdAt: new Date().toISOString(),
-      };
-      persist([newAnnouncement, ...announcements]);
+    setSaving(true);
+    try {
+      if (editingId) {
+        const updated = await updateAnnouncement(tournamentAbbrev, editingId, {
+          title: trimmedTitle,
+          body: trimmedBody,
+          image,
+        });
+        onAnnouncementsChanged(announcements.map((a) =>
+          a.id === editingId ? { id: updated.id, title: updated.title, body: updated.body, image: updated.image, createdAt: updated.created_at } : a
+        ));
+      } else {
+        const created = await createAnnouncement(tournamentAbbrev, {
+          title: trimmedTitle,
+          body: trimmedBody,
+          image,
+        });
+        onAnnouncementsChanged([
+          { id: created.id, title: created.title, body: created.body, image: created.image, createdAt: created.created_at },
+          ...announcements,
+        ]);
+      }
+      setDialogOpen(false);
+    } catch {
+      // silently fail
+    } finally {
+      setSaving(false);
     }
-    setDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    persist(announcements.filter((a) => a.id !== id));
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteAnnouncement(tournamentAbbrev, id);
+      onAnnouncementsChanged(announcements.filter((a) => a.id !== id));
+    } catch {
+      // silently fail
+    }
     setDeleteConfirm(null);
   };
 
@@ -240,7 +262,7 @@ export default function TournamentAnnouncements({ tournamentAbbrev, isOwner }: T
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!title.trim()}>
+          <Button variant="contained" onClick={handleSave} disabled={!title.trim() || saving}>
             {editingId ? 'Save' : 'Post'}
           </Button>
         </DialogActions>

@@ -29,6 +29,26 @@ export interface SlotConfig {
   color: string;
 }
 
+export interface TournamentPlayer {
+  id: number;
+  tournament_id: number;
+  osu_id: number;
+  name: string;
+  seed: number;
+  discord?: string;
+  created_at: string;
+}
+
+export interface TournamentAnnouncement {
+  id: number;
+  tournament_id: number;
+  title: string;
+  body: string;
+  image?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Tournament {
   id: number;
   name: string;
@@ -38,6 +58,7 @@ export interface Tournament {
   logo_url: string;
   status: 'upcoming' | 'live' | 'completed';
   slot_configs?: string;
+  bracket_data?: string;
   user_id: number;
   user?: {
     id: number;
@@ -47,6 +68,8 @@ export interface Tournament {
     avatar_url: string;
   };
   stages?: TournamentStage[];
+  players?: TournamentPlayer[];
+  announcements?: TournamentAnnouncement[];
   created_at: string;
   updated_at: string;
 }
@@ -243,6 +266,132 @@ async function getPresignedUrl(filename: string, contentType: string): Promise<P
     throw new Error(error.error || 'Failed to get upload URL');
   }
   return response.json();
+}
+
+// ── Players ──
+
+export async function addPlayer(abbrev: string, input: { osu_id: number; name: string; discord?: string }): Promise<TournamentPlayer> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/players`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to add player');
+  }
+  return response.json();
+}
+
+export async function bulkAddPlayers(abbrev: string, players: { osu_id: number; name: string }[]): Promise<TournamentPlayer[]> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/players/bulk`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ players }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to bulk add players');
+  }
+  return response.json();
+}
+
+export async function updatePlayer(abbrev: string, playerId: number, input: { name?: string; discord?: string; seed?: number }): Promise<TournamentPlayer> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/players/${playerId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to update player');
+  }
+  return response.json();
+}
+
+export async function removePlayer(abbrev: string, playerId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/players/${playerId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to remove player');
+  }
+}
+
+export async function clearPlayers(abbrev: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/players`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to clear players');
+  }
+}
+
+export async function reorderPlayers(abbrev: string, playerIds: number[]): Promise<TournamentPlayer[]> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/players/reorder`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ player_ids: playerIds }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to reorder players');
+  }
+  return response.json();
+}
+
+// ── Bracket ──
+
+export async function saveBracket(abbrev: string, bracketData: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/bracket`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ bracket_data: bracketData }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to save bracket');
+  }
+}
+
+// ── Announcements ──
+
+export async function createAnnouncement(abbrev: string, input: { title: string; body: string; image?: string }): Promise<TournamentAnnouncement> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/announcements`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to create announcement');
+  }
+  return response.json();
+}
+
+export async function updateAnnouncement(abbrev: string, annId: number, input: { title: string; body: string; image?: string }): Promise<TournamentAnnouncement> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/announcements/${annId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to update announcement');
+  }
+  return response.json();
+}
+
+export async function deleteAnnouncement(abbrev: string, annId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/announcements/${annId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete announcement');
+  }
 }
 
 export async function uploadImage(file: File): Promise<string> {
