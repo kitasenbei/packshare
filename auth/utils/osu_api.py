@@ -133,6 +133,45 @@ class OsuAPI:
                 return None
 
     @staticmethod
+    async def get_user(user_id: int) -> Optional[Dict[str, Any]]:
+        """Fetch osu! user by ID using client credentials."""
+        token = await OsuAPI._get_client_token()
+        if not token:
+            return None
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "PackShare/1.0",
+        }
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{OsuAPI.OSU_API_BASE}/users/{user_id}",
+                    headers=headers,
+                    timeout=10.0
+                )
+
+                if response.status_code == 404:
+                    return None
+
+                if response.status_code != 200:
+                    logging.warning("User fetch failed: %s", response.text)
+                    return None
+
+                data = response.json()
+                return {
+                    "id": data["id"],
+                    "username": data.get("username", ""),
+                    "avatar_url": data.get("avatar_url", ""),
+                    "country_code": data.get("country_code", ""),
+                }
+
+            except Exception as e:
+                logging.error("Error fetching user: %s", e)
+                return None
+
+    @staticmethod
     async def get_beatmapset(beatmapset_id: int) -> Optional[Dict[str, Any]]:
         """
         Fetch beatmapset data with all difficulties from osu! API.

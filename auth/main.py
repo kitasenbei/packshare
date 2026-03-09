@@ -95,6 +95,15 @@ async def verify(token: str = Query(..., description="JWT token to verify")):
     return {"valid": True, "user": payload}
 
 
+@app.get("/auth/user/{user_id}")
+async def get_user(user_id: int):
+    """Fetch osu! user info by ID."""
+    data = await OsuAPI.get_user(user_id)
+    if not data:
+        return JSONResponse(status_code=404, content={"error": "User not found"})
+    return data
+
+
 @app.get("/auth/beatmapset/{beatmapset_id}")
 async def get_beatmapset(beatmapset_id: int):
     """

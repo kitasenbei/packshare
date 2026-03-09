@@ -17,6 +17,7 @@ import {
   Avatar,
   Tooltip,
   Badge,
+  CircularProgress,
   Table,
   TableBody,
   TableCell,
@@ -32,11 +33,14 @@ import UploadIcon from '@mui/icons-material/Upload';
 import PersonIcon from '@mui/icons-material/Person';
 import LinkIcon from '@mui/icons-material/Link';
 import CheckIcon from '@mui/icons-material/Check';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import { getOsuUser } from '../../auth/api/auth';
 
 // ── Types (shared with TournamentBracket) ──
 
 export interface Player {
   id: string;
+  osuId: number;
   name: string;
   seed: number;
   discord?: string;
@@ -90,30 +94,55 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
   const [bulkInput, setBulkInput] = useState('');
   const [editingDiscord, setEditingDiscord] = useState<string | null>(null);
   const [discordInput, setDiscordInput] = useState('');
+  const [editingName, setEditingName] = useState<string | null>(null);
+  const [nameInput, setNameInput] = useState('');
 
   const persist = useCallback((next: BracketData) => {
     setData(next);
     saveBracket(tournamentAbbrev, next);
   }, [tournamentAbbrev]);
 
-  const addPlayer = () => {
-    const name = playerInput.trim();
-    if (!name) {
-      setPlayerError('Enter a player name');
+  const parseOsuId = (input: string): number | null => {
+    const trimmed = input.trim();
+    // Direct numeric ID
+    if (/^\d+$/.test(trimmed)) return parseInt(trimmed);
+    // osu profile link: https://osu.ppy.sh/users/12345 or https://osu.ppy.sh/users/12345/mania
+    const match = trimmed.match(/osu\.ppy\.sh\/users\/(\d+)/);
+    if (match) return parseInt(match[1]);
+    return null;
+  };
+
+  const [adding, setAdding] = useState(false);
+
+  const addPlayer = async () => {
+    const osuId = parseOsuId(playerInput);
+    if (!osuId) {
+      setPlayerError('Enter an osu! user ID or profile link');
       return;
     }
-    if (data.players.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
-      setPlayerError(`"${name}" is already in the roster`);
+    if (data.players.some((p) => p.osuId === osuId)) {
+      setPlayerError(`Player with osu! ID ${osuId} is already in the roster`);
       return;
     }
     setPlayerError('');
-    const player: Player = {
-      id: `p${Date.now()}`,
-      name,
-      seed: data.players.length + 1,
-    };
-    persist({ ...data, players: [...data.players, player], generated: false, matches: [] });
-    setPlayerInput('');
+    setAdding(true);
+    let name = `Player ${osuId}`;
+    try {
+      const user = await getOsuUser(osuId);
+      if (user) name = user.username;
+      else setPlayerError('osu! user not found');
+    } catch { /* use fallback name */ }
+    if (!data.players.some((p) => p.osuId === osuId)) {
+      const player: Player = {
+        id: `p${Date.now()}`,
+        osuId,
+        name,
+        seed: data.players.length + 1,
+      };
+      persist({ ...data, players: [...data.players, player], generated: false, matches: [] });
+      setPlayerInput('');
+    }
+    setAdding(false);
   };
 
   const removePlayer = (id: string) => {
@@ -123,16 +152,21 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
   };
 
   const bulkImport = () => {
-    const names = bulkInput
-      .split('\n')
-      .map((n) => n.trim())
-      .filter((n) => n && !data.players.some((p) => p.name.toLowerCase() === n.toLowerCase()));
-    if (names.length === 0) return;
-    const newPlayers: Player[] = names.map((name, i) => ({
-      id: `p${Date.now()}_${i}`,
-      name,
-      seed: data.players.length + i + 1,
-    }));
+    const lines = bulkInput.split('\n').map((n) => n.trim()).filter(Boolean);
+    const existingIds = new Set(data.players.map((p) => p.osuId));
+    const newPlayers: Player[] = [];
+    for (const line of lines) {
+      const osuId = parseOsuId(line);
+      if (!osuId || existingIds.has(osuId)) continue;
+      existingIds.add(osuId);
+      newPlayers.push({
+        id: `p${Date.now()}_${newPlayers.length}`,
+        osuId,
+        name: `Player ${osuId}`,
+        seed: data.players.length + newPlayers.length + 1,
+      });
+    }
+    if (newPlayers.length === 0) return;
     persist({ ...data, players: [...data.players, ...newPlayers], generated: false, matches: [] });
     setBulkInput('');
     setBulkImportOpen(false);
@@ -150,6 +184,19 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
       generated: false,
       matches: [],
     });
+  };
+
+  const saveName = (playerId: string) => {
+    const name = nameInput.trim();
+    if (!name) return;
+    if (data.players.some((p) => p.id !== playerId && p.name.toLowerCase() === name.toLowerCase())) return;
+    persist({
+      ...data,
+      players: data.players.map((p) => p.id === playerId ? { ...p, name } : p),
+      generated: false, matches: [],
+    });
+    setEditingName(null);
+    setNameInput('');
   };
 
   const saveDiscord = (playerId: string) => {
@@ -191,7 +238,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
           {playerCount > 0 ? (
             <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
               <Table size="small">
-                <TableHead>
+                <TableHead sx={{ bgcolor: 'action.hover' }}>
                   <TableRow>
                     <TableCell sx={{ width: 48, fontWeight: 600, fontSize: 12 }}>Seed</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: 12 }}>Player</TableCell>
@@ -210,7 +257,14 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
                         </Avatar>
                       </TableCell>
                       <TableCell sx={{ py: 0.5 }}>
-                        <Typography variant="body2">{player.name}</Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar
+                            src={`https://a.ppy.sh/${player.osuId}`}
+                            variant="rounded"
+                            sx={{ width: 28, height: 28 }}
+                          />
+                          <Typography variant="body2">{player.name}</Typography>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -236,7 +290,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
       <Stack direction="row" spacing={1} alignItems="flex-start">
         <TextField
           size="small"
-          placeholder="Player name..."
+          placeholder="osu! user ID or profile link..."
           value={playerInput}
           onChange={(e) => { setPlayerInput(e.target.value); setPlayerError(''); }}
           onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
@@ -249,9 +303,9 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
             },
           }}
         />
-        <Button variant="contained" onClick={addPlayer} disabled={!playerInput.trim()}
+        <Button variant="contained" onClick={addPlayer} disabled={!playerInput.trim() || adding}
           sx={{ minWidth: 40, px: 1, height: 40 }}>
-          <AddIcon sx={{ fontSize: 20 }} />
+          {adding ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <AddIcon sx={{ fontSize: 20 }} />}
         </Button>
         <Tooltip title="Bulk import from list">
           <Button variant="outlined" startIcon={<UploadIcon />}
@@ -268,13 +322,16 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
       </Stack>
 
           {/* Player list */}
-          <Typography variant="caption" color="text.disabled">
-            ⚠ Editing players will reset the bracket
-          </Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <WarningAmberIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+            <Typography variant="caption" color="text.disabled">
+              Editing players will reset the bracket
+            </Typography>
+          </Stack>
           {data.players.length > 0 ? (
             <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
               <Table size="small">
-                <TableHead>
+                <TableHead sx={{ bgcolor: 'action.hover' }}>
                   <TableRow>
                     <TableCell sx={{ width: 48, fontWeight: 600, fontSize: 12 }}>Seed</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: 12 }}>Player</TableCell>
@@ -295,7 +352,30 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
                         </Avatar>
                       </TableCell>
                       <TableCell sx={{ py: 0.5 }}>
-                        <Typography variant="body2">{player.name}</Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar
+                            src={`https://a.ppy.sh/${player.osuId}`}
+                            variant="rounded"
+                            sx={{ width: 28, height: 28 }}
+                          />
+                          {editingName === player.id ? (
+                            <TextField
+                              size="small"
+                              value={nameInput}
+                              onChange={(e) => setNameInput(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') saveName(player.id); if (e.key === 'Escape') setEditingName(null); }}
+                              onBlur={() => saveName(player.id)}
+                              autoFocus
+                              sx={{ '& .MuiInputBase-input': { fontSize: 13, py: 0.5 } }}
+                            />
+                          ) : (
+                            <Typography variant="body2"
+                              onClick={() => { setEditingName(player.id); setNameInput(player.name); }}
+                              sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}>
+                              {player.name}
+                            </Typography>
+                          )}
+                        </Stack>
                       </TableCell>
                       <TableCell sx={{ py: 0.5 }}>
                         {editingDiscord === player.id ? (
@@ -314,10 +394,10 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
                             </IconButton>
                           </Stack>
                         ) : (
-                          <Button size="small" variant="text"
+                          <Button size="small" variant={player.discord ? 'text' : 'contained'}
                             onClick={() => { setEditingDiscord(player.id); setDiscordInput(player.discord || ''); }}
                             startIcon={<LinkIcon sx={{ fontSize: 14 }} />}
-                            sx={{ fontSize: 11, color: player.discord ? 'primary.main' : 'text.disabled', '&:hover': { color: 'primary.main' }, textTransform: 'none', minWidth: 0, px: 0.5 }}>
+                            sx={{ fontSize: 11, textTransform: 'none', minWidth: 0, px: 0.75, ...(player.discord ? { color: 'primary.main' } : { bgcolor: '#5865F2', color: 'white', '&:hover': { bgcolor: '#4752C4' } }) }}>
                             {player.discord || 'Link Discord'}
                           </Button>
                         )}
@@ -358,13 +438,13 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Paste player names, one per line
+            Paste osu! user IDs or profile links, one per line
           </Typography>
           <TextField
             multiline
             rows={8}
             fullWidth
-            placeholder={"Player1\nPlayer2\nPlayer3"}
+            placeholder={"12345\nhttps://osu.ppy.sh/users/67890\n11111"}
             value={bulkInput}
             onChange={(e) => setBulkInput(e.target.value)}
             autoFocus

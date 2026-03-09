@@ -263,6 +263,23 @@ export interface BeatmapsetInfo {
 }
 
 // Fetch beatmapset info from osu! API
+export interface OsuUserInfo {
+  id: number;
+  username: string;
+  avatar_url: string;
+  country_code: string;
+}
+
+export async function getOsuUser(userId: number): Promise<OsuUserInfo | null> {
+  try {
+    const response = await fetch(`${AUTH_BASE_URL}/auth/user/${userId}`);
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function getBeatmapset(beatmapsetId: number): Promise<BeatmapsetInfo | null> {
   try {
     const response = await fetch(`${AUTH_BASE_URL}/auth/beatmapset/${beatmapsetId}`);
