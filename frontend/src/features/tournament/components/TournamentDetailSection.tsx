@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import Cropper from 'react-easy-crop';
+import type { Area } from 'react-easy-crop';
 import {
   Box,
   Paper,
@@ -158,6 +160,11 @@ export default function TournamentDetailSection({
   const [addingMap, setAddingMap] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [imageModal, setImageModal] = useState<'banner' | 'logo' | null>(null);
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
+  const [cropUploading, setCropUploading] = useState(false);
 
   // Load full tournament data
   useEffect(() => {
@@ -241,6 +248,50 @@ export default function TournamentDetailSection({
       onUpdated(updated);
     } catch (err) {
       setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to upload logo' });
+    }
+  };
+
+  const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
+    setCroppedArea(croppedPixels);
+  }, []);
+
+  const startCrop = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImage(reader.result as string);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedArea(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const applyCrop = async () => {
+    if (!cropImage || !croppedArea || !imageModal) return;
+    setCropUploading(true);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = croppedArea.width;
+      canvas.height = croppedArea.height;
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = cropImage;
+      });
+      ctx.drawImage(img, croppedArea.x, croppedArea.y, croppedArea.width, croppedArea.height, 0, 0, croppedArea.width, croppedArea.height);
+      const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9));
+      const croppedFile = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
+      if (imageModal === 'banner') await handleBannerFile(croppedFile);
+      else await handleLogoFile(croppedFile);
+      setCropImage(null);
+      setImageModal(null);
+    } catch (err) {
+      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to crop image' });
+    } finally {
+      setCropUploading(false);
     }
   };
 
@@ -367,22 +418,22 @@ export default function TournamentDetailSection({
 
       {/* ── Hero card (contains everything) ── */}
       <Card variant="outlined" sx={{ overflow: 'hidden' }}>
+        <Box sx={{ background: `linear-gradient(180deg, ${palette.mid}15 0%, ${palette.light}08 100%)` }}>
         {/* Banner */}
         <Box
-          sx={{ height: 140, position: 'relative', cursor: isOwner ? 'pointer' : 'default' }}
+          sx={{ aspectRatio: '4/1', position: 'relative', cursor: isOwner ? 'pointer' : 'default' }}
           onClick={() => isOwner && setImageModal('banner')}
         >
           <Box
             component="img"
             src={tournament.banner_url || placeholderBanner}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            sx={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              maskImage: 'linear-gradient(180deg, black 40%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(180deg, black 40%, transparent 100%)',
+            }}
           />
-          <Box sx={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)',
-          }} />
         </Box>
-
         <CardHeader
           avatar={
             <Avatar
@@ -448,7 +499,7 @@ export default function TournamentDetailSection({
               </Tooltip>
             </ButtonGroup>
           }
-          sx={{ pb: 0, background: `linear-gradient(135deg, ${palette.mid}15 0%, ${palette.light}08 100%)` }}
+          sx={{ pb: 0 }}
         />
 
         {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
@@ -459,8 +510,6 @@ export default function TournamentDetailSection({
           onChange={(_, v) => setDetailTab(v as typeof detailTab)}
           sx={{
             minHeight: 40, px: 2,
-            background: `linear-gradient(135deg, ${palette.mid}10 0%, ${palette.light}05 100%)`,
-            borderBottom: '1px solid', borderColor: 'divider',
             '& .MuiTab-root': {
               fontWeight: 600, fontSize: 13,
               minHeight: 40, py: 0, px: 2,
@@ -821,7 +870,6 @@ export default function TournamentDetailSection({
             {isOwner && (
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
                 <Box>
-                  <input ref={bannerInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBannerFile(f); }} style={{ display: 'none' }} />
                   <Button
                     variant="outlined"
                     fullWidth
@@ -833,7 +881,6 @@ export default function TournamentDetailSection({
                   </Button>
                 </Box>
                 <Box>
-                  <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); }} style={{ display: 'none' }} />
                   <Button
                     variant="outlined"
                     fullWidth
@@ -940,6 +987,7 @@ export default function TournamentDetailSection({
             )}
           </Stack>
         )}
+      </Box>
       </Box>
       </Card>
 
@@ -1119,7 +1167,7 @@ export default function TournamentDetailSection({
         }}
       >
         <Box sx={{
-          background: 'linear-gradient(135deg, rgba(132,169,140,0.15) 0%, rgba(132,169,140,0.03) 100%)',
+          background: 'linear-gradient(0deg, rgba(132,169,140,0.15) 0%, rgba(132,169,140,0.03) 100%)',
           px: 4, pt: 4, pb: 2, textAlign: 'center',
         }}>
           <RocketLaunchIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
@@ -1275,65 +1323,97 @@ export default function TournamentDetailSection({
         </DialogActions>
       </Dialog>
 
+      {/* Hidden file inputs (always in DOM) */}
+      <input ref={bannerInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) { startCrop(f); setImageModal('banner'); } e.target.value = ''; }} style={{ display: 'none' }} />
+      <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) { startCrop(f); setImageModal('logo'); } e.target.value = ''; }} style={{ display: 'none' }} />
+
       {/* Image modal */}
-      <Dialog open={!!imageModal} onClose={() => setImageModal(null)} maxWidth="sm" fullWidth>
+      <Dialog open={!!imageModal} onClose={() => { setImageModal(null); setCropImage(null); }} maxWidth="sm" fullWidth>
         <DialogContent sx={{ p: 0, position: 'relative' }}>
           <IconButton
-            onClick={() => setImageModal(null)}
+            onClick={() => { setImageModal(null); setCropImage(null); }}
             sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}
             size="small"
           >
             <CloseIcon sx={{ fontSize: 18 }} />
           </IconButton>
-          {imageModal === 'banner' && (
-            <Box
-              component="img"
-              src={tournament.banner_url || placeholderBanner}
-              sx={{ width: '100%', display: 'block' }}
-            />
-          )}
-          {imageModal === 'logo' && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <Box
-                component="img"
-                src={tournament.logo_url || placeholderLogo}
-                sx={{ maxWidth: 256, maxHeight: 256 }}
+          {cropImage ? (
+            <Box sx={{ position: 'relative', width: '100%', height: imageModal === 'banner' ? 300 : 350 }}>
+              <Cropper
+                image={cropImage}
+                crop={crop}
+                zoom={zoom}
+                aspect={imageModal === 'banner' ? 4 : 1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
               />
             </Box>
+          ) : (
+            <>
+              {imageModal === 'banner' && (
+                <Box
+                  component="img"
+                  src={tournament.banner_url || placeholderBanner}
+                  sx={{ width: '100%', display: 'block' }}
+                />
+              )}
+              {imageModal === 'logo' && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <Box
+                    component="img"
+                    src={tournament.logo_url || placeholderLogo}
+                    sx={{ maxWidth: 256, maxHeight: 256 }}
+                  />
+                </Box>
+              )}
+            </>
           )}
         </DialogContent>
         {isOwner && (
           <DialogActions sx={{ px: 2, pb: 2 }}>
-            <Button
-              variant="outlined"
-              color="error"
-              size="small"
-              onClick={async () => {
-                try {
-                  const field = imageModal === 'banner' ? 'banner_url' : 'logo_url';
-                  const updated = await updateTournament(tournament.abbreviation, { [field]: '' });
-                  setTournament(updated);
-                  onUpdated(updated);
-                  setImageModal(null);
-                } catch (err) {
-                  setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to clear image' });
-                }
-              }}
-            >
-              Clear
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<ImageIcon />}
-              onClick={() => {
-                if (imageModal === 'banner') bannerInputRef.current?.click();
-                else logoInputRef.current?.click();
-                setImageModal(null);
-              }}
-            >
-              {imageModal === 'banner' ? 'Upload Banner' : 'Upload Logo'}
-            </Button>
+            {cropImage ? (
+              <>
+                <Button variant="outlined" size="small" onClick={() => setCropImage(null)}>
+                  Cancel
+                </Button>
+                <Button variant="contained" size="small" onClick={applyCrop} disabled={cropUploading}>
+                  {cropUploading ? 'Uploading…' : 'Save'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={async () => {
+                    try {
+                      const field = imageModal === 'banner' ? 'banner_url' : 'logo_url';
+                      const updated = await updateTournament(tournament.abbreviation, { [field]: '' });
+                      setTournament(updated);
+                      onUpdated(updated);
+                      setImageModal(null);
+                    } catch (err) {
+                      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to clear image' });
+                    }
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<ImageIcon />}
+                  onClick={() => {
+                    if (imageModal === 'banner') bannerInputRef.current?.click();
+                    else logoInputRef.current?.click();
+                  }}
+                >
+                  {imageModal === 'banner' ? 'Upload Banner' : 'Upload Logo'}
+                </Button>
+              </>
+            )}
           </DialogActions>
         )}
       </Dialog>
