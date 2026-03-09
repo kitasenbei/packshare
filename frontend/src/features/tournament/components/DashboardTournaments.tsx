@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -67,6 +67,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import SettingsIcon from '@mui/icons-material/Settings';
+import ImageIcon from '@mui/icons-material/Image';
 import type { User, BeatmapsetInfo } from '../../auth/api/auth';
 import { palette } from '../../../shared/theme/palette';
 import placeholderBanner from '../../../assets/tournament_placeholder.png';
@@ -87,6 +88,7 @@ import {
   type TournamentMap,
   type SlotConfig,
   type CreateTournamentInput,
+  uploadImage,
 } from '../api/tournaments';
 import BeatmapRow from '../../../shared/components/BeatmapRow';
 import DownloadButton from '../../../shared/components/DownloadButton';
@@ -687,10 +689,6 @@ function SlotsEditor({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
-        Define the slot categories for your mappool. Each slot has a short key (e.g. RC, LN), a display name, and a color.
-      </Typography>
-
       <List disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
         {slots.map((slot, i) => (
           <ListItem key={slot.key} divider={i < slots.length - 1} sx={{ py: 1, px: 2, gap: 1.5 }}>
@@ -833,6 +831,7 @@ function TournamentDetailSection({
   const [selectedMod, setSelectedMod] = useState('NM');
   const [addingMap, setAddingMap] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [imageModal, setImageModal] = useState<'banner' | 'logo' | null>(null);
 
   // Load full tournament data
   useEffect(() => {
@@ -894,23 +893,28 @@ function TournamentDetailSection({
     }
   };
 
-  const handleBannerChange = async (url: string | null) => {
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBannerFile = async (file: File) => {
     try {
-      const updated = await updateTournament(tournament.abbreviation, { banner_url: url || '' });
+      const url = await uploadImage(file);
+      const updated = await updateTournament(tournament.abbreviation, { banner_url: url });
       setTournament(updated);
       onUpdated(updated);
     } catch (err) {
-      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update banner' });
+      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to upload banner' });
     }
   };
 
-  const handleLogoChange = async (url: string | null) => {
+  const handleLogoFile = async (file: File) => {
     try {
-      const updated = await updateTournament(tournament.abbreviation, { logo_url: url || '' });
+      const url = await uploadImage(file);
+      const updated = await updateTournament(tournament.abbreviation, { logo_url: url });
       setTournament(updated);
       onUpdated(updated);
     } catch (err) {
-      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update logo' });
+      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to upload logo' });
     }
   };
 
@@ -1038,7 +1042,10 @@ function TournamentDetailSection({
       {/* ── Hero card (contains everything) ── */}
       <Card variant="outlined" sx={{ overflow: 'hidden' }}>
         {/* Banner */}
-        <Box sx={{ height: 140, position: 'relative' }}>
+        <Box
+          sx={{ height: 140, position: 'relative', cursor: isOwner ? 'pointer' : 'default' }}
+          onClick={() => isOwner && setImageModal('banner')}
+        >
           <Box
             component="img"
             src={tournament.banner_url || placeholderBanner}
@@ -1055,7 +1062,8 @@ function TournamentDetailSection({
             <Avatar
               src={tournament.logo_url || placeholderLogo}
               variant="rounded"
-              sx={{ width: 48, height: 48 }}
+              sx={{ width: 48, height: 48, cursor: isOwner ? 'pointer' : 'default' }}
+              onClick={() => isOwner && setImageModal('logo')}
             />
           }
           title={
@@ -1099,11 +1107,6 @@ function TournamentDetailSection({
                 />
               </Box>
             )
-          }
-          subheader={
-            <Typography variant="caption" color="text.disabled" sx={{ fontFamily: 'monospace', mt: 0.25 }}>
-              /t/{tournament.abbreviation}
-            </Typography>
           }
           action={
             <ButtonGroup size="small" variant="outlined" sx={{ mt: 0.5 }}>
@@ -1484,106 +1487,32 @@ function TournamentDetailSection({
 
             {/* Branding */}
             {isOwner && (
-              <Card variant="outlined">
-                <CardHeader
-                  avatar={<PaletteIcon sx={{ fontSize: 18, color: 'text.secondary' }} />}
-                  title="Branding"
-                  subheader="Customize how your tournament appears to players"
-                  slotProps={{
-                    title: { variant: 'subtitle2', fontWeight: 'bold' },
-                    subheader: { variant: 'caption' },
-                  }}
-                  sx={{ pb: 0 }}
-                />
-                <CardContent>
-                  {/* Live preview */}
-                  <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: 10, mb: 1, display: 'block' }}>
-                    Preview
-                  </Typography>
-                  <Card variant="outlined" sx={{ mb: 2.5, overflow: 'hidden' }}>
-                    {/* Preview banner */}
-                    <Box sx={{ height: 80, position: 'relative' }}>
-                      <Box
-                        component="img"
-                        src={tournament.banner_url || placeholderBanner}
-                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }} />
-                    </Box>
-                    {/* Preview header */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5 }}>
-                      <Avatar
-                        src={tournament.logo_url || placeholderLogo}
-                        variant="rounded"
-                        sx={{ width: 36, height: 36 }}
-                      />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" fontWeight="bold" noWrap>{tournament.name}</Typography>
-                        <Stack direction="row" spacing={0.75} alignItems="center">
-                          <FiberManualRecordIcon sx={{ fontSize: 6, color: statusColors[tournament.status] }} />
-                          <Typography variant="caption" color="text.secondary">{tournament.format}</Typography>
-                        </Stack>
-                      </Box>
-                      <Chip label={tournament.status} size="small" variant="outlined" sx={{ height: 20, fontSize: 10, textTransform: 'capitalize' }} />
-                    </Box>
-                  </Card>
-
-                  {/* Upload fields */}
-                  <Divider sx={{ mb: 2 }} />
-                  <Stack spacing={2.5}>
-                    <Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" fontWeight={600}>Banner Image</Typography>
-                        <Chip
-                          label={tournament.banner_url ? 'Uploaded' : 'Not set'}
-                          size="small"
-                          variant="outlined"
-                          icon={tournament.banner_url ? <CheckIcon sx={{ fontSize: '14px !important' }} /> : undefined}
-                          sx={{
-                            height: 20, fontSize: 10,
-                            borderColor: tournament.banner_url ? 'primary.main' : 'divider',
-                            color: tournament.banner_url ? 'primary.main' : 'text.disabled',
-                          }}
-                        />
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        Displayed at the top of your tournament page. Recommended: 1200x300px
-                      </Typography>
-                      <ImageUpload
-                        value={tournament.banner_url || undefined}
-                        onChange={handleBannerChange}
-                        aspectRatio="4/1"
-                      />
-                    </Box>
-                    <Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" fontWeight={600}>Logo</Typography>
-                        <Chip
-                          label={tournament.logo_url ? 'Uploaded' : 'Not set'}
-                          size="small"
-                          variant="outlined"
-                          icon={tournament.logo_url ? <CheckIcon sx={{ fontSize: '14px !important' }} /> : undefined}
-                          sx={{
-                            height: 20, fontSize: 10,
-                            borderColor: tournament.logo_url ? 'primary.main' : 'divider',
-                            color: tournament.logo_url ? 'primary.main' : 'text.disabled',
-                          }}
-                        />
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        Square image shown in listings and headers. Recommended: 256x256px
-                      </Typography>
-                      <Box sx={{ maxWidth: 180 }}>
-                        <ImageUpload
-                          value={tournament.logo_url || undefined}
-                          onChange={handleLogoChange}
-                          aspectRatio="1/1"
-                        />
-                      </Box>
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                <Box>
+                  <input ref={bannerInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBannerFile(f); }} style={{ display: 'none' }} />
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    onClick={() => bannerInputRef.current?.click()}
+                    startIcon={<ImageIcon />}
+                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                  >
+                    {tournament.banner_url ? 'Change Banner' : 'Upload Banner'}
+                  </Button>
+                </Box>
+                <Box>
+                  <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); }} style={{ display: 'none' }} />
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    onClick={() => logoInputRef.current?.click()}
+                    startIcon={<ImageIcon />}
+                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                  >
+                    {tournament.logo_url ? 'Change Logo' : 'Upload Logo'}
+                  </Button>
+                </Box>
+              </Box>
             )}
 
             {/* Info */}
@@ -2012,6 +1941,69 @@ function TournamentDetailSection({
             Maybe later
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Image modal */}
+      <Dialog open={!!imageModal} onClose={() => setImageModal(null)} maxWidth="sm" fullWidth>
+        <DialogContent sx={{ p: 0, position: 'relative' }}>
+          <IconButton
+            onClick={() => setImageModal(null)}
+            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}
+            size="small"
+          >
+            <CloseIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+          {imageModal === 'banner' && (
+            <Box
+              component="img"
+              src={tournament.banner_url || placeholderBanner}
+              sx={{ width: '100%', display: 'block' }}
+            />
+          )}
+          {imageModal === 'logo' && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <Box
+                component="img"
+                src={tournament.logo_url || placeholderLogo}
+                sx={{ maxWidth: 256, maxHeight: 256 }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        {isOwner && (
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              onClick={async () => {
+                try {
+                  const field = imageModal === 'banner' ? 'banner_url' : 'logo_url';
+                  const updated = await updateTournament(tournament.abbreviation, { [field]: '' });
+                  setTournament(updated);
+                  onUpdated(updated);
+                  setImageModal(null);
+                } catch (err) {
+                  setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to clear image' });
+                }
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<ImageIcon />}
+              onClick={() => {
+                if (imageModal === 'banner') bannerInputRef.current?.click();
+                else logoInputRef.current?.click();
+                setImageModal(null);
+              }}
+            >
+              {imageModal === 'banner' ? 'Upload Banner' : 'Upload Logo'}
+            </Button>
+          </DialogActions>
+        )}
       </Dialog>
 
       <Snackbar

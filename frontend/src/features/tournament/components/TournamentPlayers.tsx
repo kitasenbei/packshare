@@ -15,20 +15,23 @@ import {
   CardHeader,
   CardContent,
   Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
   Tooltip,
   Badge,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import CloseIcon from '@mui/icons-material/Close';
 import GroupIcon from '@mui/icons-material/Group';
 import UploadIcon from '@mui/icons-material/Upload';
 import PersonIcon from '@mui/icons-material/Person';
+import LinkIcon from '@mui/icons-material/Link';
+import CheckIcon from '@mui/icons-material/Check';
 
 // ── Types (shared with TournamentBracket) ──
 
@@ -36,6 +39,7 @@ export interface Player {
   id: string;
   name: string;
   seed: number;
+  discord?: string;
 }
 
 export interface BracketData {
@@ -54,6 +58,7 @@ export interface Match {
   score1: number;
   score2: number;
   winner: string | null;
+  noShow?: string | null;
 }
 
 const STORAGE_PREFIX = 'packshare_bracket_';
@@ -83,6 +88,8 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
   const [playerError, setPlayerError] = useState('');
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [bulkInput, setBulkInput] = useState('');
+  const [editingDiscord, setEditingDiscord] = useState<string | null>(null);
+  const [discordInput, setDiscordInput] = useState('');
 
   const persist = useCallback((next: BracketData) => {
     setData(next);
@@ -145,6 +152,16 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
     });
   };
 
+  const saveDiscord = (playerId: string) => {
+    const discord = discordInput.trim();
+    persist({
+      ...data,
+      players: data.players.map((p) => p.id === playerId ? { ...p, discord: discord || undefined } : p),
+    });
+    setEditingDiscord(null);
+    setDiscordInput('');
+  };
+
   const clearAll = () => {
     persist({ players: [], matches: [], bestOf: data.bestOf, generated: false });
   };
@@ -172,24 +189,34 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
         />
         <CardContent sx={{ pt: 1.5 }}>
           {playerCount > 0 ? (
-            <List dense disablePadding sx={{
-              border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
-            }}>
-              {data.players.map((player, i) => (
-                <ListItem key={player.id} divider={i < data.players.length - 1} sx={{ py: 0.25 }}>
-                  <ListItemAvatar sx={{ minWidth: 36 }}>
-                    <Avatar sx={{
-                      width: 26, height: 26, fontSize: 11, fontWeight: 'bold',
-                      bgcolor: player.seed <= 3 ? 'primary.main' : 'action.hover',
-                      color: player.seed <= 3 ? 'white' : 'text.secondary',
-                    }}>
-                      {player.seed}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText primary={player.name} slotProps={{ primary: { variant: 'body2' } }} />
-                </ListItem>
-              ))}
-            </List>
+            <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ width: 48, fontWeight: 600, fontSize: 12 }}>Seed</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 12 }}>Player</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.players.map((player) => (
+                    <TableRow key={player.id} hover>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Avatar sx={{
+                          width: 24, height: 24, fontSize: 11, fontWeight: 'bold',
+                          bgcolor: player.seed <= 3 ? 'primary.main' : 'action.hover',
+                          color: player.seed <= 3 ? 'white' : 'text.secondary',
+                        }}>
+                          {player.seed}
+                        </Avatar>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Typography variant="body2">{player.name}</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           ) : (
             <Box sx={{ py: 3, textAlign: 'center' }}>
               <PersonIcon sx={{ fontSize: 36, color: 'text.disabled', mb: 0.5 }} />
@@ -206,7 +233,7 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
   return (
     <Stack spacing={2}>
       {/* Add player input + actions */}
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack direction="row" spacing={1} alignItems="flex-start">
         <TextField
           size="small"
           placeholder="Player name..."
@@ -222,52 +249,90 @@ export default function TournamentPlayers({ tournamentAbbrev, isOwner }: Tournam
             },
           }}
         />
-        <Button size="small" variant="contained" onClick={addPlayer} disabled={!playerInput.trim()}
-          sx={{ minWidth: 40, px: 1 }}>
+        <Button variant="contained" onClick={addPlayer} disabled={!playerInput.trim()}
+          sx={{ minWidth: 40, px: 1, height: 40 }}>
           <AddIcon sx={{ fontSize: 20 }} />
         </Button>
         <Tooltip title="Bulk import from list">
-          <Button size="small" variant="outlined" startIcon={<UploadIcon />}
-            onClick={() => setBulkImportOpen(true)} sx={{ fontSize: 12, flexShrink: 0 }}>
-            Import
+          <Button variant="outlined" startIcon={<UploadIcon />}
+            onClick={() => setBulkImportOpen(true)} sx={{ fontSize: 12, flexShrink: 0, height: 40 }}>
+            Import Players
           </Button>
         </Tooltip>
-        <Tooltip title="Editing players resets the bracket">
-          <InfoOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled', cursor: 'help', flexShrink: 0 }} />
-        </Tooltip>
         {data.players.length > 1 && (
-          <Tooltip title="Randomize seed order">
-            <IconButton size="small" onClick={shuffleSeeds}>
-              <ShuffleIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
+          <Button variant="outlined" startIcon={<ShuffleIcon />} onClick={shuffleSeeds}
+            sx={{ fontSize: 12, flexShrink: 0, height: 40 }}>
+            Randomize Seed
+          </Button>
         )}
       </Stack>
 
           {/* Player list */}
+          <Typography variant="caption" color="text.disabled">
+            ⚠ Editing players will reset the bracket
+          </Typography>
           {data.players.length > 0 ? (
-            <List dense disablePadding sx={{
-              border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden',
-            }}>
-              {data.players.map((player, i) => (
-                <ListItem key={player.id} divider={i < data.players.length - 1} sx={{ py: 0.25 }}>
-                  <ListItemAvatar sx={{ minWidth: 36 }}>
-                    <Avatar sx={{
-                      width: 26, height: 26, fontSize: 11, fontWeight: 'bold',
-                      bgcolor: player.seed <= 3 ? 'primary.main' : 'action.hover',
-                      color: player.seed <= 3 ? 'white' : 'text.secondary',
-                    }}>
-                      {player.seed}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText primary={player.name} slotProps={{ primary: { variant: 'body2' } }} />
-                  <IconButton size="small" edge="end" onClick={() => removePlayer(player.id)}
-                    sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                    <CloseIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
-                </ListItem>
-              ))}
-            </List>
+            <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ width: 48, fontWeight: 600, fontSize: 12 }}>Seed</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 12 }}>Player</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 12 }}>Discord</TableCell>
+                    <TableCell sx={{ width: 48 }} />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.players.map((player) => (
+                    <TableRow key={player.id} hover>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Avatar sx={{
+                          width: 24, height: 24, fontSize: 11, fontWeight: 'bold',
+                          bgcolor: player.seed <= 3 ? 'primary.main' : 'action.hover',
+                          color: player.seed <= 3 ? 'white' : 'text.secondary',
+                        }}>
+                          {player.seed}
+                        </Avatar>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Typography variant="body2">{player.name}</Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        {editingDiscord === player.id ? (
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <TextField
+                              size="small"
+                              placeholder="Discord username..."
+                              value={discordInput}
+                              onChange={(e) => setDiscordInput(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') saveDiscord(player.id); if (e.key === 'Escape') setEditingDiscord(null); }}
+                              autoFocus
+                              sx={{ '& .MuiInputBase-input': { fontSize: 13, py: 0.5 } }}
+                            />
+                            <IconButton size="small" onClick={() => saveDiscord(player.id)}>
+                              <CheckIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+                            </IconButton>
+                          </Stack>
+                        ) : (
+                          <Button size="small" variant="text"
+                            onClick={() => { setEditingDiscord(player.id); setDiscordInput(player.discord || ''); }}
+                            startIcon={<LinkIcon sx={{ fontSize: 14 }} />}
+                            sx={{ fontSize: 11, color: player.discord ? 'primary.main' : 'text.disabled', '&:hover': { color: 'primary.main' }, textTransform: 'none', minWidth: 0, px: 0.5 }}>
+                            {player.discord || 'Link Discord'}
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }} align="right">
+                        <IconButton size="small" onClick={() => removePlayer(player.id)}
+                          sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+                          <CloseIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           ) : (
             <Box sx={{ py: 3, textAlign: 'center' }}>
               <PersonIcon sx={{ fontSize: 36, color: 'text.disabled', mb: 0.5 }} />

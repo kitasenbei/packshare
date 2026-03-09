@@ -112,6 +112,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
   const [scoreDialog, setScoreDialog] = useState<BracketData['matches'][0] | null>(null);
   const [editScore1, setEditScore1] = useState(0);
   const [editScore2, setEditScore2] = useState(0);
+  const [editNoShow, setEditNoShow] = useState<string | null>(null);
 
   const persist = useCallback((next: BracketData) => {
     setData(next);
@@ -133,6 +134,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
     setScoreDialog(match);
     setEditScore1(match.score1);
     setEditScore2(match.score2);
+    setEditNoShow(match.noShow || null);
   };
 
   const handleSaveScore = () => {
@@ -144,7 +146,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
 
     const updatedMatches = data.matches.map((m) => {
       if (m.id === scoreDialog.id) {
-        return { ...m, score1: editScore1, score2: editScore2, winner };
+        return { ...m, score1: editScore1, score2: editScore2, winner, noShow: editNoShow };
       }
       return m;
     });
@@ -336,7 +338,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
                           {!isBye && match.player1 && match.player2 && (
                             <LinearProgress
                               variant="determinate"
-                              value={((match.score1 + match.score2) / data.bestOf) * 100}
+                              value={isFinished ? 100 : ((match.score1 + match.score2) / data.bestOf) * 100}
                               sx={{
                                 height: 2,
                                 bgcolor: 'transparent',
@@ -403,7 +405,7 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
             <>
               {/* Header with Bo info */}
               <Box sx={{ px: 3, pt: 2.5, pb: 1.5, textAlign: 'center' }}>
-                <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>
+                <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: 10, fontFamily: 'inherit' }}>
                   Best of {data.bestOf} · First to {winsNeeded}
                 </Typography>
               </Box>
@@ -480,6 +482,49 @@ export default function TournamentBracket({ tournamentAbbrev, isOwner }: Tournam
                       </Button>
                     </Stack>
                   </Box>
+                </Box>
+
+                {/* No-show */}
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.disabled" sx={{ mb: 0.5, display: 'block' }}>
+                    No-show
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      variant={editNoShow === scoreDialog.player1 ? 'contained' : 'outlined'}
+                      color={editNoShow === scoreDialog.player1 ? 'error' : 'inherit'}
+                      onClick={() => {
+                        if (editNoShow === scoreDialog.player1) {
+                          setEditNoShow(null);
+                        } else {
+                          setEditNoShow(scoreDialog.player1);
+                          setEditScore1(0);
+                          setEditScore2(winsNeeded);
+                        }
+                      }}
+                      sx={{ flex: 1, textTransform: 'none', fontSize: 12 }}
+                    >
+                      {p1Name}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant={editNoShow === scoreDialog.player2 ? 'contained' : 'outlined'}
+                      color={editNoShow === scoreDialog.player2 ? 'error' : 'inherit'}
+                      onClick={() => {
+                        if (editNoShow === scoreDialog.player2) {
+                          setEditNoShow(null);
+                        } else {
+                          setEditNoShow(scoreDialog.player2);
+                          setEditScore2(0);
+                          setEditScore1(winsNeeded);
+                        }
+                      }}
+                      sx={{ flex: 1, textTransform: 'none', fontSize: 12 }}
+                    >
+                      {p2Name}
+                    </Button>
+                  </Stack>
                 </Box>
 
                 {/* Winner banner */}

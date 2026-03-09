@@ -234,7 +234,7 @@ function App() {
               >
                 <Routes>
                   <Route path="/dashboard" element={
-                    <Box sx={{ pt: 0, pb: 4, px: { xs: 2, md: 4 }, display: 'flex', flex: 1 }}>
+                    <Box sx={{ pt: 4, pb: 4, px: { xs: 2, md: 4 }, display: 'flex', flex: 1 }}>
                       <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} />
                     </Box>
                   } />
