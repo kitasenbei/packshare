@@ -33,6 +33,9 @@ import {
   ListItemText,
   Badge,
   ButtonGroup,
+  Menu,
+  MenuItem,
+  ListItemIcon as MuiListItemIcon,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
@@ -66,7 +69,9 @@ import ViewListIcon from '@mui/icons-material/ViewList';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import ImageIcon from '@mui/icons-material/Image';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import type { User, BeatmapsetInfo } from '../../auth/api/auth';
+import { browsePacks, getPack, type Pack, type BrowsePacksResult } from '../../pack/api/packs';
 import { palette } from '../../../shared/theme/palette';
 import { placeholderBanner, placeholderLogo } from '../utils/placeholders';
 import { getBeatmapset } from '../../auth/api/auth';
@@ -76,6 +81,7 @@ import {
   deleteTournament,
   addMapToStage,
   removeMap,
+  updateMap,
   addStage,
   renameStage,
   deleteStage,
@@ -155,6 +161,19 @@ export default function TournamentDetailSection({
   const [mapError, setMapError] = useState('');
   const [fetchedBeatmapset, setFetchedBeatmapset] = useState<BeatmapsetInfo | null>(null);
   const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryData, setLibraryData] = useState<BrowsePacksResult | null>(null);
+  const [libraryPage, setLibraryPage] = useState(1);
+  const [librarySearch, setLibrarySearch] = useState('');
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [expandedPack, setExpandedPack] = useState<Pack | null>(null);
+  const [expandingPackCode, setExpandingPackCode] = useState<string | null>(null);
+  const [editingMap, setEditingMap] = useState<TournamentMap | null>(null);
+  const [slotMenuAnchor, setSlotMenuAnchor] = useState<HTMLElement | null>(null);
+  const [slotMenuMap, setSlotMenuMap] = useState<TournamentMap | null>(null);
+  const [editSlot, setEditSlot] = useState('');
+  const [editMod, setEditMod] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState('RC');
   const [selectedMod, setSelectedMod] = useState('NM');
   const [addingMap, setAddingMap] = useState(false);
@@ -530,9 +549,8 @@ export default function TournamentDetailSection({
         {/* Mappool */}
         {detailTab === 'mappool' && (
           <>
-            {stages.length > 0 ? (
+            {editingStages ? (
               <Box>
-                {editingStages ? (
                   /* ── Stage editor (replaces mappool content) ── */
                   <>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -688,8 +706,9 @@ export default function TournamentDetailSection({
                       </DialogActions>
                     </Dialog>
                   </>
-                ) : (
-                  /* ── Normal mappool view ── */
+              </Box>
+            ) : stages.length > 0 ? (
+              <Box>
                   <>
                 {/* Stage tabs + Add button */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -796,6 +815,7 @@ export default function TournamentDetailSection({
                               slotBadge={{
                                 label: `${map.slot_type}${map.slot_number}`,
                                 color: getSlotColor(map.slot_type, slotConfigs),
+                                onClick: isOwner ? (e) => { e.stopPropagation(); setSlotMenuAnchor(e.currentTarget as HTMLElement); setSlotMenuMap(map); } : undefined,
                               }}
                               modChips={map.mod.match(/.{2}/g)?.map((m) => ({
                                 label: m,
@@ -810,7 +830,14 @@ export default function TournamentDetailSection({
                                     downloadName={`${map.artist} - ${map.title}`}
                                   />
                                   {isOwner && (
-                                    <RemoveButton onClick={() => handleRemoveMap(map.id)} />
+                                    <>
+                                      <Tooltip title="Edit slot/mod">
+                                        <IconButton size="small" onClick={() => { setEditingMap(map); setEditSlot(map.slot_type); setEditMod(map.mod); }}>
+                                          <EditIcon sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <RemoveButton onClick={() => handleRemoveMap(map.id)} />
+                                    </>
                                   )}
                                 </Stack>
                               }
@@ -822,11 +849,25 @@ export default function TournamentDetailSection({
                   </Stack>
                 )}
                   </>
-                )}
               </Box>
             ) : (
-              <Card variant="outlined" sx={{ p: 5, textAlign: 'center' }}>
-                <Typography color="text.disabled">No stages configured</Typography>
+              <Card variant="outlined" sx={{ py: 6, textAlign: 'center' }}>
+                <ViewListIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>
+                  No stages yet
+                </Typography>
+                <Typography variant="body2" color="text.disabled" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+                  Stages are rounds of your tournament (e.g. Qualifiers, Group Stage, Finals). Create your first stage to start building your mappool.
+                </Typography>
+                {isOwner && (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setEditingStages(true)}
+                  >
+                    Add Stage
+                  </Button>
+                )}
               </Card>
             )}
           </>
@@ -991,6 +1032,129 @@ export default function TournamentDetailSection({
       </Box>
       </Card>
 
+      {/* Inline slot menu */}
+      <Menu
+        anchorEl={slotMenuAnchor}
+        open={!!slotMenuAnchor && !!slotMenuMap}
+        onClose={() => { setSlotMenuAnchor(null); setSlotMenuMap(null); }}
+        slotProps={{ paper: { sx: { minWidth: 140 } } }}
+      >
+        {tournamentSlots.map((s) => (
+          <MenuItem
+            key={s}
+            selected={slotMenuMap?.slot_type === s}
+            onClick={async () => {
+              if (!slotMenuMap || slotMenuMap.slot_type === s) {
+                setSlotMenuAnchor(null);
+                setSlotMenuMap(null);
+                return;
+              }
+              try {
+                const updated = await updateMap(tournament.abbreviation, slotMenuMap.id, { slot_type: s });
+                setTournament((prev) => ({
+                  ...prev,
+                  stages: prev.stages?.map((stage) => ({
+                    ...stage,
+                    maps: stage.maps?.map((m) => m.id === updated.id ? { ...m, ...updated } : m),
+                  })),
+                }));
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to update slot');
+              }
+              setSlotMenuAnchor(null);
+              setSlotMenuMap(null);
+            }}
+            sx={{ fontSize: 13 }}
+          >
+            <MuiListItemIcon sx={{ minWidth: 28 }}>
+              <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: getSlotColor(s, slotConfigs) }} />
+            </MuiListItemIcon>
+            {s} — {getSlotLabel(s, slotConfigs)}
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* Edit Map Dialog */}
+      <Dialog open={!!editingMap} onClose={() => setEditingMap(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Edit Map</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Slot Type</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.75 }}>
+                {tournamentSlots.map((s) => (
+                  <Chip
+                    key={s}
+                    label={`${s} — ${getSlotLabel(s, slotConfigs)}`}
+                    size="small"
+                    onClick={() => setEditSlot(s)}
+                    sx={{
+                      fontWeight: 'bold', cursor: 'pointer',
+                      backgroundColor: editSlot === s ? getSlotColor(s, slotConfigs) : 'action.hover',
+                      color: editSlot === s ? 'white' : 'text.primary',
+                      border: editSlot === s ? 'none' : '1px solid',
+                      borderColor: 'divider',
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Mod</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${MODS.length}, 1fr)`, gap: 0.75 }}>
+                {MODS.map((m) => (
+                  <Chip
+                    key={m}
+                    label={m}
+                    size="small"
+                    icon={modIcons[m] ? <Box component="img" src={modIcons[m]} sx={(theme) => ({ width: 18, height: 18, filter: editMod === m || theme.palette.mode === 'dark' ? 'none' : 'invert(1)' })} /> : undefined}
+                    onClick={() => setEditMod(m)}
+                    sx={{
+                      fontWeight: 'bold', cursor: 'pointer',
+                      backgroundColor: editMod === m ? (modColors[m] || '#666') : 'action.hover',
+                      color: editMod === m ? 'white' : 'text.primary',
+                      border: editMod === m ? 'none' : '1px solid',
+                      borderColor: 'divider',
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setEditingMap(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            disabled={editSaving}
+            onClick={async () => {
+              if (!editingMap) return;
+              setEditSaving(true);
+              try {
+                const updated = await updateMap(tournament.abbreviation, editingMap.id, {
+                  slot_type: editSlot,
+                  mod: editMod,
+                });
+                setTournament((prev) => ({
+                  ...prev,
+                  stages: prev.stages?.map((stage) => ({
+                    ...stage,
+                    maps: stage.maps?.map((m) => m.id === updated.id ? { ...m, ...updated } : m),
+                  })),
+                }));
+                setEditingMap(null);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to update map');
+              } finally {
+                setEditSaving(false);
+              }
+            }}
+          >
+            {editSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Add Map Dialog */}
       <Dialog
         open={addMapOpen}
@@ -1032,6 +1196,165 @@ export default function TournamentDetailSection({
             </Stack>
 
             {mapError && <Alert severity="error">{mapError}</Alert>}
+
+            {/* Check Library */}
+            <Box>
+              <Button
+                size="small"
+                variant="text"
+                startIcon={<FolderOpenIcon sx={{ fontSize: 16 }} />}
+                onClick={() => {
+                  const opening = !showLibrary;
+                  setShowLibrary(opening);
+                  if (opening && !libraryData) {
+                    setLibraryLoading(true);
+                    browsePacks(1, 10, 'recent')
+                      .then((data) => { setLibraryData(data); setLibraryPage(1); })
+                      .catch(() => {})
+                      .finally(() => setLibraryLoading(false));
+                  }
+                }}
+                sx={{ fontSize: 12, textTransform: 'none', color: 'text.secondary' }}
+              >
+                {showLibrary ? 'Hide Library' : 'Check Library'}
+              </Button>
+              {showLibrary && (
+                <Box sx={{ mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                  {/* Search */}
+                  <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      placeholder="Search packs..."
+                      value={librarySearch}
+                      onChange={(e) => setLibrarySearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setLibraryLoading(true);
+                          browsePacks(1, 10, 'recent', librarySearch)
+                            .then((data) => { setLibraryData(data); setLibraryPage(1); })
+                            .catch(() => {})
+                            .finally(() => setLibraryLoading(false));
+                        }
+                      }}
+                      sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: 13 } }}
+                    />
+                  </Box>
+                  <Box sx={{ maxHeight: 280, overflow: 'auto' }}>
+                    {libraryLoading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                        <CircularProgress size={20} />
+                      </Box>
+                    ) : !libraryData || libraryData.packs.length === 0 ? (
+                      <Typography variant="body2" color="text.disabled" sx={{ p: 2, textAlign: 'center' }}>
+                        No packs found
+                      </Typography>
+                    ) : (
+                      <>
+                        {libraryData.packs.map((pack) => (
+                          <Box key={pack.id}>
+                            <Box
+                              onClick={() => {
+                                if (expandedPack?.share_code === pack.share_code) {
+                                  setExpandedPack(null);
+                                  return;
+                                }
+                                setExpandingPackCode(pack.share_code);
+                                getPack(pack.share_code)
+                                  .then(setExpandedPack)
+                                  .catch(() => {})
+                                  .finally(() => setExpandingPackCode(null));
+                              }}
+                              sx={{
+                                px: 1.5, py: 1, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: 1,
+                                bgcolor: 'action.hover',
+                                borderBottom: '1px solid', borderColor: 'divider',
+                                '&:hover': { opacity: 0.8 },
+                              }}
+                            >
+                              <FolderOpenIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                              <Typography variant="caption" fontWeight="bold" sx={{ flex: 1 }}>
+                                {pack.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {pack.beatmap_count} maps
+                              </Typography>
+                              {expandingPackCode === pack.share_code && <CircularProgress size={14} />}
+                            </Box>
+                            {expandedPack?.share_code === pack.share_code && expandedPack.beatmaps.map((bm) => (
+                              <Box
+                                key={bm.id}
+                                onClick={() => {
+                                  setMapInput(bm.beatmapset_id.toString());
+                                  setShowLibrary(false);
+                                }}
+                                sx={{
+                                  px: 1.5, py: 0.75, cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', gap: 1,
+                                  '&:hover': { bgcolor: 'action.hover' },
+                                  borderBottom: '1px solid', borderColor: 'divider',
+                                }}
+                              >
+                                <Box
+                                  component="img"
+                                  src={`https://assets.ppy.sh/beatmaps/${bm.beatmapset_id}/covers/list.jpg`}
+                                  sx={{ width: 36, height: 36, borderRadius: 0.5, objectFit: 'cover', flexShrink: 0 }}
+                                />
+                                <Box sx={{ minWidth: 0, flex: 1 }}>
+                                  <Typography variant="body2" noWrap>{bm.artist} - {bm.title}</Typography>
+                                  <Typography variant="caption" color="text.secondary" noWrap>
+                                    {bm.difficulty_name && `[${bm.difficulty_name}]`} {bm.star_rating && ` ★ ${bm.star_rating.toFixed(2)}`}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                        ))}
+                      </>
+                    )}
+                  </Box>
+                  {/* Pagination */}
+                  {libraryData && libraryData.total > 10 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, p: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                      <Button
+                        size="small"
+                        disabled={libraryPage <= 1 || libraryLoading}
+                        onClick={() => {
+                          const p = libraryPage - 1;
+                          setLibraryLoading(true);
+                          browsePacks(p, 10, 'recent', librarySearch)
+                            .then((data) => { setLibraryData(data); setLibraryPage(p); })
+                            .catch(() => {})
+                            .finally(() => setLibraryLoading(false));
+                        }}
+                        sx={{ fontSize: 11, minWidth: 0 }}
+                      >
+                        Prev
+                      </Button>
+                      <Typography variant="caption" sx={{ lineHeight: '30px' }}>
+                        {libraryPage} / {Math.ceil(libraryData.total / 10)}
+                      </Typography>
+                      <Button
+                        size="small"
+                        disabled={libraryPage >= Math.ceil(libraryData.total / 10) || libraryLoading}
+                        onClick={() => {
+                          const p = libraryPage + 1;
+                          setLibraryLoading(true);
+                          browsePacks(p, 10, 'recent', librarySearch)
+                            .then((data) => { setLibraryData(data); setLibraryPage(p); })
+                            .catch(() => {})
+                            .finally(() => setLibraryLoading(false));
+                        }}
+                        sx={{ fontSize: 11, minWidth: 0 }}
+                      >
+                        Next
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
 
             {/* Fetched beatmapset info */}
             {fetchedBeatmapset && (
@@ -1080,9 +1403,11 @@ export default function TournamentDetailSection({
                           }}
                         />
                         <Typography variant="body2" sx={{ flex: 1 }}>{diff.difficulty_name}</Typography>
-                        <Typography variant="caption" sx={{ color: '#f5c842', fontWeight: 'bold' }}>
-                          ★ {diff.star_rating.toFixed(2)}
-                        </Typography>
+                        <Chip
+                          label={`★ ${diff.star_rating.toFixed(2)}`}
+                          size="small"
+                          sx={{ height: 20, fontSize: 11, fontWeight: 'bold', bgcolor: 'black', color: 'white' }}
+                        />
                       </Paper>
                     ))}
                   </Stack>
@@ -1092,8 +1417,13 @@ export default function TournamentDetailSection({
                 {selectedDiffIndex !== null && (
                   <>
                     <Box>
-                      <Typography variant="subtitle2" sx={{ mb: 1 }}>Slot Type</Typography>
-                      <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle2">Slot Type</Typography>
+                        <Button size="small" variant="text" onClick={() => { setAddMapOpen(false); setDetailTab('slots'); }} sx={{ fontSize: 11, textTransform: 'none', p: 0, minWidth: 0 }}>
+                          Edit Slots
+                        </Button>
+                      </Box>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.75 }}>
                         {tournamentSlots.map((s) => (
                           <Chip
                             key={s}
@@ -1115,13 +1445,13 @@ export default function TournamentDetailSection({
 
                     <Box>
                       <Typography variant="subtitle2" sx={{ mb: 1 }}>Mod</Typography>
-                      <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${MODS.length}, 1fr)`, gap: 0.75 }}>
                         {MODS.map((m) => (
                           <Chip
                             key={m}
                             label={m}
                             size="small"
-                            icon={modIcons[m] ? <Box component="img" src={modIcons[m]} sx={{ width: 18, height: 18 }} /> : undefined}
+                            icon={modIcons[m] ? <Box component="img" src={modIcons[m]} sx={(theme) => ({ width: 18, height: 18, filter: selectedMod === m || theme.palette.mode === 'dark' ? 'none' : 'invert(1)' })} /> : undefined}
                             onClick={() => setSelectedMod(m)}
                             sx={{
                               fontWeight: 'bold', cursor: 'pointer',

@@ -23,7 +23,7 @@ export interface BeatmapRowProps {
   beatmapsetId?: number;
 
   // Tournament badges (replace keys badge)
-  slotBadge?: { label: string; color: string };
+  slotBadge?: { label: string; color: string; onClick?: (e: React.MouseEvent) => void };
   modChips?: { label: string; color: string; icon?: string }[];
 
   // Stash metadata
@@ -186,6 +186,7 @@ export default function BeatmapRow({
           {/* Slot badge (tournament) */}
           {slotBadge && (
             <Box
+              onClick={slotBadge.onClick}
               sx={{
                 backgroundColor: slotBadge.color,
                 px: 1.5,
@@ -196,6 +197,8 @@ export default function BeatmapRow({
                 minWidth: 48,
                 textAlign: 'center',
                 flexShrink: 0,
+                cursor: slotBadge.onClick ? 'pointer' : 'default',
+                '&:hover': slotBadge.onClick ? { opacity: 0.8 } : {},
               }}
             >
               {slotBadge.label}

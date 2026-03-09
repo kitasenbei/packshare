@@ -175,6 +175,19 @@ export async function removeMap(abbrev: string, mapId: number): Promise<void> {
   }
 }
 
+export async function updateMap(abbrev: string, mapId: number, data: { slot_type?: string; mod?: string }): Promise<TournamentMap> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/maps/${mapId}`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to update map');
+  }
+  return response.json();
+}
+
 export async function addStage(abbrev: string, name: string): Promise<TournamentStage> {
   const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/stages`, {
     method: 'POST',

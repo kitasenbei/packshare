@@ -84,6 +84,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client,
 	protected.Delete("/tournaments/:abbrev/stages/:stageId", tournamentHandler.DeleteStage)
 	protected.Post("/tournaments/:abbrev/stages/:stageId/maps", tournamentHandler.AddMapToStage)
 	protected.Delete("/tournaments/:abbrev/maps/:mapId", tournamentHandler.RemoveMapFromStage)
+	protected.Patch("/tournaments/:abbrev/maps/:mapId", tournamentHandler.UpdateMap)
 
 	// OAuth-only routes (key management)
 	oauthOnly := apiGroup.Group("", middleware.OAuthOnlyMiddleware(cfg.JWTSecret))

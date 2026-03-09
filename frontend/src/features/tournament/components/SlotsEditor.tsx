@@ -4,7 +4,6 @@ import {
   Typography,
   Button,
   Stack,
-  Chip,
   CircularProgress,
   TextField,
   IconButton,
@@ -108,8 +107,8 @@ export default function SlotsEditor({
     setSlots((prev) => prev.filter((s) => s.key !== key));
   };
 
-  const updateSlot = (key: string, field: 'label' | 'color', value: string) => {
-    setSlots((prev) => prev.map((s) => s.key === key ? { ...s, [field]: value } : s));
+  const updateSlot = (index: number, field: 'key' | 'label' | 'color', value: string) => {
+    setSlots((prev) => prev.map((s, i) => i === index ? { ...s, [field]: field === 'key' ? value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10) : value } : s));
   };
 
   if (!isOwner) {
@@ -124,13 +123,13 @@ export default function SlotsEditor({
     <Stack spacing={2}>
       <List disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
         {slots.map((slot, i) => (
-          <ListItem key={slot.key} divider={i < slots.length - 1} sx={{ py: 1, px: 2, gap: 1.5 }}>
+          <ListItem key={i} divider={i < slots.length - 1} sx={{ py: 1, px: 2, gap: 1.5 }}>
             {/* Color picker */}
             <Box
               component="input"
               type="color"
               value={slot.color}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSlot(slot.key, 'color', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSlot(i, 'color', e.target.value)}
               sx={{
                 width: 28, height: 28, border: 'none', borderRadius: 1,
                 cursor: 'pointer', p: 0, background: 'none', flexShrink: 0,
@@ -139,13 +138,17 @@ export default function SlotsEditor({
               }}
             />
 
-            {/* Slot key (read-only) */}
-            <Chip
-              label={slot.key}
+            {/* Slot key */}
+            <TextField
               size="small"
+              value={slot.key}
+              onChange={(e) => updateSlot(i, 'key', e.target.value)}
               sx={{
-                fontWeight: 'bold', fontSize: 11, minWidth: 48,
-                backgroundColor: `${slot.color}20`, color: slot.color,
+                width: 70, '& .MuiInputBase-input': {
+                  py: 0.5, fontSize: 12, fontWeight: 'bold', textAlign: 'center',
+                  color: slot.color,
+                },
+                '& .MuiOutlinedInput-root': { backgroundColor: `${slot.color}20` },
               }}
             />
 
@@ -153,7 +156,7 @@ export default function SlotsEditor({
             <TextField
               size="small"
               value={slot.label}
-              onChange={(e) => updateSlot(slot.key, 'label', e.target.value)}
+              onChange={(e) => updateSlot(i, 'label', e.target.value)}
               placeholder="Display name"
               sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 14 } }}
             />

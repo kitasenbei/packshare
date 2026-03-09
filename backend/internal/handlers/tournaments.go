@@ -672,3 +672,84 @@ func (h *TournamentHandler) RemoveMapFromStage(c *fiber.Ctx) error {
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
+
+type UpdateMapRequest struct {
+	SlotType string `json:"slot_type"`
+	Mod      string `json:"mod"`
+}
+
+func (h *TournamentHandler) UpdateMap(c *fiber.Ctx) error {
+	claims, err := getUserClaims(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	abbrev := c.Params("abbrev")
+	tournament, err := h.getTournamentByAbbrev(abbrev)
+	if err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "tournament not found"})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	if tournament.User.OsuID != claims.OsuID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you don't own this tournament"})
+	}
+
+	mapID, err := c.ParamsInt("mapId")
+	if err != nil || mapID < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid map ID"})
+	}
+
+	var tournamentMap models.TournamentMap
+	if err := h.db.First(&tournamentMap, mapID).Error; err == gorm.ErrRecordNotFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "map not found"})
+	} else if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
+
+	var stage models.TournamentStage
+	if err := h.db.Where("id = ? AND tournament_id = ?", tournamentMap.StageID, tournament.ID).First(&stage).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "map does not belong to this tournament"})
+	}
+
+	var req UpdateMapRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	updates := map[string]interface{}{}
+
+	if req.SlotType != "" {
+		req.SlotType = strings.TrimSpace(req.SlotType)
+		if len(req.SlotType) > 20 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "slot_type must be under 20 characters"})
+		}
+		if req.SlotType != tournamentMap.SlotType {
+			var maxSlotNum int
+			h.db.Model(&models.TournamentMap{}).Where("stage_id = ? AND slot_type = ?", tournamentMap.StageID, req.SlotType).
+				Select("COALESCE(MAX(slot_number), 0)").Scan(&maxSlotNum)
+			updates["slot_type"] = req.SlotType
+			updates["slot_number"] = maxSlotNum + 1
+		}
+	}
+
+	if req.Mod != "" {
+		if !isValidModCombo(req.Mod) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid mod"})
+		}
+		updates["mod"] = req.Mod
+	}
+
+	if len(updates) == 0 {
+		return c.JSON(tournamentMap)
+	}
+
+	if err := h.db.Model(&tournamentMap).Updates(updates).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update map"})
+	}
+
+	h.db.First(&tournamentMap, mapID)
+	return c.JSON(tournamentMap)
+}

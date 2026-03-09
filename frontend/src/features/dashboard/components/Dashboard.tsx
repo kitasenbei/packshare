@@ -178,9 +178,6 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
               <Typography variant="subtitle2" fontWeight="bold" noWrap>
                 {user.username}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {packs.length} pack{packs.length !== 1 ? 's' : ''}
-              </Typography>
             </Box>
           </Box>
         </Box>
