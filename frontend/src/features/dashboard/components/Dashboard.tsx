@@ -272,7 +272,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
       </Paper>
 
       {/* Content Panel */}
-      <Box sx={{ flex: 1, minWidth: 0, ml: { xs: 0, md: `${SIDEBAR_WIDTH + 1}px` } }}>
+      <Box sx={{ flex: 1, minWidth: 0, ml: { xs: 0, md: `${SIDEBAR_WIDTH + 1}px` }, px: { xs: 0, lg: '300px' } }}>
         {/* Mobile profile header (hidden on desktop) */}
         {!selectedPack && tournamentView === 'list' && (
           <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: 3 }}>

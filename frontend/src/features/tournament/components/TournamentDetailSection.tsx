@@ -35,7 +35,7 @@ import {
   ButtonGroup,
   Menu,
   MenuItem,
-  ListItemIcon as MuiListItemIcon,
+
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
@@ -90,6 +90,7 @@ import {
   uploadImage,
 } from '../api/tournaments';
 import BeatmapRow from '../../../shared/components/BeatmapRow';
+import SlotBadge from '../../../shared/components/SlotBadge';
 import DownloadButton from '../../../shared/components/DownloadButton';
 import OsuButton from '../../../shared/components/OsuButton';
 import RemoveButton from '../../../shared/components/RemoveButton';
@@ -551,7 +552,7 @@ export default function TournamentDetailSection({
           <Tab icon={<AccountTreeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Bracket" value="bracket" />
           <Tab icon={<DnsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Slots" value="slots" />
           <Tab icon={<CampaignIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="News" value="news" />
-          {isOwner && <Tab icon={<CodeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Website" value="website" />}
+          {isOwner && <Tab icon={<CodeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Website (Soon)" value="website" disabled sx={{ opacity: 0.4 }} />}
           <Tab icon={<SettingsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Settings" value="details" />
         </Tabs>
 
@@ -801,10 +802,9 @@ export default function TournamentDetailSection({
                       <Card key={slotType} variant="outlined" sx={{ overflow: 'hidden' }}>
                         <Box sx={{
                           py: 1, px: 2,
-                          backgroundColor: `${getSlotColor(slotType, slotConfigs)}20`,
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         }}>
-                          <Typography variant="body2" fontWeight="bold" sx={{ color: getSlotColor(slotType, slotConfigs) }}>
+                          <Typography variant="body2" fontWeight="bold" color="text.primary">
                             {getSlotLabel(slotType, slotConfigs)}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
@@ -1098,12 +1098,10 @@ export default function TournamentDetailSection({
               setSlotMenuAnchor(null);
               setSlotMenuMap(null);
             }}
-            sx={{ fontSize: 13 }}
+            sx={{ fontSize: 13, gap: 1.5 }}
           >
-            <MuiListItemIcon sx={{ minWidth: 28 }}>
-              <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: getSlotColor(s, slotConfigs) }} />
-            </MuiListItemIcon>
-            {s} — {getSlotLabel(s, slotConfigs)}
+            <SlotBadge label={s} color={getSlotColor(s, slotConfigs)} />
+            {getSlotLabel(s, slotConfigs)}
           </MenuItem>
         ))}
       </Menu>

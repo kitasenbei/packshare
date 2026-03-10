@@ -19,7 +19,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
 import StarIcon from '@mui/icons-material/Star';
 import { getSiteBySubdomain, type Tournament, type TournamentMap } from '../api/tournaments';
-import type { SiteConfig, SiteSection } from './SiteBuilder';
+import type { SiteConfig, SiteSection, SitePage as SitePageType, BuilderElement, ElementStyles } from '../types/siteConfig';
 
 // ── Types ──
 
@@ -269,20 +269,31 @@ export function SitePreview({ config, tournament, activePageId, compact }: SiteP
         )}
 
         {/* Page content */}
-        <Box sx={{ maxWidth: compact ? '100%' : 1000, mx: 'auto', px: compact ? 1.5 : 3, py: compact ? 2 : 4 }}>
-          {currentPage?.sections.map((section) => (
-            <Box key={section.id} sx={{ mb: compact ? 2 : 4 }}>
-              <SectionRendererComponent
-                section={section}
-                tournament={tournament}
-                config={config}
-                players={players}
-                bracketData={bracketData}
-                compact={compact}
-              />
-            </Box>
-          ))}
-        </Box>
+        {currentPage?.layout === 'canvas' ? (
+          <CanvasPageRenderer
+            page={currentPage}
+            tournament={tournament}
+            config={config}
+            players={players}
+            bracketData={bracketData}
+            compact={compact}
+          />
+        ) : (
+          <Box sx={{ maxWidth: compact ? '100%' : 1000, mx: 'auto', px: compact ? 1.5 : 3, py: compact ? 2 : 4 }}>
+            {currentPage?.sections.map((section) => (
+              <Box key={section.id} sx={{ mb: compact ? 2 : 4 }}>
+                <SectionRendererComponent
+                  section={section}
+                  tournament={tournament}
+                  config={config}
+                  players={players}
+                  bracketData={bracketData}
+                  compact={compact}
+                />
+              </Box>
+            ))}
+          </Box>
+        )}
 
         {/* Footer */}
         {!compact && (
@@ -297,9 +308,130 @@ export function SitePreview({ config, tournament, activePageId, compact }: SiteP
   );
 }
 
+// ── Canvas/Builder Page Renderer (premium element tree) ──
+
+function CanvasPageRenderer({
+  page,
+}: {
+  page: SitePageType;
+  tournament: Tournament;
+  config: SiteConfig;
+  players: Player[];
+  bracketData: BracketData;
+  compact?: boolean;
+}) {
+  const elements = page.elements || {};
+  const rootIds = page.rootElementIds || [];
+
+  if (rootIds.length === 0) return null;
+
+  return (
+    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      {rootIds.map((id) => (
+        <ElementRenderer key={id} elementId={id} elements={elements} />
+      ))}
+    </Box>
+  );
+}
+
+function ElementRenderer({ elementId, elements }: { elementId: string; elements: Record<string, BuilderElement> }) {
+  const el = elements[elementId];
+  if (!el) return null;
+
+  const css = elementStylestoCSS(el.styles);
+
+  if (el.type === 'text') {
+    return (
+      <Typography component="div" sx={{ ...css, whiteSpace: 'pre-wrap' }}>
+        {el.content || ''}
+      </Typography>
+    );
+  }
+
+  if (el.type === 'image') {
+    return el.content ? (
+      <Box component="img" src={el.content} sx={{ display: 'block', ...css }} />
+    ) : null;
+  }
+
+  if (el.type === 'button') {
+    const Wrapper = el.href ? 'a' : 'div';
+    return (
+      <Box
+        component={Wrapper}
+        {...(el.href ? { href: el.href, target: '_blank', rel: 'noopener noreferrer' } : {})}
+        sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', cursor: 'pointer', ...css }}
+      >
+        {el.content || 'Button'}
+      </Box>
+    );
+  }
+
+  if (el.type === 'divider' || el.type === 'spacer') {
+    return <Box sx={css} />;
+  }
+
+  // Container
+  return (
+    <Box sx={css}>
+      {el.children.map((childId) => (
+        <ElementRenderer key={childId} elementId={childId} elements={elements} />
+      ))}
+    </Box>
+  );
+}
+
+function elementStylestoCSS(styles: ElementStyles): Record<string, unknown> {
+  const css: Record<string, unknown> = {};
+
+  if (styles.display) css.display = styles.display;
+  if (styles.flexDirection) css.flexDirection = styles.flexDirection;
+  if (styles.alignItems) css.alignItems = styles.alignItems;
+  if (styles.justifyContent) css.justifyContent = styles.justifyContent;
+  if (styles.flexWrap) css.flexWrap = styles.flexWrap;
+  if (styles.gap != null) css.gap = `${styles.gap}px`;
+
+  if (styles.width) css.width = styles.width;
+  if (styles.height) css.height = styles.height;
+  if (styles.minHeight) css.minHeight = styles.minHeight;
+  if (styles.maxWidth) css.maxWidth = styles.maxWidth;
+
+  if (styles.paddingTop != null) css.paddingTop = `${styles.paddingTop}px`;
+  if (styles.paddingRight != null) css.paddingRight = `${styles.paddingRight}px`;
+  if (styles.paddingBottom != null) css.paddingBottom = `${styles.paddingBottom}px`;
+  if (styles.paddingLeft != null) css.paddingLeft = `${styles.paddingLeft}px`;
+  if (styles.marginTop != null) css.marginTop = `${styles.marginTop}px`;
+  if (styles.marginRight != null) css.marginRight = `${styles.marginRight}px`;
+  if (styles.marginBottom != null) css.marginBottom = `${styles.marginBottom}px`;
+  if (styles.marginLeft != null) css.marginLeft = `${styles.marginLeft}px`;
+
+  if (styles.backgroundColor) css.backgroundColor = styles.backgroundColor;
+  if (styles.backgroundImage) css.backgroundImage = styles.backgroundImage;
+  if (styles.backgroundSize) css.backgroundSize = styles.backgroundSize;
+  if (styles.backgroundPosition) css.backgroundPosition = styles.backgroundPosition;
+
+  if (styles.borderRadius != null) css.borderRadius = `${styles.borderRadius}px`;
+  if (styles.borderWidth != null) css.borderWidth = `${styles.borderWidth}px`;
+  if (styles.borderColor) css.borderColor = styles.borderColor;
+  if (styles.borderStyle) css.borderStyle = styles.borderStyle;
+
+  if (styles.fontSize != null) css.fontSize = `${styles.fontSize}px`;
+  if (styles.fontWeight != null) css.fontWeight = styles.fontWeight;
+  if (styles.color) css.color = styles.color;
+  if (styles.textAlign) css.textAlign = styles.textAlign;
+  if (styles.lineHeight != null) css.lineHeight = styles.lineHeight;
+  if (styles.letterSpacing != null) css.letterSpacing = `${styles.letterSpacing}px`;
+
+  if (styles.opacity != null) css.opacity = styles.opacity;
+  if (styles.boxShadow) css.boxShadow = styles.boxShadow;
+  if (styles.overflow) css.overflow = styles.overflow;
+
+  return css;
+}
+
 // ── Section Renderer ──
 
-function SectionRendererComponent({
+export function SectionRendererComponent({
   section,
   tournament,
   config,

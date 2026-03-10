@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Box, Typography, Chip, Checkbox, Stack } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
+import SlotBadge from './SlotBadge';
 
 export interface BeatmapRowProps {
   // Core (always shown)
@@ -185,24 +186,7 @@ export default function BeatmapRow({
 
           {/* Slot badge (tournament) */}
           {slotBadge && (
-            <Box
-              onClick={slotBadge.onClick}
-              sx={{
-                backgroundColor: slotBadge.color,
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                fontWeight: 'bold',
-                fontSize: 14,
-                minWidth: 48,
-                textAlign: 'center',
-                flexShrink: 0,
-                cursor: slotBadge.onClick ? 'pointer' : 'default',
-                '&:hover': slotBadge.onClick ? { opacity: 0.8 } : {},
-              }}
-            >
-              {slotBadge.label}
-            </Box>
+            <SlotBadge label={slotBadge.label} color={slotBadge.color} onClick={slotBadge.onClick} />
           )}
 
           {/* Mod chips (tournament) */}
