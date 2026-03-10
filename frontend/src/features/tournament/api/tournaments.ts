@@ -408,3 +408,74 @@ export async function uploadImage(file: File): Promise<string> {
 
   return file_url;
 }
+
+// ── Site Builder ──
+
+export interface TournamentSite {
+  id: number;
+  tournament_id: number;
+  subdomain: string;
+  config: string;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getSite(abbrev: string): Promise<TournamentSite | null> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/site`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.site || null;
+}
+
+export async function saveSite(abbrev: string, input: { subdomain?: string; config: string }): Promise<TournamentSite> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/site`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to save site');
+  }
+  return response.json();
+}
+
+export async function publishSite(abbrev: string, published: boolean): Promise<TournamentSite> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/site/publish`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ published }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to publish site');
+  }
+  return response.json();
+}
+
+export async function deleteSite(abbrev: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tournaments/${abbrev}/site`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete site');
+  }
+}
+
+export interface SitePublicData {
+  site: TournamentSite;
+  tournament: Tournament;
+}
+
+export async function getSiteBySubdomain(subdomain: string): Promise<SitePublicData> {
+  const response = await fetch(`${API_BASE_URL}/api/sites/${subdomain}`);
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Site not found');
+  }
+  return response.json();
+}

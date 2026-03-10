@@ -60,6 +60,7 @@ type Tournament struct {
 	Stages        []TournamentStage        `gorm:"foreignKey:TournamentID" json:"stages,omitempty"`
 	Players       []TournamentPlayer       `gorm:"foreignKey:TournamentID" json:"players,omitempty"`
 	Announcements []TournamentAnnouncement `gorm:"foreignKey:TournamentID" json:"announcements,omitempty"`
+	Site          *TournamentSite          `gorm:"foreignKey:TournamentID" json:"site,omitempty"`
 	CreatedAt     time.Time                `json:"created_at"`
 	UpdatedAt     time.Time                `json:"updated_at"`
 }
@@ -105,6 +106,16 @@ type TournamentAnnouncement struct {
 	Title        string    `gorm:"not null" json:"title"`
 	Body         string    `gorm:"type:text" json:"body"`
 	Image        string    `json:"image,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type TournamentSite struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	TournamentID uint      `gorm:"uniqueIndex;not null" json:"tournament_id"`
+	Subdomain    string    `gorm:"uniqueIndex;size:63" json:"subdomain"`
+	Config       string    `gorm:"type:text;not null" json:"config"`
+	Published    bool      `gorm:"not null;default:false" json:"published"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }

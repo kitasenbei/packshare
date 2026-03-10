@@ -21,6 +21,8 @@ import Home from './pages/Home';
 import Explore from './pages/Explore';
 import Tournaments from './features/tournament/components/Tournaments';
 import TournamentMappool from './features/tournament/components/TournamentMappool';
+import SiteRenderer from './features/tournament/components/SiteRenderer';
+import SiteBuilder from './features/tournament/components/SiteBuilder';
 import KeyManager from './features/auth/components/KeyManager';
 import Dashboard from './features/dashboard/components/Dashboard';
 import Sidebar, { TOPNAV_HEIGHT } from './pages/Sidebar';
@@ -90,6 +92,18 @@ function SharedPackPage() {
 function TournamentMappoolPage({ user }: { user: User | null }) {
   const { abbreviation } = useParams();
   return <TournamentMappool abbreviation={abbreviation} user={user} />;
+}
+
+function SitePage() {
+  const { subdomain } = useParams();
+  if (!subdomain) return <NotFound />;
+  return <SiteRenderer subdomain={subdomain} />;
+}
+
+function SiteEditorPage() {
+  const { abbreviation } = useParams();
+  if (!abbreviation) return <NotFound />;
+  return <SiteBuilder abbreviation={abbreviation} />;
 }
 
 function NotFound() {
@@ -210,6 +224,8 @@ function App() {
           {/* Clean pages without sidebar */}
           <Route path="/s/:packId" element={<SharedPackPage />} />
           <Route path="/t/:abbreviation" element={<TournamentMappoolPage user={user} />} />
+          <Route path="/site/:subdomain" element={<SitePage />} />
+          <Route path="/tournaments/:abbreviation/editor" element={<SiteEditorPage />} />
 
           {/* Main app with top navbar */}
           <Route path="*" element={

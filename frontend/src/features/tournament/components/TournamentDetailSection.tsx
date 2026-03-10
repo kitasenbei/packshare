@@ -99,6 +99,7 @@ import { toAnnouncements, type Announcement } from './TournamentAnnouncements';
 import TournamentStatus, { statusColors } from './TournamentStatus';
 import SlotsEditor from './SlotsEditor';
 import TournamentAnnouncements from './TournamentAnnouncements';
+import SiteSettings from './SiteSettings';
 import { parseSlotConfigs, getSlotLabel, getSlotColor, SLOTS } from './slotUtils';
 
 const statusIcons: Record<string, React.ReactElement> = {
@@ -139,7 +140,7 @@ export default function TournamentDetailSection({
   const [tournament, setTournament] = useState<Tournament>(initialTournament);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [detailTab, setDetailTab] = useState<'mappool' | 'players' | 'bracket' | 'slots' | 'news' | 'details'>('mappool');
+  const [detailTab, setDetailTab] = useState<'mappool' | 'players' | 'bracket' | 'slots' | 'news' | 'website' | 'details'>('mappool');
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -550,6 +551,7 @@ export default function TournamentDetailSection({
           <Tab icon={<AccountTreeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Bracket" value="bracket" />
           <Tab icon={<DnsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Slots" value="slots" />
           <Tab icon={<CampaignIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="News" value="news" />
+          {isOwner && <Tab icon={<CodeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Website" value="website" />}
           <Tab icon={<SettingsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Settings" value="details" />
         </Tabs>
 
@@ -924,6 +926,11 @@ export default function TournamentDetailSection({
             announcements={announcements}
             onAnnouncementsChanged={setAnnouncements}
           />
+        )}
+
+        {/* Website */}
+        {detailTab === 'website' && isOwner && (
+          <SiteSettings tournament={tournament} />
         )}
 
         {/* Settings */}

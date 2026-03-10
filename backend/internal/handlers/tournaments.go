@@ -381,6 +381,9 @@ func (h *TournamentHandler) DeleteTournament(c *fiber.Ctx) error {
 		if err := tx.Where("tournament_id = ?", tournament.ID).Delete(&models.TournamentAnnouncement{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("tournament_id = ?", tournament.ID).Delete(&models.TournamentSite{}).Error; err != nil {
+			return err
+		}
 		return tx.Delete(tournament).Error
 	})
 

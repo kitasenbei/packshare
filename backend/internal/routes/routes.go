@@ -50,6 +50,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client,
 	packHandler := handlers.NewPackHandler(db)
 	keyHandler := handlers.NewAccessKeyHandler(db, cfg.JWTSecret)
 	tournamentHandler := handlers.NewTournamentHandler(db)
+	siteHandler := handlers.NewSiteHandler(db)
 
 	// API routes
 	apiGroup := app.Group("/api")
@@ -63,6 +64,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client,
 	apiGroup.Get("/tournaments", tournamentHandler.ListTournaments)
 	apiGroup.Get("/tournaments/:abbrev", tournamentHandler.GetTournament)
 	apiGroup.Get("/tournaments/:abbrev/bracket", tournamentHandler.GetBracket)
+	apiGroup.Get("/sites/:subdomain", siteHandler.GetSiteBySubdomain)
 
 	// Upload routes (requires auth + S3 configuration)
 	if s3Client != nil && cfg.UploadsBucket != "" {
@@ -99,6 +101,11 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, s3Client *s3.Client,
 	protected.Post("/tournaments/:abbrev/announcements", tournamentHandler.CreateAnnouncement)
 	protected.Put("/tournaments/:abbrev/announcements/:annId", tournamentHandler.UpdateAnnouncement)
 	protected.Delete("/tournaments/:abbrev/announcements/:annId", tournamentHandler.DeleteAnnouncement)
+	// Site builder
+	protected.Get("/tournaments/:abbrev/site", siteHandler.GetSite)
+	protected.Put("/tournaments/:abbrev/site", siteHandler.SaveSite)
+	protected.Put("/tournaments/:abbrev/site/publish", siteHandler.PublishSite)
+	protected.Delete("/tournaments/:abbrev/site", siteHandler.DeleteSite)
 
 	// OAuth-only routes (key management)
 	oauthOnly := apiGroup.Group("", middleware.OAuthOnlyMiddleware(cfg.JWTSecret))
