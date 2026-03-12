@@ -12,9 +12,10 @@ interface DownloadButtonProps {
   downloadName?: string;
   stashData?: Omit<StashBeatmap, 'addedAt'>;
   onDownloaded?: () => void;
+  iconOnly?: boolean;
 }
 
-export default function DownloadButton({ downloadUrl, downloadName, stashData, onDownloaded }: DownloadButtonProps) {
+export default function DownloadButton({ downloadUrl, downloadName, stashData, onDownloaded, iconOnly }: DownloadButtonProps) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
 
@@ -98,7 +99,7 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
 
   return (
     <Button
-      size="sm"
+      size={iconOnly ? 'icon' : 'sm'}
       variant="ghost"
       onClick={handleClick}
       disabled={loading}
@@ -109,7 +110,7 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
       ) : (
         <Download className="size-3.5" />
       )}
-      {loading ? `${progressLabel || 'Downloading...'}` : 'Download'}
+      {!iconOnly && (loading ? `${progressLabel || 'Downloading...'}` : 'Download')}
     </Button>
   );
 }

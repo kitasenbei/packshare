@@ -4,6 +4,7 @@ import { Download, Share2, ExternalLink, Eye, Music, Calendar } from 'lucide-rea
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import {
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/pagination';
 import BackButton from '../../../shared/components/BackButton';
 import { getPack, trackDownload, type Pack } from '../api/packs';
-import BeatmapRow from '../../../shared/components/BeatmapRow';
+import BeatmapPanel from './BeatmapPanel';
 import DownloadButton from '../../../shared/components/DownloadButton';
 import OsuButton from '../../../shared/components/OsuButton';
 import PackBanner from './PackBanner';
@@ -208,49 +209,44 @@ export default function PackViewer({ packId }: PackViewerProps) {
           )}
 
           {/* Beatmap rows */}
-          <div className="p-1">
-            {displayMaps.map((beatmap) => {
-              const isSelected = selectedIds.has(beatmap.id);
-              return (
-                <BeatmapRow
-                  key={beatmap.id}
-                  title={beatmap.title}
-                  artist={beatmap.artist}
-                  keys={beatmap.keys}
-                  creator={beatmap.downloads ? `${beatmap.creator} · ${beatmap.downloads} download${beatmap.downloads !== 1 ? 's' : ''}` : beatmap.creator}
-                  creatorPrefix="mapped by"
-                  difficultyName={beatmap.difficulty_name}
-                  starRating={beatmap.star_rating}
-                  beatmapsetId={beatmap.beatmapset_id}
-                  onClick={() => toggleSelect(beatmap.id)}
-                  sx={isSelected ? {
-                    backgroundColor: 'rgba(100,181,246,0.15)',
-                    border: '1px solid rgba(100,181,246,0.4)',
-                  } : undefined}
-                  actions={
-                    <div className="flex flex-row gap-0.5" onClick={(e) => e.stopPropagation()}>
-                      <OsuButton onClick={() => handleOpenOsu(beatmap)} />
-                      <DownloadButton
-                        downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
-                        downloadName={`${beatmap.artist} - ${beatmap.title}`}
-                        stashData={{
-                          id: beatmap.id,
-                          beatmapsetId: beatmap.beatmapset_id,
-                          title: beatmap.title,
-                          artist: beatmap.artist,
-                          creator: beatmap.creator,
-                          keys: beatmap.keys,
-                          source: 'download',
-                          sourcePackId: pack.share_code,
-                          sourcePackName: pack.name,
-                        }}
-                        onDownloaded={() => trackDownload(pack.share_code, beatmap.beatmapset_id)}
-                      />
-                    </div>
-                  }
-                />
-              );
-            })}
+          <div className="flex flex-col gap-2 p-2">
+            {displayMaps.map((beatmap) => (
+              <BeatmapPanel
+                key={beatmap.id}
+                title={beatmap.title}
+                artist={beatmap.artist}
+                creator={beatmap.creator}
+                keys={beatmap.keys}
+                difficultyName={beatmap.difficulty_name}
+                starRating={beatmap.star_rating}
+                beatmapsetId={beatmap.beatmapset_id}
+                downloads={beatmap.downloads}
+                selected={selectedIds.has(beatmap.id)}
+                onClick={() => toggleSelect(beatmap.id)}
+                actions={
+                  <>
+                    <OsuButton onClick={() => handleOpenOsu(beatmap)} iconOnly />
+                    <DownloadButton
+                      downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                      downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                      iconOnly
+                      stashData={{
+                        id: beatmap.id,
+                        beatmapsetId: beatmap.beatmapset_id,
+                        title: beatmap.title,
+                        artist: beatmap.artist,
+                        creator: beatmap.creator,
+                        keys: beatmap.keys,
+                        source: 'download',
+                        sourcePackId: pack.share_code,
+                        sourcePackName: pack.name,
+                      }}
+                      onDownloaded={() => trackDownload(pack.share_code, beatmap.beatmapset_id)}
+                    />
+                  </>
+                }
+              />
+            ))}
           </div>
 
           {/* Pagination */}
@@ -345,13 +341,10 @@ export default function PackViewer({ packId }: PackViewerProps) {
               to={pack.user ? `/explore?user_id=${pack.user.id}&username=${encodeURIComponent(pack.user.username)}` : '#'}
               className="-m-0.5 flex items-center gap-1.5 rounded p-0.5 no-underline hover:bg-muted"
             >
-              {pack.user?.avatar_url && (
-                <img
-                  src={pack.user.avatar_url}
-                  className="size-8 rounded-full"
-                  alt=""
-                />
-              )}
+              <Avatar>
+                <AvatarImage src={pack.user?.avatar_url} />
+                <AvatarFallback>{(pack.user?.username || 'U')[0]}</AvatarFallback>
+              </Avatar>
               <span className="text-sm font-medium">
                 {pack.user?.username || 'Unknown'}
               </span>

@@ -5,13 +5,14 @@ import osuLogo from '../../assets/osu-logo.svg';
 interface OsuButtonProps {
   onClick: () => void;
   variant?: 'light' | 'dark';
+  iconOnly?: boolean;
 }
 
-export default function OsuButton({ onClick, variant = 'light' }: OsuButtonProps) {
+export default function OsuButton({ onClick, variant = 'light', iconOnly }: OsuButtonProps) {
   const isDark = variant === 'dark';
   return (
     <Button
-      size="sm"
+      size={iconOnly ? 'icon' : 'sm'}
       variant="ghost"
       onClick={onClick}
       className={cn(
@@ -22,7 +23,7 @@ export default function OsuButton({ onClick, variant = 'light' }: OsuButtonProps
       )}
     >
       <img src={osuLogo} alt="" className="size-4" />
-      Open on osu!
+      {!iconOnly && 'Open on osu!'}
     </Button>
   );
 }
