@@ -1,37 +1,42 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  IconButton,
-  Stack,
-  Tooltip,
-  Avatar,
-  Divider,
-  Pagination,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  InputAdornment,
-  Alert,
-  Chip,
-  Collapse,
-  CircularProgress,
-} from '@mui/material';
 import { Link } from 'react-router-dom';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import AddIcon from '@mui/icons-material/Add';
-import LinkIcon from '@mui/icons-material/Link';
-import CloseIcon from '@mui/icons-material/Close';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import {
+  Trash2,
+  Pencil,
+  Copy,
+  ExternalLink,
+  Plus,
+  Link as LinkIcon,
+  Package,
+  ChevronDown,
+  ChevronUp,
+  X,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from '@/components/ui/pagination';
 import type { StashBeatmap } from '../../../shared/types/beatmap';
 import type { User, BeatmapsetInfo } from '../../auth/api/auth';
 import { getBeatmapset } from '../../auth/api/auth';
@@ -48,6 +53,7 @@ interface MyPacksProps {
   user?: User | null;
   permissions?: string[];
   isKeySession?: boolean;
+  onOpenCreatePack: () => void;
 }
 
 function hasPerm(permissions: string[] | undefined, isKey: boolean | undefined, perm: string): boolean {
@@ -62,7 +68,7 @@ const sourceLabels: Record<string, { label: string; color: string }> = {
   pack: { label: 'From Pack', color: '#b44ad9' },
 };
 
-export default function MyPacks({ user, permissions, isKeySession }: MyPacksProps) {
+export default function MyPacks({ user, permissions, isKeySession, onOpenCreatePack }: MyPacksProps) {
   const [packs, setPacks] = useState<Pack[]>([]);
   const [packsLoading, setPacksLoading] = useState(true);
   const [packsError, setPacksError] = useState<string | null>(null);
@@ -334,264 +340,327 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
   const stashPageCount = Math.ceil(filteredStash.length / STASH_PER_PAGE);
   const displayStash = filteredStash.slice((stashPage - 1) * STASH_PER_PAGE, stashPage * STASH_PER_PAGE);
 
+  const renderPagination = (count: number, current: number, onChange: (page: number) => void) => {
+    const pages: (number | 'ellipsis')[] = [];
+    for (let i = 1; i <= count; i++) {
+      if (i === 1 || i === count || (i >= current - 1 && i <= current + 1)) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== 'ellipsis') {
+        pages.push('ellipsis');
+      }
+    }
+    return (
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              onClick={() => onChange(Math.max(1, current - 1))}
+              className={current <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              text=""
+            />
+          </PaginationItem>
+          {pages.map((p, i) =>
+            p === 'ellipsis' ? (
+              <PaginationItem key={`e-${i}`}>
+                <span className="flex size-8 items-center justify-center text-muted-foreground">...</span>
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={p}>
+                <PaginationLink
+                  isActive={p === current}
+                  onClick={() => onChange(p)}
+                  className="cursor-pointer"
+                >
+                  {p}
+                </PaginationLink>
+              </PaginationItem>
+            )
+          )}
+          <PaginationItem>
+            <PaginationNext
+              onClick={() => onChange(Math.min(count, current + 1))}
+              className={current >= count ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              text=""
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    );
+  };
+
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           {user && (
-            <Avatar
+            <img
               src={user.avatar_url}
-              sx={{ width: 48, height: 48, border: 3, borderColor: 'primary.main' }}
+              alt={user.username}
+              className="size-12 rounded-full border-3 border-primary"
             />
           )}
-          <Box>
+          <div>
             {user && (
-              <Typography variant="body2" color="text.secondary">
+              <p className="text-sm text-muted-foreground">
                 {user.username}'s
-              </Typography>
+              </p>
             )}
-            <Typography variant="h5" fontWeight="bold">
+            <h2 className="text-xl font-bold">
               My Maps
-            </Typography>
-          </Box>
-        </Box>
+            </h2>
+          </div>
+        </div>
         {hasPerm(permissions, isKeySession, 'create') && (
-          <Button
-            component={Link}
-            to="/create"
-            variant="contained"
-            startIcon={<AddIcon />}
-            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-          >
+          <Button onClick={onOpenCreatePack}>
+            <Plus data-icon="inline-start" />
             New Pack
           </Button>
         )}
-      </Box>
+      </div>
 
       {/* My Stash Section */}
-      <Paper sx={{ mb: 3, overflow: 'hidden' }}>
-        <Box
+      <Card className="mb-6 py-0">
+        <div
           onClick={() => setStashExpanded(!stashExpanded)}
-          sx={{
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            borderBottom: stashExpanded ? 1 : 0,
-            borderColor: 'divider',
-            '&:hover': { backgroundColor: 'action.hover' },
-          }}
+          className={`flex cursor-pointer items-center p-4 hover:bg-muted/50 ${stashExpanded ? 'border-b' : ''}`}
         >
-          <InventoryIcon sx={{ mr: 1.5, color: 'primary.main' }} />
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" fontWeight="bold">
+          <Package className="mr-3 size-5 text-primary" />
+          <div className="flex-1">
+            <h3 className="text-base font-bold">
               My Stash
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
+            </h3>
+            <p className="text-sm text-muted-foreground">
               {stash.length} maps saved · Your collection from packs, downloads, and uploads
-            </Typography>
-          </Box>
+            </p>
+          </div>
           {stash.length > 0 && (
             <Button
-              size="small"
-              startIcon={<DeleteIcon />}
+              variant="ghost"
+              size="sm"
               onClick={(e) => { e.stopPropagation(); handleClearStash(); }}
-              sx={{
-                fontSize: 12,
-                color: 'text.disabled',
-                mr: 1,
-                '&:hover': { color: 'error.main' },
-              }}
+              className="mr-2 text-xs text-muted-foreground hover:text-destructive"
             >
+              <Trash2 data-icon="inline-start" />
               Clear
             </Button>
           )}
-          <IconButton size="small" sx={{ color: 'text.secondary' }}>
-            {stashExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
+          <Button variant="ghost" size="icon-xs" className="text-muted-foreground">
+            {stashExpanded ? <ChevronUp /> : <ChevronDown />}
+          </Button>
+        </div>
 
-        <Collapse in={stashExpanded}>
-          {stash.length === 0 ? (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <InventoryIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-              <Typography color="text.secondary" gutterBottom>
-                Your stash is empty
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Save maps from shared packs, downloads, or uploads to build your collection
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              {/* Filter chips */}
-              <Box sx={{ p: 2, pb: 1, display: 'flex', gap: 1 }}>
-                {(['all', '4K', '7K'] as const).map((filter) => (
-                  <Chip
-                    key={filter}
-                    label={filter === 'all' ? 'All Maps' : filter}
-                    size="small"
-                    onClick={() => {
-                      setStashFilter(filter);
-                      setStashPage(1);
-                    }}
-                    sx={{
-                      backgroundColor: stashFilter === filter ? 'primary.main' : undefined,
-                      color: stashFilter === filter ? 'white' : undefined,
-                      '&:hover': { backgroundColor: stashFilter === filter ? 'primary.dark' : undefined },
-                    }}
-                  />
-                ))}
-                <Box sx={{ flex: 1 }} />
-                <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                  {filteredStash.length} maps
-                </Typography>
-              </Box>
+        {stashExpanded && (
+          <>
+            {stash.length === 0 ? (
+              <div className="p-8 text-center">
+                <Package className="mx-auto mb-4 size-12 text-muted-foreground/50" />
+                <p className="mb-1 text-muted-foreground">
+                  Your stash is empty
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Save maps from shared packs, downloads, or uploads to build your collection
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Filter chips */}
+                <div className="flex items-center gap-2 px-4 pt-4 pb-2">
+                  {(['all', '4K', '7K'] as const).map((filter) => (
+                    <Badge
+                      key={filter}
+                      variant={stashFilter === filter ? 'default' : 'secondary'}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setStashFilter(filter);
+                        setStashPage(1);
+                      }}
+                    >
+                      {filter === 'all' ? 'All Maps' : filter}
+                    </Badge>
+                  ))}
+                  <div className="flex-1" />
+                  <span className="text-sm text-muted-foreground">
+                    {filteredStash.length} maps
+                  </span>
+                </div>
 
-              {/* Stash list */}
-              <Box sx={{ px: 2 }}>
-                {displayStash.map((beatmap) => (
-                  <BeatmapRow
-                    key={beatmap.id}
-                    title={beatmap.title}
-                    artist={beatmap.artist}
-                    keys={beatmap.keys}
-                    creator={beatmap.creator}
-                    bpm={beatmap.bpm}
-                    beatmapsetId={beatmap.beatmapsetId}
-                    density="compact"
-                                        sourceChip={{
-                      label: sourceLabels[beatmap.source]?.label || beatmap.source,
-                      color: sourceLabels[beatmap.source]?.color || '#666',
-                    }}
-                    sourceTooltip={beatmap.sourcePackName ? `From: ${beatmap.sourcePackName}` : undefined}
-                    actions={
-                      <>
-                        <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapsetId || beatmap.id}`, '_blank')} />
-                        <DownloadButton
-                          downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapsetId || beatmap.id}`}
-                          downloadName={`${beatmap.artist} - ${beatmap.title}`}
-                        />
-                        <RemoveButton onClick={() => handleRemoveFromStash(beatmap.id)} />
-                      </>
-                    }
-                  />
-                ))}
-              </Box>
+                {/* Stash list */}
+                <div className="px-4">
+                  {displayStash.map((beatmap) => (
+                    <BeatmapRow
+                      key={beatmap.id}
+                      title={beatmap.title}
+                      artist={beatmap.artist}
+                      keys={beatmap.keys}
+                      creator={beatmap.creator}
+                      bpm={beatmap.bpm}
+                      beatmapsetId={beatmap.beatmapsetId}
+                      density="compact"
+                      sourceChip={{
+                        label: sourceLabels[beatmap.source]?.label || beatmap.source,
+                        color: sourceLabels[beatmap.source]?.color || '#666',
+                      }}
+                      sourceTooltip={beatmap.sourcePackName ? `From: ${beatmap.sourcePackName}` : undefined}
+                      actions={
+                        <>
+                          <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapsetId || beatmap.id}`, '_blank')} />
+                          <DownloadButton
+                            downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapsetId || beatmap.id}`}
+                            downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                          />
+                          <RemoveButton onClick={() => handleRemoveFromStash(beatmap.id)} />
+                        </>
+                      }
+                    />
+                  ))}
+                </div>
 
-              {/* Stash pagination */}
-              {stashPageCount > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Pagination
-                    size="small"
-                    count={stashPageCount}
-                    page={stashPage}
-                    onChange={(_, p) => setStashPage(p)}
-                    color="primary"
-                  />
-                </Box>
-              )}
-            </>
-          )}
-        </Collapse>
-      </Paper>
+                {/* Stash pagination */}
+                {stashPageCount > 1 && (
+                  <div className="flex justify-center border-t py-3">
+                    {renderPagination(stashPageCount, stashPage, setStashPage)}
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </Card>
 
       {/* Packs Section Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <Typography variant="h6" fontWeight="bold">
+      <div className="mb-4 flex items-center gap-2">
+        <h3 className="text-base font-bold">
           Packs
-        </Typography>
-        <Chip label={packs.length} size="small" />
-      </Box>
+        </h3>
+        <Badge variant="secondary">{packs.length}</Badge>
+      </div>
 
       {/* Loading state */}
       {packsLoading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress sx={{ color: 'primary.main' }} />
-        </Box>
+        <div className="flex justify-center py-8">
+          <Spinner className="size-6 text-primary" />
+        </div>
       )}
 
       {/* Error state */}
       {packsError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {packsError}
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{packsError}</AlertDescription>
         </Alert>
       )}
 
       {/* Not logged in state */}
       {!user && !packsLoading && (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography color="text.secondary" gutterBottom>
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">
             Sign in to view and create your packs
-          </Typography>
-        </Paper>
+          </p>
+        </Card>
       )}
 
       {/* Packs list */}
       {user && !packsLoading && (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-4">
           {packs.map((pack) => {
             const currentPage = getMapPage(pack.share_code);
             const pageCount = Math.ceil(pack.beatmaps.length / MAPS_PER_PAGE);
             const displayMaps = pack.beatmaps.slice((currentPage - 1) * MAPS_PER_PAGE, currentPage * MAPS_PER_PAGE);
 
             return (
-              <Paper key={pack.share_code} sx={{ overflow: 'hidden' }}>
+              <Card key={pack.share_code} className="py-0">
                 {/* Pack Header */}
-                <Box
-                  sx={{
-                    p: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" fontWeight="bold">{pack.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                <div className="flex items-center border-b p-4">
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold">{pack.name}</h3>
+                    <p className="text-sm text-muted-foreground">
                       {pack.beatmaps.length} maps · {pack.views.toLocaleString()} views · Created at {new Date(pack.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </Typography>
-                  </Box>
-                  <Stack direction="row" spacing={0.5}>
-                    <Tooltip title="Copy link">
-                      <IconButton
-                        size="small"
-                        onClick={() => navigator.clipboard.writeText(`${window.location.origin}/s/${pack.share_code}`)}
-                        sx={{ color: 'text.secondary' }}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-muted-foreground"
+                            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/s/${pack.share_code}`)}
+                          />
+                        }
                       >
-                        <ContentCopyIcon fontSize="small" />
-                      </IconButton>
+                        <Copy className="size-4" />
+                      </TooltipTrigger>
+                      <TooltipContent>Copy link</TooltipContent>
                     </Tooltip>
-                    <Tooltip title="Open shared link">
-                      <IconButton size="small" component={Link} to={`/s/${pack.share_code}`} sx={{ color: 'text.secondary' }}>
-                        <LinkIcon fontSize="small" />
-                      </IconButton>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-muted-foreground"
+                            render={<Link to={`/s/${pack.share_code}`} />}
+                          />
+                        }
+                      >
+                        <LinkIcon className="size-4" />
+                      </TooltipTrigger>
+                      <TooltipContent>Open shared link</TooltipContent>
                     </Tooltip>
-                    <Tooltip title="Open full page">
-                      <IconButton size="small" component={Link} to={`/pack/${pack.share_code}`} sx={{ color: 'text.secondary' }}>
-                        <OpenInNewIcon fontSize="small" />
-                      </IconButton>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-muted-foreground"
+                            render={<Link to={`/pack/${pack.share_code}`} />}
+                          />
+                        }
+                      >
+                        <ExternalLink className="size-4" />
+                      </TooltipTrigger>
+                      <TooltipContent>Open full page</TooltipContent>
                     </Tooltip>
                     {hasPerm(permissions, isKeySession, 'edit') && (
-                      <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => handleEditClick(pack)} sx={{ color: 'text.secondary' }}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              className="text-muted-foreground"
+                              onClick={() => handleEditClick(pack)}
+                            />
+                          }
+                        >
+                          <Pencil className="size-4" />
+                        </TooltipTrigger>
+                        <TooltipContent>Edit</TooltipContent>
                       </Tooltip>
                     )}
                     {hasPerm(permissions, isKeySession, 'delete') && (
-                      <Tooltip title="Delete">
-                        <IconButton size="small" onClick={() => handleDeleteClick(pack)} sx={{ color: 'error.main' }}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              className="text-destructive"
+                              onClick={() => handleDeleteClick(pack)}
+                            />
+                          }
+                        >
+                          <Trash2 className="size-4" />
+                        </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
                       </Tooltip>
                     )}
-                  </Stack>
-                </Box>
+                  </div>
+                </div>
 
                 {/* Beatmaps List */}
-                <Box sx={{ p: 1 }}>
+                <div className="p-2">
                   {displayMaps.map((beatmap) => (
                     <BeatmapRow
                       key={beatmap.id}
@@ -602,7 +671,7 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                       beatmapsetId={beatmap.beatmapset_id}
                       titleOnly
                       density="compact"
-                                            actions={
+                      actions={
                         <DownloadButton
                           downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
                           downloadName={`${beatmap.artist} - ${beatmap.title}`}
@@ -621,110 +690,103 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                       }
                     />
                   ))}
-                </Box>
+                </div>
 
                 {/* Pagination */}
                 {pageCount > 1 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-                    <Pagination
-                      size="small"
-                      count={pageCount}
-                      page={currentPage}
-                      onChange={(_, p) => setMapPage(pack.share_code, p)}
-                      color="primary"
-                    />
-                  </Box>
+                  <div className="flex justify-center border-t py-2">
+                    {renderPagination(pageCount, currentPage, (p) => setMapPage(pack.share_code, p))}
+                  </div>
                 )}
-              </Paper>
+              </Card>
             );
           })}
-        </Stack>
+        </div>
       )}
 
       {user && !packsLoading && packs.length === 0 && (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography color="text.secondary" gutterBottom>
+        <Card className="p-8 text-center">
+          <p className="mb-3 text-muted-foreground">
             No packs yet
-          </Typography>
-          <Button
-            component={Link}
-            to="/create"
-            variant="outlined"
-            startIcon={<AddIcon />}
-          >
+          </p>
+          <Button variant="outline" onClick={onOpenCreatePack}>
+            <Plus data-icon="inline-start" />
             Create your first pack
           </Button>
-        </Paper>
+        </Card>
       )}
 
       {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onClose={handleCloseEdit} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Edit Pack
-          <IconButton size="small" onClick={handleCloseEdit}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Pack Name"
-              fullWidth
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-            />
-            <TextField
-              label="Description (optional)"
-              fullWidth
-              multiline
-              rows={2}
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-            />
+      <Dialog open={editDialogOpen} onOpenChange={(open) => !open && handleCloseEdit()}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Edit Pack</DialogTitle>
+              <Button variant="ghost" size="icon-xs" onClick={handleCloseEdit}>
+                <X />
+              </Button>
+            </div>
+            <DialogDescription className="sr-only">Edit your pack details and beatmaps</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Pack Name</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Pack Name"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Description (optional)</label>
+              <Textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Description (optional)"
+                rows={2}
+              />
+            </div>
 
-            <Divider sx={{ my: 1 }} />
+            <Separator />
 
-            <Typography variant="subtitle2" fontWeight="bold">
+            <p className="text-sm font-bold">
               Beatmaps ({editBeatmaps.length})
-            </Typography>
+            </p>
 
             {/* Add beatmap input */}
-            <Stack direction="row" spacing={1}>
-              <TextField
-                label="Add beatmap (ID or URL)"
-                fullWidth
-                size="small"
-                value={beatmapInput}
-                onChange={(e) => setBeatmapInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && beatmapInput.trim() && handleAddBeatmap()}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LinkIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <LinkIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-8"
+                  placeholder="Add beatmap (ID or URL)"
+                  value={beatmapInput}
+                  onChange={(e) => setBeatmapInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && beatmapInput.trim() && handleAddBeatmap()}
+                />
+              </div>
               <Button
-                variant="contained"
                 onClick={handleAddBeatmap}
                 disabled={!beatmapInput.trim() || addingBeatmap}
-                sx={{ minWidth: 50 }}
+                className="min-w-[50px]"
               >
-                {addingBeatmap ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <AddIcon />}
+                {addingBeatmap ? <Spinner className="size-4" /> : <Plus />}
               </Button>
-            </Stack>
+            </div>
 
             {error && (
-              <Alert severity="error" onClose={() => setError('')}>
-                {error}
+              <Alert variant="destructive">
+                <AlertDescription className="flex items-center justify-between">
+                  {error}
+                  <Button variant="ghost" size="icon-xs" onClick={() => setError('')}>
+                    <X className="size-3" />
+                  </Button>
+                </AlertDescription>
               </Alert>
             )}
 
             {/* Beatmap list */}
-            <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+            <div className="max-h-[300px] overflow-auto">
               {editBeatmaps.map((beatmap) => (
                 <BeatmapRow
                   key={beatmap.id}
@@ -735,116 +797,110 @@ export default function MyPacks({ user, permissions, isKeySession }: MyPacksProp
                   beatmapsetId={beatmap.beatmapset_id}
                   titleOnly
                   density="compact"
-                                    actions={
+                  actions={
                     <RemoveButton onClick={() => handleRemoveEditBeatmap(beatmap.id)} />
                   }
                 />
               ))}
-            </Box>
-          </Stack>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseEdit}>Cancel</Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={handleCloseEdit}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSaveEdit}
-            disabled={saving}
-            sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
-        <DialogTitle>Delete Pack</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete "{packToDelete?.name}"? This action cannot be undone.
-          </Typography>
+      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !open && setDeleteConfirmOpen(false)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Pack</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{packToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={deleting}>
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={deleting}>
-            {deleting ? 'Deleting...' : 'Delete'}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Difficulty Selection Dialog */}
       <Dialog
         open={diffSelectOpen}
-        onClose={() => {
-          setDiffSelectOpen(false);
-          setPendingBeatmapset(null);
+        onOpenChange={(open) => {
+          if (!open) {
+            setDiffSelectOpen(false);
+            setPendingBeatmapset(null);
+          }
         }}
-        maxWidth="xs"
-        fullWidth
       >
-        <DialogTitle>Select Difficulty</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Select Difficulty</DialogTitle>
+            <DialogDescription className="sr-only">Choose which difficulty to add</DialogDescription>
+          </DialogHeader>
           {pendingBeatmapset && (
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+            <div className="flex flex-col gap-2">
+              <p className="mb-2 text-sm text-muted-foreground">
                 {pendingBeatmapset.artist} - {pendingBeatmapset.title}
-              </Typography>
+              </p>
               <Button
-                variant="contained"
-                fullWidth
+                className="w-full justify-start"
                 onClick={() => handleSelectDifficulty('all')}
-                sx={{ justifyContent: 'flex-start' }}
               >
                 Add all {pendingBeatmapset.beatmaps.length} difficulties
               </Button>
-              <Divider sx={{ my: 1 }}>or select one</Divider>
+              <div className="flex items-center gap-2 py-1">
+                <Separator className="flex-1" />
+                <span className="text-xs text-muted-foreground">or select one</span>
+                <Separator className="flex-1" />
+              </div>
               {pendingBeatmapset.beatmaps.map((diff, index) => (
                 <Button
                   key={diff.beatmap_id}
-                  variant="outlined"
-                  fullWidth
+                  variant="outline"
+                  className="w-full justify-start"
                   onClick={() => handleSelectDifficulty(index)}
-                  sx={{ justifyContent: 'flex-start' }}
                 >
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 22,
-                      backgroundColor: 'primary.main',
-                      borderRadius: 0.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: 10,
-                      fontWeight: 'bold',
-                      mr: 1.5,
-                    }}
+                  <span
+                    className="mr-3 flex h-[22px] w-8 items-center justify-center rounded text-[10px] font-bold text-white"
+                    style={{ backgroundColor: 'hsl(var(--primary))' }}
                   >
                     {diff.keys}K
-                  </Box>
-                  <Box sx={{ flex: 1, textAlign: 'left' }}>
-                    <Typography variant="body2">{diff.difficulty_name}</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                  </span>
+                  <span className="flex flex-1 flex-col text-left">
+                    <span className="text-sm">{diff.difficulty_name}</span>
+                    <span className="text-xs text-muted-foreground">
                       ★ {diff.star_rating.toFixed(2)}
-                    </Typography>
-                  </Box>
+                    </span>
+                  </span>
                 </Button>
               ))}
-            </Stack>
+            </div>
           )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDiffSelectOpen(false);
+                setPendingBeatmapset(null);
+              }}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setDiffSelectOpen(false);
-              setPendingBeatmapset(null);
-            }}
-          >
-            Cancel
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

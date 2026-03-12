@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Button, Snackbar, Alert, CircularProgress, LinearProgress, Box } from '@mui/material';
-import DownloadIcon from '@mui/icons-material/Download';
-import CheckIcon from '@mui/icons-material/Check';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Spinner } from '@/components/ui/spinner';
+import { Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { addToStash } from '../utils/stash';
 import type { StashBeatmap } from '../types/beatmap';
 
@@ -15,11 +17,6 @@ interface DownloadButtonProps {
 export default function DownloadButton({ downloadUrl, downloadName, stashData, onDownloaded }: DownloadButtonProps) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'info' | 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'info',
-  });
 
   const handleClick = async () => {
     if (loading) return;
@@ -27,7 +24,12 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
     const name = downloadName || 'beatmap';
     setLoading(true);
     setProgress(null);
-    setSnackbar({ open: true, message: `Downloading ${name}...`, severity: 'info' });
+
+    const toastId = toast.loading(`Downloading ${name}...`, {
+      description: (
+        <Progress value={0} className="mt-2" />
+      ),
+    });
 
     try {
       const response = await fetch(downloadUrl);
@@ -47,7 +49,14 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
           if (done) break;
           chunks.push(value);
           received += value.length;
-          setProgress(Math.round((received / total) * 100));
+          const pct = Math.round((received / total) * 100);
+          setProgress(pct);
+          toast.loading(`Downloading ${name}...`, {
+            id: toastId,
+            description: (
+              <Progress value={pct} className="mt-2" />
+            ),
+          });
         }
 
         const blob = new Blob(chunks as BlobPart[]);
@@ -63,9 +72,9 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
       }
 
       onDownloaded?.();
-      setSnackbar({ open: true, message: `Downloaded ${name}`, severity: 'success' });
+      toast.success(`Downloaded ${name}`, { id: toastId });
     } catch {
-      setSnackbar({ open: true, message: `Failed to download ${name}`, severity: 'error' });
+      toast.error(`Failed to download ${name}`, { id: toastId });
     } finally {
       setLoading(false);
       setProgress(null);
@@ -88,54 +97,19 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
   const progressLabel = progress != null ? `${progress}%` : '';
 
   return (
-    <>
-      <Button
-        size="small"
-        color="success"
-        variant="text"
-        startIcon={
-          loading ? (
-            <CircularProgress size={14} color="success" />
-          ) : (
-            <DownloadIcon sx={{ fontSize: 16 }} />
-          )
-        }
-        onClick={handleClick}
-        disabled={loading}
-        sx={{
-          fontSize: 12,
-          fontWeight: 600,
-          minWidth: 'auto',
-          px: 1,
-          py: 0.25,
-        }}
-      >
-        {loading ? `${progressLabel || 'Downloading...'}` : 'Download'}
-      </Button>
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={snackbar.severity === 'info' ? null : 3000}
-        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackbar(s => ({ ...s, open: false }))}
-          severity={snackbar.severity}
-          icon={snackbar.severity === 'success' ? <CheckIcon /> : undefined}
-          sx={{ width: '100%' }}
-        >
-          <Box>
-            {snackbar.message}
-            {snackbar.severity === 'info' && (
-              <LinearProgress
-                variant={progress != null ? 'determinate' : 'indeterminate'}
-                value={progress ?? undefined}
-                sx={{ mt: 1, borderRadius: 1 }}
-              />
-            )}
-          </Box>
-        </Alert>
-      </Snackbar>
-    </>
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={handleClick}
+      disabled={loading}
+      className="gap-1 font-semibold text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+    >
+      {loading ? (
+        <Spinner className="size-3.5" />
+      ) : (
+        <Download className="size-3.5" />
+      )}
+      {loading ? `${progressLabel || 'Downloading...'}` : 'Download'}
+    </Button>
   );
 }

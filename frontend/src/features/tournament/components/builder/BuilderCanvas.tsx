@@ -1,15 +1,19 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Box, Typography, IconButton, Tooltip, Chip, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
-import TabletMacIcon from '@mui/icons-material/TabletMac';
-import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
-import VerticalAlignBottomIcon from '@mui/icons-material/VerticalAlignBottom';
-import AddIcon from '@mui/icons-material/Add';
+import {
+  Monitor,
+  Tablet,
+  Smartphone,
+  ZoomIn,
+  ZoomOut,
+  Copy,
+  Trash2,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  Plus,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { BuilderElement, ElementStyles, SiteConfig } from '../../types/siteConfig';
 
 type DeviceMode = 'desktop' | 'tablet' | 'mobile';
@@ -109,93 +113,122 @@ export default function BuilderCanvas({
   const breadcrumb = selectedId ? getBreadcrumb(selectedId, elements, rootIds) : [];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="flex flex-col overflow-hidden">
       {/* Canvas toolbar */}
-      <Box sx={{
-        display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 0.75,
-        borderBottom: '1px solid', borderColor: 'divider',
-        bgcolor: 'background.paper', flexShrink: 0,
-      }}>
+      <div className="flex items-center gap-1 px-2 py-[3px] border-b border-border bg-card shrink-0">
         {/* Breadcrumb */}
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
+        <div className="flex-1 flex items-center gap-0.5 min-w-0 overflow-hidden">
           {breadcrumb.length > 0 ? (
             breadcrumb.map((crumb, i) => (
-              <Box key={crumb.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {i > 0 && <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>/</Typography>}
-                <Chip
-                  label={crumb.name}
-                  size="small"
+              <div key={crumb.id} className="flex items-center gap-0.5">
+                {i > 0 && <span className="text-[10px] text-muted-foreground">/</span>}
+                <button
                   onClick={() => onSelect(crumb.id)}
-                  variant={crumb.id === selectedId ? 'filled' : 'outlined'}
-                  color={crumb.id === selectedId ? 'primary' : 'default'}
-                  sx={{ height: 20, fontSize: 10, cursor: 'pointer' }}
-                />
-              </Box>
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full cursor-pointer transition-colors ${
+                    crumb.id === selectedId
+                      ? 'bg-primary text-primary-foreground'
+                      : 'border border-border hover:bg-muted'
+                  }`}
+                >
+                  {crumb.name}
+                </button>
+              </div>
             ))
           ) : (
-            <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>
+            <span className="text-[10px] text-muted-foreground">
               Click an element to select it
-            </Typography>
+            </span>
           )}
-        </Box>
+        </div>
 
         {/* Device toggle */}
-        <ToggleButtonGroup
-          value={device}
-          exclusive
-          onChange={(_, v) => { if (v) setDevice(v); }}
-          size="small"
-          sx={{ '& .MuiToggleButton-root': { px: 0.75, py: 0.25 } }}
+        <ToggleGroup
+          value={[device]}
+          className="h-6"
         >
-          <ToggleButton value="desktop"><Tooltip title="Desktop (1440px)"><DesktopWindowsIcon sx={{ fontSize: 16 }} /></Tooltip></ToggleButton>
-          <ToggleButton value="tablet"><Tooltip title="Tablet (768px)"><TabletMacIcon sx={{ fontSize: 16 }} /></Tooltip></ToggleButton>
-          <ToggleButton value="mobile"><Tooltip title="Mobile (375px)"><PhoneIphoneIcon sx={{ fontSize: 16 }} /></Tooltip></ToggleButton>
-        </ToggleButtonGroup>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <ToggleGroupItem
+                  value="desktop"
+                  onClick={() => setDevice('desktop')}
+                  className="h-6 px-1"
+                />
+              }
+            >
+              <Monitor className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>Desktop (1440px)</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <ToggleGroupItem
+                  value="tablet"
+                  onClick={() => setDevice('tablet')}
+                  className="h-6 px-1"
+                />
+              }
+            >
+              <Tablet className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>Tablet (768px)</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <ToggleGroupItem
+                  value="mobile"
+                  onClick={() => setDevice('mobile')}
+                  className="h-6 px-1"
+                />
+              }
+            >
+              <Smartphone className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>Mobile (375px)</TooltipContent>
+          </Tooltip>
+        </ToggleGroup>
 
         {/* Zoom */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-          <IconButton size="small" onClick={() => setZoom(Math.max(25, zoom - 25))} disabled={zoom <= 25}>
-            <ZoomOutIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-          <Typography variant="caption" sx={{ fontSize: 10, fontFamily: 'monospace', minWidth: 32, textAlign: 'center' }}>
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="icon-xs" onClick={() => setZoom(Math.max(25, zoom - 25))} disabled={zoom <= 25}>
+            <ZoomOut className="size-4" />
+          </Button>
+          <span className="text-[10px] font-mono min-w-[32px] text-center text-muted-foreground">
             {zoom}%
-          </Typography>
-          <IconButton size="small" onClick={() => setZoom(Math.min(200, zoom + 25))} disabled={zoom >= 200}>
-            <ZoomInIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Box>
-      </Box>
+          </span>
+          <Button variant="ghost" size="icon-xs" onClick={() => setZoom(Math.min(200, zoom + 25))} disabled={zoom >= 200}>
+            <ZoomIn className="size-4" />
+          </Button>
+        </div>
+      </div>
 
       {/* Canvas area */}
-      <Box
+      <div
         ref={canvasRef}
         onClick={handleCanvasClick}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        sx={{
-          flex: 1,
-          overflow: 'auto',
-          bgcolor: '#0e0e10',
-          display: 'flex',
-          justifyContent: 'center',
-          py: 4,
-          // Subtle grid pattern
+        className="flex-1 overflow-auto flex justify-center py-4"
+        style={{
+          backgroundColor: '#0e0e10',
           backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}
       >
-        <Box
+        <div
           onClick={handleCanvasClick}
-          sx={{
+          style={{
             width: canvasWidth,
             minHeight: 600,
             maxWidth: '100%',
-            bgcolor: config.theme.backgroundColor,
+            backgroundColor: config.theme.backgroundColor,
             color: config.theme.textColor,
             fontFamily: config.theme.fontFamily,
             boxShadow: '0 8px 60px rgba(0,0,0,0.5)',
-            borderRadius: 1.5,
+            borderRadius: 6,
             position: 'relative',
             overflow: 'hidden',
             transform: `scale(${zoom / 100})`,
@@ -231,9 +264,9 @@ export default function BuilderCanvas({
               />
             ))
           )}
-        </Box>
-      </Box>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -241,43 +274,43 @@ export default function BuilderCanvas({
 
 function EmptyState() {
   return (
-    <Box sx={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: 500, gap: 2, py: 8,
-    }}>
-      <Box sx={{
-        width: 80, height: 80, borderRadius: '50%',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        bgcolor: 'rgba(255,255,255,0.03)',
-        border: '2px dashed rgba(255,255,255,0.1)',
-      }}>
-        <AddIcon sx={{ fontSize: 32, color: 'rgba(255,255,255,0.15)' }} />
-      </Box>
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500, mb: 0.5 }}>
+    <div className="flex flex-col items-center justify-center gap-2 py-8" style={{ minHeight: 500 }}>
+      <div
+        className="flex items-center justify-center rounded-full"
+        style={{
+          width: 80,
+          height: 80,
+          backgroundColor: 'rgba(255,255,255,0.03)',
+          border: '2px dashed rgba(255,255,255,0.1)',
+        }}
+      >
+        <Plus className="size-8" style={{ color: 'rgba(255,255,255,0.15)' }} />
+      </div>
+      <div className="text-center">
+        <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>
           Start building your page
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', display: 'block', maxWidth: 280 }}>
+        </p>
+        <p className="text-xs max-w-[280px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
           Drag elements from the left panel or click the + buttons to add containers, text, images, and more
-        </Typography>
-      </Box>
-      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+        </p>
+      </div>
+      <div className="flex gap-1 mt-1">
         {['Container', 'Text', 'Image'].map((label) => (
-          <Chip
+          <span
             key={label}
-            label={label}
-            size="small"
-            variant="outlined"
-            sx={{
-              height: 24, fontSize: 10,
+            className="text-[10px] px-2 py-0.5 rounded-full"
+            style={{
+              borderWidth: 1,
+              borderStyle: 'dashed',
               borderColor: 'rgba(255,255,255,0.1)',
               color: 'rgba(255,255,255,0.3)',
-              borderStyle: 'dashed',
             }}
-          />
+          >
+            {label}
+          </span>
         ))}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 
@@ -451,7 +484,7 @@ function BuilderElementRenderer({
     : 'none';
 
   return (
-    <Box
+    <div
       ref={boxRef}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
@@ -459,7 +492,7 @@ function BuilderElementRenderer({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      sx={{
+      style={{
         ...cssStyles,
         outline: outlineStyle,
         outlineOffset: isSelected ? -1 : 0,
@@ -468,136 +501,143 @@ function BuilderElementRenderer({
         transition: resizing ? 'none' : 'outline 0.15s',
         // Drop zone background pulse
         ...(isDropOver ? {
-          bgcolor: el.styles.backgroundColor
+          backgroundColor: el.styles.backgroundColor
             ? el.styles.backgroundColor
             : 'rgba(59,130,246,0.04)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 0,
-            bgcolor: 'rgba(59,130,246,0.06)',
-            borderRadius: 'inherit',
-            pointerEvents: 'none',
-            zIndex: 0,
-          },
         } : {}),
       }}
     >
+      {/* Drop overlay */}
+      {isDropOver && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundColor: 'rgba(59,130,246,0.06)',
+            borderRadius: 'inherit',
+          }}
+        />
+      )}
+
       {/* Element label tag */}
       {(isSelected || isHovered) && (
-        <Box sx={{
-          position: 'absolute',
-          top: -20,
-          left: -1,
-          display: 'flex', alignItems: 'center', gap: 0,
-          zIndex: 1000,
-          pointerEvents: 'none',
-          fontFamily: 'Inter, system-ui, sans-serif',
-        }}>
-          <Box sx={{
-            fontSize: 9,
-            fontWeight: 600,
-            color: '#fff',
-            bgcolor: isSelected ? accentColor : `${accentColor}99`,
-            px: 0.75,
-            py: 0.15,
-            borderRadius: '4px 4px 0 0',
-            lineHeight: 1.4,
-            whiteSpace: 'nowrap',
-          }}>
+        <div
+          className="absolute flex items-center z-[1000] pointer-events-none"
+          style={{ top: -20, left: -1, fontFamily: 'Inter, system-ui, sans-serif' }}
+        >
+          <span
+            className="text-[9px] font-semibold text-white px-[3px] py-[1px] whitespace-nowrap"
+            style={{
+              backgroundColor: isSelected ? accentColor : `${accentColor}99`,
+              borderRadius: '4px 4px 0 0',
+              lineHeight: 1.4,
+            }}
+          >
             {el.name || el.type}
-          </Box>
+          </span>
           {/* Resize dimensions */}
           {resizing && resizeSize && (
-            <Box sx={{
-              fontSize: 9, fontWeight: 500, color: '#fff',
-              bgcolor: 'rgba(0,0,0,0.7)', px: 0.75, py: 0.15,
-              borderRadius: '0 4px 0 0', lineHeight: 1.4,
-              fontFamily: 'monospace',
-            }}>
+            <span
+              className="text-[9px] font-medium font-mono text-white px-[3px] py-[1px] whitespace-nowrap"
+              style={{
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                borderRadius: '0 4px 0 0',
+                lineHeight: 1.4,
+              }}
+            >
               {resizeSize.w} × {resizeSize.h}
-            </Box>
+            </span>
           )}
-        </Box>
+        </div>
       )}
 
       {/* Quick action toolbar (floating) */}
       {isSelected && !resizing && (
-        <Box sx={{
-          position: 'absolute',
-          top: -20,
-          right: -1,
-          display: 'flex', gap: 0,
-          zIndex: 1001,
-          fontFamily: 'Inter, system-ui, sans-serif',
-        }}>
+        <div
+          className="absolute flex z-[1001]"
+          style={{ top: -20, right: -1, fontFamily: 'Inter, system-ui, sans-serif' }}
+        >
           {[
-            { icon: <VerticalAlignTopIcon sx={{ fontSize: 12 }} />, tip: 'Move up (Ctrl+↑)', action: () => onMoveElement(elementId, -1) },
-            { icon: <VerticalAlignBottomIcon sx={{ fontSize: 12 }} />, tip: 'Move down (Ctrl+↓)', action: () => onMoveElement(elementId, 1) },
-            { icon: <ContentCopyIcon sx={{ fontSize: 11 }} />, tip: 'Duplicate (Ctrl+D)', action: () => onDuplicate(elementId) },
-            { icon: <DeleteOutlineIcon sx={{ fontSize: 12 }} />, tip: 'Delete', action: () => onDelete(elementId), color: '#ef4444' },
+            { icon: <ArrowUpToLine className="size-3" />, tip: 'Move up (Ctrl+Up)', action: () => onMoveElement(elementId, -1) },
+            { icon: <ArrowDownToLine className="size-3" />, tip: 'Move down (Ctrl+Down)', action: () => onMoveElement(elementId, 1) },
+            { icon: <Copy className="size-[11px]" />, tip: 'Duplicate (Ctrl+D)', action: () => onDuplicate(elementId) },
+            { icon: <Trash2 className="size-3" />, tip: 'Delete', action: () => onDelete(elementId), color: '#ef4444' },
           ].map(({ icon, tip, action, color }, i) => (
-            <Tooltip key={i} title={tip} placement="top" arrow>
-              <IconButton
-                size="small"
-                onClick={(e) => { e.stopPropagation(); action(); }}
-                sx={{
-                  width: 20, height: 20,
-                  bgcolor: accentColor, color: '#fff',
-                  borderRadius: i === 0 ? '4px 0 0 0' : i === 3 ? '0 4px 0 0' : 0,
-                  '&:hover': { bgcolor: color || '#2563eb' },
-                }}
+            <Tooltip key={i}>
+              <TooltipTrigger
+                render={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); action(); }}
+                    className="flex items-center justify-center text-white"
+                    style={{
+                      width: 20,
+                      height: 20,
+                      backgroundColor: accentColor,
+                      borderRadius: i === 0 ? '4px 0 0 0' : i === 3 ? '0 4px 0 0' : 0,
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = color || '#2563eb'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = accentColor; }}
+                  />
+                }
               >
                 {icon}
-              </IconButton>
+              </TooltipTrigger>
+              <TooltipContent>{tip}</TooltipContent>
             </Tooltip>
           ))}
-        </Box>
+        </div>
       )}
 
       {/* Resize handles */}
       {isSelected && (
         <>
           {/* Right */}
-          <Box
+          <div
             onPointerDown={(e) => handleResizePointerDown(e, 'right')}
-            sx={{
-              position: 'absolute', top: '50%', right: -4, width: 8, height: 32,
-              transform: 'translateY(-50%)', cursor: 'ew-resize', zIndex: 200,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              '&::after': {
-                content: '""', width: 3, height: 16,
-                bgcolor: accentColor, borderRadius: 4, opacity: 0.8,
-                transition: 'height 0.15s, opacity 0.15s',
-              },
-              '&:hover::after': { height: 24, opacity: 1 },
+            className="absolute z-[200] flex items-center justify-center"
+            style={{
+              top: '50%',
+              right: -4,
+              width: 8,
+              height: 32,
+              transform: 'translateY(-50%)',
+              cursor: 'ew-resize',
             }}
-          />
+          >
+            <div
+              className="rounded-full transition-all"
+              style={{ width: 3, height: 16, backgroundColor: accentColor, opacity: 0.8 }}
+            />
+          </div>
           {/* Bottom */}
-          <Box
+          <div
             onPointerDown={(e) => handleResizePointerDown(e, 'bottom')}
-            sx={{
-              position: 'absolute', bottom: -4, left: '50%', width: 32, height: 8,
-              transform: 'translateX(-50%)', cursor: 'ns-resize', zIndex: 200,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              '&::after': {
-                content: '""', width: 16, height: 3,
-                bgcolor: accentColor, borderRadius: 4, opacity: 0.8,
-                transition: 'width 0.15s, opacity 0.15s',
-              },
-              '&:hover::after': { width: 24, opacity: 1 },
+            className="absolute z-[200] flex items-center justify-center"
+            style={{
+              bottom: -4,
+              left: '50%',
+              width: 32,
+              height: 8,
+              transform: 'translateX(-50%)',
+              cursor: 'ns-resize',
             }}
-          />
+          >
+            <div
+              className="rounded-full transition-all"
+              style={{ width: 16, height: 3, backgroundColor: accentColor, opacity: 0.8 }}
+            />
+          </div>
           {/* Corner */}
-          <Box
+          <div
             onPointerDown={(e) => handleResizePointerDown(e, 'bottom-right')}
-            sx={{
-              position: 'absolute', bottom: -5, right: -5, width: 10, height: 10,
-              cursor: 'nwse-resize', zIndex: 201,
-              bgcolor: '#fff', border: `2px solid ${accentColor}`,
-              borderRadius: '50%',
-              transition: 'transform 0.15s',
-              '&:hover': { transform: 'scale(1.3)' },
+            className="absolute z-[201] rounded-full transition-transform hover:scale-130"
+            style={{
+              bottom: -5,
+              right: -5,
+              width: 10,
+              height: 10,
+              cursor: 'nwse-resize',
+              backgroundColor: '#fff',
+              border: `2px solid ${accentColor}`,
             }}
           />
         </>
@@ -605,83 +645,71 @@ function BuilderElementRenderer({
 
       {/* Padding visualization (when selected) */}
       {isSelected && hasPadding(el.styles) && (
-        <Box sx={{
-          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-          borderTop: el.styles.paddingTop ? `${el.styles.paddingTop}px solid rgba(59,130,246,0.06)` : 'none',
-          borderRight: el.styles.paddingRight ? `${el.styles.paddingRight}px solid rgba(59,130,246,0.06)` : 'none',
-          borderBottom: el.styles.paddingBottom ? `${el.styles.paddingBottom}px solid rgba(59,130,246,0.06)` : 'none',
-          borderLeft: el.styles.paddingLeft ? `${el.styles.paddingLeft}px solid rgba(59,130,246,0.06)` : 'none',
-        }} />
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            borderTop: el.styles.paddingTop ? `${el.styles.paddingTop}px solid rgba(59,130,246,0.06)` : 'none',
+            borderRight: el.styles.paddingRight ? `${el.styles.paddingRight}px solid rgba(59,130,246,0.06)` : 'none',
+            borderBottom: el.styles.paddingBottom ? `${el.styles.paddingBottom}px solid rgba(59,130,246,0.06)` : 'none',
+            borderLeft: el.styles.paddingLeft ? `${el.styles.paddingLeft}px solid rgba(59,130,246,0.06)` : 'none',
+          }}
+        />
       )}
 
       {/* Element content */}
       {el.type === 'text' && (
-        <Typography
-          component="div"
+        <div
           contentEditable={isSelected}
           suppressContentEditableWarning
           onBlur={(e) => onUpdateContent(elementId, e.currentTarget.textContent || '')}
-          sx={{
-            outline: 'none',
-            cursor: isSelected ? 'text' : 'default',
-            minHeight: '1em',
-            whiteSpace: 'pre-wrap',
-            position: 'relative',
-            zIndex: 1,
-          }}
+          className="outline-none min-h-[1em] whitespace-pre-wrap relative z-[1]"
+          style={{ cursor: isSelected ? 'text' : 'default' }}
         >
           {el.content || 'Add text...'}
-        </Typography>
+        </div>
       )}
 
       {el.type === 'image' && (
         el.content ? (
-          <Box
-            component="img"
+          <img
             src={el.content}
-            sx={{ display: 'block', width: '100%', height: el.styles.height || 'auto', objectFit: 'cover', position: 'relative', zIndex: 1 }}
+            className="block w-full relative z-[1]"
+            style={{ height: el.styles.height || 'auto', objectFit: 'cover' }}
             onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = 'none'; }}
           />
         ) : (
-          <Box sx={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            minHeight: 140, bgcolor: 'rgba(255,255,255,0.03)',
-            border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 1, gap: 0.5,
+          <div className="flex flex-col items-center justify-center gap-0.5 min-h-[140px] rounded" style={{
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            border: '1px dashed rgba(255,255,255,0.08)',
           }}>
-            <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Typography sx={{ fontSize: 16, opacity: 0.2 }}>🖼</Typography>
-            </Box>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>Set image URL in panel →</Typography>
-          </Box>
+            <div className="w-8 h-8 rounded flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+              <span className="text-base opacity-20">&#x1f5bc;</span>
+            </div>
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>Set image URL in panel →</span>
+          </div>
         )
       )}
 
       {el.type === 'button' && (
-        <Box
+        <div
           contentEditable={isSelected}
           suppressContentEditableWarning
           onBlur={(e) => onUpdateContent(elementId, e.currentTarget.textContent || '')}
-          sx={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            cursor: isSelected ? 'text' : 'pointer',
-            outline: 'none', position: 'relative', zIndex: 1,
-          }}
+          className="inline-flex items-center justify-center outline-none relative z-[1]"
+          style={{ cursor: isSelected ? 'text' : 'pointer' }}
         >
           {el.content || 'Button'}
-        </Box>
+        </div>
       )}
 
       {el.type === 'divider' && null}
       {el.type === 'spacer' && (
         isSelected ? (
-          <Box sx={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: '100%', minHeight: 20,
-          }}>
-            <Typography sx={{ fontSize: 8, color: 'rgba(255,255,255,0.15)', fontFamily: 'monospace' }}>
+          <div className="flex items-center justify-center h-full min-h-[20px]">
+            <span className="text-[8px] font-mono" style={{ color: 'rgba(255,255,255,0.15)' }}>
               spacer {el.styles.height || '40px'}
-            </Typography>
-          </Box>
+            </span>
+          </div>
         ) : null
       )}
 
@@ -689,20 +717,19 @@ function BuilderElementRenderer({
       {el.type === 'container' && (
         <>
           {el.children.length === 0 ? (
-            <Box sx={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              minHeight: 80, gap: 0.5,
-              border: isDropOver ? '2px dashed rgba(59,130,246,0.4)' : '1px dashed rgba(255,255,255,0.08)',
-              borderRadius: 1, transition: 'border-color 0.2s, background 0.2s',
-              bgcolor: isDropOver ? 'rgba(59,130,246,0.04)' : 'transparent',
-              fontFamily: 'Inter, system-ui, sans-serif',
-              position: 'relative', zIndex: 1,
-            }}>
-              <AddIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.1)' }} />
-              <Typography sx={{ fontSize: 9, color: 'rgba(255,255,255,0.15)' }}>
+            <div
+              className="flex flex-col items-center justify-center min-h-[80px] gap-0.5 rounded transition-all relative z-[1]"
+              style={{
+                border: isDropOver ? '2px dashed rgba(59,130,246,0.4)' : '1px dashed rgba(255,255,255,0.08)',
+                backgroundColor: isDropOver ? 'rgba(59,130,246,0.04)' : 'transparent',
+                fontFamily: 'Inter, system-ui, sans-serif',
+              }}
+            >
+              <Plus className="size-[18px]" style={{ color: 'rgba(255,255,255,0.1)' }} />
+              <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.15)' }}>
                 Drop elements here
-              </Typography>
-            </Box>
+              </span>
+            </div>
           ) : (
             el.children.map((childId) => (
               <BuilderElementRenderer
@@ -725,7 +752,7 @@ function BuilderElementRenderer({
           )}
         </>
       )}
-    </Box>
+    </div>
   );
 }
 

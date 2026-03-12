@@ -1,36 +1,20 @@
 import { useState } from 'react';
+import { Trophy, X, Palette, ChevronRight, List, Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  CircularProgress,
-  Alert,
-  TextField,
   Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  IconButton,
-  InputAdornment,
-  Divider,
-  Avatar,
-  Breadcrumbs,
-  Card,
-  CardHeader,
-  CardContent,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Badge,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import CloseIcon from '@mui/icons-material/Close';
-import PaletteIcon from '@mui/icons-material/Palette';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import ViewListIcon from '@mui/icons-material/ViewList';
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import {
   createTournament,
   type Tournament,
@@ -112,201 +96,206 @@ export default function TournamentCreateSection({
   return (
     <>
       {/* Breadcrumb */}
-      <Breadcrumbs separator={<NavigateNextIcon sx={{ fontSize: 14 }} />} sx={{ mb: 2 }}>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+      <nav className="flex items-center gap-1 text-sm mb-2">
+        <button
+          className="text-muted-foreground hover:text-primary cursor-pointer"
           onClick={onBack}
         >
           Tournaments
-        </Typography>
-        <Typography variant="body2" fontWeight={600}>
-          Create
-        </Typography>
-      </Breadcrumbs>
+        </button>
+        <ChevronRight className="size-3.5 text-muted-foreground" />
+        <span className="font-semibold">Create</span>
+      </nav>
 
-      <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+      <div className="flex gap-3 flex-col md:flex-row">
         {/* Left: Form */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack spacing={2.5}>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col gap-3">
             {/* Basic Info Card */}
-            <Card variant="outlined">
-              <CardHeader
-                avatar={<Avatar sx={{ width: 34, height: 34, bgcolor: 'action.hover' }}><EmojiEventsIcon sx={{ fontSize: 18, color: 'text.secondary' }} /></Avatar>}
-                title="Basic Information"
-                slotProps={{ title: { variant: 'subtitle2', fontWeight: 'bold' } }}
-                sx={{ pb: 0 }}
-              />
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center size-[34px] rounded-full bg-muted">
+                    <Trophy className="size-[18px] text-muted-foreground" />
+                  </div>
+                  <CardTitle className="text-sm font-bold">Basic Information</CardTitle>
+                </div>
+              </CardHeader>
               <CardContent>
-                <Stack spacing={2}>
-                  <TextField
-                    label="Tournament Name"
-                    fullWidth
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. osu!mania World Cup 2025"
-                  />
-                  <TextField
-                    label="Abbreviation"
-                    fullWidth
-                    value={abbreviation}
-                    onChange={(e) => setAbbreviation(e.target.value.replace(/[^a-zA-Z0-9-]/g, ''))}
-                    placeholder="e.g. MWC-2025"
-                    helperText={abbreviation ? `URL: /t/${abbreviation.toLowerCase()}` : 'Used in the tournament URL'}
-                    slotProps={{
-                      input: {
-                        startAdornment: <InputAdornment position="start">/t/</InputAdornment>,
-                      },
-                    }}
-                  />
-                  <FormControl fullWidth>
-                    <InputLabel>Format</InputLabel>
-                    <Select value={format} label="Format" onChange={(e) => setFormat(e.target.value)}>
-                      {FORMATS.map((f) => (
-                        <MenuItem key={f} value={f}>{f}</MenuItem>
-                      ))}
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="tournament-name">Tournament Name</Label>
+                    <Input
+                      id="tournament-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. osu!mania World Cup 2025"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="abbreviation">Abbreviation</Label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">/t/</span>
+                      <Input
+                        id="abbreviation"
+                        className="pl-8"
+                        value={abbreviation}
+                        onChange={(e) => setAbbreviation(e.target.value.replace(/[^a-zA-Z0-9-]/g, ''))}
+                        placeholder="e.g. MWC-2025"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {abbreviation ? `URL: /t/${abbreviation.toLowerCase()}` : 'Used in the tournament URL'}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Format</Label>
+                    <Select value={format} onValueChange={(v) => v && setFormat(v)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FORMATS.map((f) => (
+                          <SelectItem key={f} value={f}>{f}</SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
-                  </FormControl>
-                </Stack>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             {/* Stages Card */}
-            <Card variant="outlined">
-              <CardHeader
-                avatar={
-                  <Badge badgeContent={stages.length} color="primary" showZero
-                    sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 18, minWidth: 18 } }}>
-                    <Avatar sx={{ width: 34, height: 34, bgcolor: 'action.hover' }}>
-                      <ViewListIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                    </Avatar>
-                  </Badge>
-                }
-                title="Stages"
-                subheader="Define the rounds of your tournament"
-                slotProps={{
-                  title: { variant: 'subtitle2', fontWeight: 'bold' },
-                  subheader: { variant: 'caption' },
-                }}
-                sx={{ pb: 0 }}
-              />
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <div className="flex items-center justify-center size-[34px] rounded-full bg-muted">
+                      <List className="size-[18px] text-muted-foreground" />
+                    </div>
+                    <Badge className="absolute -top-1.5 -right-2.5 h-[18px] min-w-[18px] px-1 text-[10px]">
+                      {stages.length}
+                    </Badge>
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold">Stages</CardTitle>
+                    <CardDescription className="text-xs">Define the rounds of your tournament</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
               <CardContent>
-                <List dense disablePadding sx={{
-                  border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', mb: 1.5,
-                }}>
+                <div className="border border-border rounded-md overflow-hidden mb-2">
                   {stages.map((stage, i) => (
-                    <ListItem
+                    <div
                       key={i}
-                      divider={i < stages.length - 1}
-                      sx={{ py: 0.5 }}
+                      className={`flex items-center py-1 px-2 ${i < stages.length - 1 ? 'border-b border-border' : ''}`}
                     >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <Avatar sx={{ width: 22, height: 22, fontSize: 10, fontWeight: 'bold', bgcolor: 'action.hover', color: 'text.secondary' }}>
-                          {i + 1}
-                        </Avatar>
-                      </ListItemIcon>
-                      <ListItemText primary={stage} slotProps={{ primary: { variant: 'body2' } }} />
-                      <Stack direction="row" spacing={0.25}>
-                        <IconButton size="small" onClick={() => handleMoveStage(i, -1)} disabled={i === 0}>
-                          <Typography variant="caption">↑</Typography>
-                        </IconButton>
-                        <IconButton size="small" onClick={() => handleMoveStage(i, 1)} disabled={i === stages.length - 1}>
-                          <Typography variant="caption">↓</Typography>
-                        </IconButton>
-                        <IconButton size="small" onClick={() => handleRemoveStage(i)}
-                          sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                          <CloseIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Stack>
-                    </ListItem>
+                      <div className="flex items-center justify-center size-[22px] rounded-full bg-muted text-muted-foreground text-[10px] font-bold mr-2">
+                        {i + 1}
+                      </div>
+                      <span className="flex-1 text-sm">{stage}</span>
+                      <div className="flex items-center gap-0.5">
+                        <Button variant="ghost" size="icon-xs" onClick={() => handleMoveStage(i, -1)} disabled={i === 0}>
+                          <ArrowUp className="size-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon-xs" onClick={() => handleMoveStage(i, 1)} disabled={i === stages.length - 1}>
+                          <ArrowDown className="size-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon-xs" onClick={() => handleRemoveStage(i)} className="text-muted-foreground hover:text-destructive">
+                          <X className="size-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                   {stages.length === 0 && (
-                    <Box sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.disabled">No stages added</Typography>
-                    </Box>
+                    <div className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">No stages added</p>
+                    </div>
                   )}
-                </List>
-                <Stack direction="row" spacing={1}>
-                  <TextField
-                    size="small"
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    className="flex-1"
                     placeholder="Add stage..."
                     value={newStageName}
                     onChange={(e) => setNewStageName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddStage()}
-                    sx={{ flex: 1 }}
                   />
-                  <Button size="small" variant="outlined" onClick={handleAddStage} disabled={!newStageName.trim()}
-                    startIcon={<AddIcon />}>
+                  <Button variant="outline" size="sm" onClick={handleAddStage} disabled={!newStageName.trim()}>
+                    <Plus data-icon="inline-start" />
                     Add
                   </Button>
-                </Stack>
+                </div>
               </CardContent>
             </Card>
 
-            {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-            <Stack direction="row" spacing={1.5}>
+            <div className="flex gap-2">
               <Button
-                variant="contained"
-                size="large"
+                size="lg"
                 onClick={handleCreate}
                 disabled={saving}
-                startIcon={saving ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <EmojiEventsIcon />}
-                sx={{ fontWeight: 'bold' }}
+                className="font-bold"
               >
+                {saving ? <Spinner className="size-4" /> : <Trophy data-icon="inline-start" />}
                 {saving ? 'Creating...' : 'Create Tournament'}
               </Button>
-              <Button variant="outlined" onClick={onBack} disabled={saving}>Cancel</Button>
-            </Stack>
-          </Stack>
-        </Box>
+              <Button variant="outline" onClick={onBack} disabled={saving}>Cancel</Button>
+            </div>
+          </div>
+        </div>
 
         {/* Right: Branding Card */}
-        <Box sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0 }}>
-          <Card variant="outlined">
-            <CardHeader
-              avatar={<Avatar sx={{ width: 34, height: 34, bgcolor: 'action.hover' }}><PaletteIcon sx={{ fontSize: 18, color: 'text.secondary' }} /></Avatar>}
-              title="Branding"
-              subheader="Optional — can be added later"
-              slotProps={{
-                title: { variant: 'subtitle2', fontWeight: 'bold' },
-                subheader: { variant: 'caption' },
-              }}
-              sx={{ pb: 0 }}
-            />
+        <div className="w-full md:w-[300px] flex-shrink-0">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center size-[34px] rounded-full bg-muted">
+                  <Palette className="size-[18px] text-muted-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold">Branding</CardTitle>
+                  <CardDescription className="text-xs">Optional — can be added later</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
             <CardContent>
-              <Stack spacing={2.5}>
-                <Box>
-                  <Typography variant="body2" fontWeight={600} sx={{ mb: 0.75 }}>Banner Image</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              <div className="flex flex-col gap-3">
+                <div>
+                  <p className="text-sm font-semibold mb-1">Banner Image</p>
+                  <p className="text-xs text-muted-foreground mb-2">
                     Recommended: 1200x300px
-                  </Typography>
+                  </p>
                   <ImageUpload
                     value={bannerUrl || undefined}
                     onChange={(url) => setBannerUrl(url || '')}
                     aspectRatio="4/1"
                   />
-                </Box>
-                <Divider />
-                <Box>
-                  <Typography variant="body2" fontWeight={600} sx={{ mb: 0.75 }}>Logo</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                </div>
+                <Separator />
+                <div>
+                  <p className="text-sm font-semibold mb-1">Logo</p>
+                  <p className="text-xs text-muted-foreground mb-2">
                     Recommended: 256x256px
-                  </Typography>
-                  <Box sx={{ maxWidth: 150 }}>
+                  </p>
+                  <div className="max-w-[150px]">
                     <ImageUpload
                       value={logoUrl || undefined}
                       onChange={(url) => setLogoUrl(url || '')}
                       aspectRatio="1/1"
                     />
-                  </Box>
-                </Box>
-              </Stack>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </Box>
-      </Box>
+        </div>
+      </div>
     </>
   );
 }

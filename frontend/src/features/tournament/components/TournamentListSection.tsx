@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  Chip,
-  CircularProgress,
-  Alert,
-  Avatar,
-  Card,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import LiveTvIcon from '@mui/icons-material/LiveTv';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Plus, Trophy, Clock, Tv, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
 import type { User } from '../../auth/api/auth';
 import { placeholderBanner, placeholderLogo } from '../utils/placeholders';
 import {
@@ -24,9 +13,9 @@ import {
 import { statusColors } from './TournamentStatus';
 
 const statusIcons: Record<string, React.ReactElement> = {
-  upcoming: <ScheduleIcon />,
-  live: <LiveTvIcon />,
-  completed: <CheckCircleIcon />,
+  upcoming: <Clock className="size-3" />,
+  live: <Tv className="size-3" />,
+  completed: <CheckCircle2 className="size-3" />,
 };
 
 interface TournamentListSectionProps {
@@ -47,7 +36,6 @@ export default function TournamentListSection({
   useEffect(() => {
     listTournaments()
       .then((all) => {
-        // Show only user's tournaments
         setTournaments(all.filter((t) => t.user?.osu_id === user.osu_id));
       })
       .catch((err) => setError(err.message))
@@ -56,43 +44,44 @@ export default function TournamentListSection({
 
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h6" fontWeight="bold">
-          Tournaments
-        </Typography>
-        <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={onCreate}>
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-lg font-bold">Tournaments</h2>
+        <Button size="sm" onClick={onCreate}>
+          <Plus className="size-4" />
           New Tournament
         </Button>
-      </Box>
+      </div>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress sx={{ color: 'primary.main' }} />
-        </Box>
+        <div className="flex justify-center py-16">
+          <Spinner className="size-6 text-primary" />
+        </div>
       ) : tournaments.length === 0 ? (
-        <Card variant="outlined" sx={{ textAlign: 'center', py: 6 }}>
-          <Avatar sx={{ width: 64, height: 64, mx: 'auto', mb: 2, bgcolor: 'action.hover' }}>
-            <EmojiEventsIcon sx={{ fontSize: 32, color: 'text.disabled' }} />
-          </Avatar>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>
-            No tournaments yet
-          </Typography>
-          <Typography variant="body2" color="text.disabled" sx={{ mb: 3, maxWidth: 360, mx: 'auto' }}>
+        <Card className="py-12 text-center">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-muted">
+            <Trophy className="size-8 text-muted-foreground" />
+          </div>
+          <h3 className="mb-1 text-lg font-semibold">No tournaments yet</h3>
+          <p className="mx-auto mb-6 max-w-[360px] text-sm text-muted-foreground">
             Create a tournament to manage mappools, set up brackets, and share everything with your players
-          </Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={onCreate} size="large"
-            sx={{ fontWeight: 'bold' }}>
+          </p>
+          <Button size="lg" onClick={onCreate} className="font-bold">
+            <Plus className="size-4" />
             Create your first tournament
           </Button>
         </Card>
       ) : (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-4">
           {tournaments.map((t) => (
             <TournamentCard key={t.id} tournament={t} onClick={() => onSelect(t)} />
           ))}
-        </Stack>
+        </div>
       )}
     </>
   );
@@ -101,54 +90,43 @@ export default function TournamentListSection({
 function TournamentCard({ tournament, onClick }: { tournament: Tournament; onClick: () => void }) {
   return (
     <Card
-      variant="outlined"
       onClick={onClick}
-      sx={{
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        '&:hover': { borderColor: 'primary.main', boxShadow: 3, transform: 'translateY(-1px)' },
-        position: 'relative',
-        height: 140,
-      }}
+      className="relative h-[140px] cursor-pointer overflow-hidden transition-all duration-200 hover:-translate-y-px hover:ring-2 hover:ring-primary hover:shadow-lg"
     >
       {/* Full banner background */}
-      <Box
-        component="img"
+      <img
         src={tournament.banner_url || placeholderBanner}
-        sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        alt=""
+        className="absolute inset-0 size-full object-cover"
       />
-      <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.2) 100%)' }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.2) 100%)' }}
+      />
 
       {/* Content overlay */}
-      <Box sx={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'flex-end', p: 2, gap: 2 }}>
+      <div className="relative flex h-full items-end gap-4 p-4">
         {/* Logo bottom-left */}
-        <Avatar
+        <img
           src={tournament.logo_url || placeholderLogo}
-          variant="rounded"
-          sx={{ width: 56, height: 56, flexShrink: 0 }}
+          alt=""
+          className="size-14 shrink-0 rounded-lg object-cover"
         />
 
         {/* Text */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', lineHeight: 1.2 }} noWrap>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-lg font-bold leading-tight text-white">
             {tournament.name}
-          </Typography>
-          <Chip
-            icon={statusIcons[tournament.status]}
-            label={tournament.status}
-            size="small"
-            sx={{
-              height: 22, fontSize: 10, fontWeight: 'bold', textTransform: 'capitalize',
-              backgroundColor: `${statusColors[tournament.status]}dd`,
-              color: 'white',
-              mt: 0.5,
-              width: 'fit-content',
-              '& .MuiChip-icon': { color: 'white', fontSize: 12, ml: 0.5 },
-            }}
-          />
-        </Box>
-      </Box>
+          </h3>
+          <span
+            className="mt-1 inline-flex h-[22px] w-fit items-center gap-1 rounded-full px-2 text-[10px] font-bold capitalize text-white"
+            style={{ backgroundColor: `${statusColors[tournament.status]}dd` }}
+          >
+            {statusIcons[tournament.status]}
+            {tournament.status}
+          </span>
+        </div>
+      </div>
     </Card>
   );
 }

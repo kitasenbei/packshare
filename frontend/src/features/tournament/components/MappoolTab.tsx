@@ -1,40 +1,36 @@
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  Chip,
-  CircularProgress,
-  Alert,
-  TextField,
-  IconButton,
-  Tabs,
-  Tab,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  InputAdornment,
-  Tooltip,
-  Card,
-  CardContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  Link,
+  Check,
+  X,
   List,
-  ListItem,
-  ListItemText,
-  Badge,
-  Menu,
-  MenuItem,
-  Paper,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import LinkIcon from '@mui/icons-material/Link';
-import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
-import ViewListIcon from '@mui/icons-material/ViewList';
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+  FolderOpen,
+} from 'lucide-react';
 import type { BeatmapsetInfo } from '../../auth/api/auth';
 import { getBeatmapset } from '../../auth/api/auth';
 import { browsePacks, getPack, type Pack, type BrowsePacksResult } from '../../pack/api/packs';
@@ -124,7 +120,7 @@ export default function MappoolTab({
   const [editSaving, setEditSaving] = useState(false);
 
   // Slot menu
-  const [slotMenuAnchor, setSlotMenuAnchor] = useState<HTMLElement | null>(null);
+  const [slotMenuOpen, setSlotMenuOpen] = useState(false);
   const [slotMenuMap, setSlotMenuMap] = useState<TournamentMap | null>(null);
 
   const currentStage = stages[currentStageIndex];
@@ -220,112 +216,102 @@ export default function MappoolTab({
   return (
     <>
       {editingStages ? (
-        <Box>
-          <>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<ViewListIcon sx={{ fontSize: 16 }} />}
-                onClick={() => { setEditingStages(false); setRenamingStageId(null); }}
-                sx={{ fontSize: 12 }}
+        <div>
+          <div className="mb-4 flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setEditingStages(false); setRenamingStageId(null); }}
+              className="text-xs"
+            >
+              <List className="size-4" />
+              Back to Mappool
+            </Button>
+            <span className="ml-2 text-sm text-muted-foreground">
+              Editing stages ({stages.length})
+            </span>
+          </div>
+
+          <div className="mb-4 overflow-hidden rounded-lg border">
+            {stages.map((stage, i) => (
+              <div
+                key={stage.id}
+                className={cn(
+                  'flex items-center justify-between px-3 py-2',
+                  i < stages.length - 1 && 'border-b',
+                )}
               >
-                Back to Mappool
-              </Button>
-              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                Editing stages ({stages.length})
-              </Typography>
-            </Box>
-
-            <List disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', mb: 2 }}>
-              {stages.map((stage, i) => (
-                <ListItem
-                  key={stage.id}
-                  divider={i < stages.length - 1}
-                  secondaryAction={
-                    <Tooltip title="Delete stage">
-                      <IconButton size="small" color="error" onClick={() => setStageToDelete({ id: stage.id, name: stage.name })}>
-                        <DeleteIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
-                  }
-                  sx={{ py: 0.75, px: 1.5 }}
-                >
-                  {renamingStageId === stage.id ? (
-                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flex: 1, mr: 4 }}>
-                      <TextField
-                        size="small"
-                        value={renameStageValue}
-                        onChange={(e) => setRenameStageValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && renameStageValue.trim()) {
-                            renameStage(tournament.abbreviation, stage.id, renameStageValue.trim()).then(() => {
-                              setTournament((prev) => ({
-                                ...prev,
-                                stages: prev.stages?.map((s) => s.id === stage.id ? { ...s, name: renameStageValue.trim() } : s),
-                              }));
-                              setRenamingStageId(null);
-                            }).catch(() => onError('Failed to rename stage'));
-                          }
-                          if (e.key === 'Escape') setRenamingStageId(null);
-                        }}
-                        autoFocus
-                        sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 14 } }}
-                      />
-                      <IconButton size="small" onClick={() => {
-                        if (!renameStageValue.trim()) return;
-                        renameStage(tournament.abbreviation, stage.id, renameStageValue.trim()).then(() => {
-                          setTournament((prev) => ({
-                            ...prev,
-                            stages: prev.stages?.map((s) => s.id === stage.id ? { ...s, name: renameStageValue.trim() } : s),
-                          }));
-                          setRenamingStageId(null);
-                        }).catch(() => onError('Failed to rename stage'));
-                      }}>
-                        <CheckIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => setRenamingStageId(null)}>
-                        <CloseIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Stack>
-                  ) : (
-                    <ListItemText
-                      primary={stage.name}
-                      secondary={`${stage.maps?.length ?? 0} maps`}
-                      slotProps={{ primary: { variant: 'body2', fontWeight: 500 }, secondary: { variant: 'caption' } }}
-                      onClick={() => { setRenamingStageId(stage.id); setRenameStageValue(stage.name); }}
-                      sx={{ cursor: 'pointer', '&:hover': { opacity: 0.7 } }}
+                {renamingStageId === stage.id ? (
+                  <div className="mr-8 flex flex-1 items-center gap-1">
+                    <Input
+                      value={renameStageValue}
+                      onChange={(e) => setRenameStageValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && renameStageValue.trim()) {
+                          renameStage(tournament.abbreviation, stage.id, renameStageValue.trim()).then(() => {
+                            setTournament((prev) => ({
+                              ...prev,
+                              stages: prev.stages?.map((s) => s.id === stage.id ? { ...s, name: renameStageValue.trim() } : s),
+                            }));
+                            setRenamingStageId(null);
+                          }).catch(() => onError('Failed to rename stage'));
+                        }
+                        if (e.key === 'Escape') setRenamingStageId(null);
+                      }}
+                      autoFocus
+                      className="flex-1"
                     />
-                  )}
-                </ListItem>
-              ))}
-            </List>
+                    <Button variant="ghost" size="icon-xs" onClick={() => {
+                      if (!renameStageValue.trim()) return;
+                      renameStage(tournament.abbreviation, stage.id, renameStageValue.trim()).then(() => {
+                        setTournament((prev) => ({
+                          ...prev,
+                          stages: prev.stages?.map((s) => s.id === stage.id ? { ...s, name: renameStageValue.trim() } : s),
+                        }));
+                        setRenamingStageId(null);
+                      }).catch(() => onError('Failed to rename stage'));
+                    }}>
+                      <Check className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon-xs" onClick={() => setRenamingStageId(null)}>
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className="cursor-pointer hover:opacity-70"
+                    onClick={() => { setRenamingStageId(stage.id); setRenameStageValue(stage.name); }}
+                  >
+                    <span className="text-sm font-medium">{stage.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{stage.maps?.length ?? 0} maps</span>
+                  </div>
+                )}
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-destructive"
+                        onClick={() => setStageToDelete({ id: stage.id, name: stage.name })}
+                      />
+                    }
+                  >
+                    <Trash2 className="size-4" />
+                  </TooltipTrigger>
+                  <TooltipContent>Delete stage</TooltipContent>
+                </Tooltip>
+              </div>
+            ))}
+          </div>
 
-            <Stack direction="row" spacing={1}>
-              <TextField
-                size="small"
-                placeholder="New stage name..."
-                value={newStageName}
-                onChange={(e) => setNewStageName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newStageName.trim()) {
-                    addStage(tournament.abbreviation, newStageName.trim()).then((stage) => {
-                      setTournament((prev) => ({
-                        ...prev,
-                        stages: [...(prev.stages || []), { ...stage, maps: [] }],
-                      }));
-                      setNewStageName('');
-                    }).catch(() => onError('Failed to add stage'));
-                  }
-                }}
-                sx={{ flex: 1 }}
-              />
-              <Button
-                variant="contained"
-                size="small"
-                disabled={!newStageName.trim()}
-                startIcon={<AddIcon />}
-                onClick={() => {
+          <div className="flex gap-2">
+            <Input
+              placeholder="New stage name..."
+              value={newStageName}
+              onChange={(e) => setNewStageName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newStageName.trim()) {
                   addStage(tournament.abbreviation, newStageName.trim()).then((stage) => {
                     setTournament((prev) => ({
                       ...prev,
@@ -333,25 +319,41 @@ export default function MappoolTab({
                     }));
                     setNewStageName('');
                   }).catch(() => onError('Failed to add stage'));
-                }}
-              >
-                Add
-              </Button>
-            </Stack>
+                }
+              }}
+              className="flex-1"
+            />
+            <Button
+              size="sm"
+              disabled={!newStageName.trim()}
+              onClick={() => {
+                addStage(tournament.abbreviation, newStageName.trim()).then((stage) => {
+                  setTournament((prev) => ({
+                    ...prev,
+                    stages: [...(prev.stages || []), { ...stage, maps: [] }],
+                  }));
+                  setNewStageName('');
+                }).catch(() => onError('Failed to add stage'));
+              }}
+            >
+              <Plus className="size-4" />
+              Add
+            </Button>
+          </div>
 
-            {/* Delete stage confirmation */}
-            <Dialog open={!!stageToDelete} onClose={() => setStageToDelete(null)} maxWidth="xs" fullWidth>
-              <DialogTitle>Delete Stage</DialogTitle>
-              <DialogContent>
-                <Typography>
-                  Delete <strong>{stageToDelete?.name}</strong>? All maps in this stage will be removed. This cannot be undone.
-                </Typography>
-              </DialogContent>
-              <DialogActions sx={{ px: 3, pb: 3 }}>
-                <Button variant="outlined" onClick={() => setStageToDelete(null)}>Cancel</Button>
+          {/* Delete stage confirmation */}
+          <Dialog open={!!stageToDelete} onOpenChange={(o) => { if (!o) setStageToDelete(null); }}>
+            <DialogContent className="sm:max-w-xs">
+              <DialogHeader>
+                <DialogTitle>Delete Stage</DialogTitle>
+              </DialogHeader>
+              <p>
+                Delete <strong>{stageToDelete?.name}</strong>? All maps in this stage will be removed. This cannot be undone.
+              </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setStageToDelete(null)}>Cancel</Button>
                 <Button
-                  variant="contained"
-                  color="error"
+                  variant="destructive"
                   onClick={() => {
                     if (!stageToDelete) return;
                     deleteStage(tournament.abbreviation, stageToDelete.id).then(() => {
@@ -368,164 +370,149 @@ export default function MappoolTab({
                 >
                   Delete
                 </Button>
-              </DialogActions>
-            </Dialog>
-          </>
-        </Box>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       ) : stages.length > 0 ? (
-        <Box>
-          <>
-            {/* Stage tabs + Add button */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Tabs
-                value={currentStageIndex}
-                onChange={(_, v) => setCurrentStageIndex(v)}
-                variant="scrollable"
-                scrollButtons="auto"
-                sx={{
-                  flex: 1, minHeight: 32,
-                  '& .MuiTab-root': { minHeight: 32, py: 0, fontSize: 13 },
-                  '& .MuiTabs-indicator': { height: 2 },
-                }}
-              >
+        <div>
+          {/* Stage tabs + Add button */}
+          <div className="mb-4 flex items-center gap-2">
+            <Tabs value={currentStageIndex.toString()} onValueChange={(v) => setCurrentStageIndex(Number(v))} className="min-w-0 flex-1">
+              <TabsList className="justify-start">
                 {stages.map((stage, i) => (
-                  <Tab
-                    key={stage.id}
-                    label={
-                      <Badge
-                        badgeContent={stage.maps?.length ?? 0}
-                        color="primary"
-                        max={99}
-                        sx={{ '& .MuiBadge-badge': { fontSize: 9, height: 16, minWidth: 16 } }}
-                      >
-                        <Box sx={{ pr: (stage.maps?.length ?? 0) > 0 ? 1.5 : 0 }}>{stage.name}</Box>
+                  <TabsTrigger key={stage.id} value={i.toString()} className="text-[13px]">
+                    {stage.name}
+                    {(stage.maps?.length ?? 0) > 0 && (
+                      <Badge className="ml-1 h-4 min-w-4 px-1 text-[9px]">
+                        {stage.maps?.length}
                       </Badge>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            {isOwner && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button variant="ghost" size="icon-sm" onClick={() => setEditingStages(true)} />
                     }
-                    value={i}
-                  />
-                ))}
-              </Tabs>
-              {isOwner && (
-                <>
-                  <Tooltip title="Edit stages">
-                    <IconButton size="small" onClick={() => setEditingStages(true)}>
-                      <EditIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Add map to stage">
-                    <Button
-                      size="small"
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      onClick={() => setAddMapOpen(true)}
-                      sx={{ flexShrink: 0, fontSize: 12 }}
-                    >
-                      Add Map
-                    </Button>
-                  </Tooltip>
-                </>
-              )}
-            </Box>
-
-            {/* Map list */}
-            {currentStage && (!currentStage.maps || currentStage.maps.length === 0) ? (
-              <Card variant="outlined" sx={{ p: 5, textAlign: 'center' }}>
-                <ViewListIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
-                <Typography color="text.disabled" sx={{ mb: 1.5 }}>
-                  No maps in {currentStage.name}
-                </Typography>
-                {isOwner && (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<AddIcon />}
-                    onClick={() => setAddMapOpen(true)}
-                    sx={{ textTransform: 'none' }}
                   >
-                    Add maps to this stage
-                  </Button>
-                )}
-              </Card>
-            ) : (
-              <Stack spacing={1.5}>
-                {slotOrder.map((slotType) => (
-                  <Card key={slotType} variant="outlined" sx={{ overflow: 'hidden' }}>
-                    <Box sx={{
-                      py: 1, px: 2,
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    }}>
-                      <Typography variant="body2" fontWeight="bold" color="text.primary">
-                        {getSlotLabel(slotType, slotConfigs)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {mapsBySlot[slotType].length} map{mapsBySlot[slotType].length !== 1 ? 's' : ''}
-                      </Typography>
-                    </Box>
-                    <CardContent sx={{ p: '4px !important' }}>
-                      {mapsBySlot[slotType].map((map) => (
-                        <BeatmapRow
-                          key={map.id}
-                          title={map.title}
-                          artist={map.artist}
-                          keys={map.keys}
-                          creator={map.creator}
-                          creatorPrefix="mapped by"
-                          difficultyName={map.difficulty_name}
-                          starRating={map.star_rating}
-                          beatmapsetId={map.beatmapset_id}
-                          slotBadge={{
-                            label: `${map.slot_type}${map.slot_number}`,
-                            color: getSlotColor(map.slot_type, slotConfigs),
-                            onClick: isOwner ? (e) => { e.stopPropagation(); setSlotMenuAnchor(e.currentTarget as HTMLElement); setSlotMenuMap(map); } : undefined,
-                          }}
-                          modChips={map.mod.match(/.{2}/g)?.map((m) => ({
-                            label: m,
-                            color: modColors[m] || '#666',
-                            icon: modIcons[m],
-                          }))}
-                          actions={
-                            <Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()}>
-                              <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapset_id}`, '_blank')} />
-                              <DownloadButton
-                                downloadUrl={`https://api.nerinyan.moe/d/${map.beatmapset_id}`}
-                                downloadName={`${map.artist} - ${map.title}`}
-                              />
-                              {isOwner && (
-                                <>
-                                  <Tooltip title="Edit slot/mod">
-                                    <IconButton size="small" onClick={() => { setEditingMap(map); setEditSlot(map.slot_type); setEditMod(map.mod); }}>
-                                      <EditIcon sx={{ fontSize: 16 }} />
-                                    </IconButton>
-                                  </Tooltip>
-                                  <RemoveButton onClick={() => handleRemoveMap(map.id)} />
-                                </>
-                              )}
-                            </Stack>
-                          }
-                        />
-                      ))}
-                    </CardContent>
-                  </Card>
-                ))}
-              </Stack>
+                    <Pencil className="size-4" />
+                  </TooltipTrigger>
+                  <TooltipContent>Edit stages</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button size="sm" onClick={() => setAddMapOpen(true)} className="shrink-0 text-xs" />
+                    }
+                  >
+                    <Plus className="size-4" />
+                    Add Map
+                  </TooltipTrigger>
+                  <TooltipContent>Add map to stage</TooltipContent>
+                </Tooltip>
+              </>
             )}
-          </>
-        </Box>
+          </div>
+
+          {/* Map list */}
+          {currentStage && (!currentStage.maps || currentStage.maps.length === 0) ? (
+            <Card className="py-10 text-center">
+              <List className="mx-auto mb-2 size-10 text-muted-foreground" />
+              <p className="mb-3 text-muted-foreground">
+                No maps in {currentStage.name}
+              </p>
+              {isOwner && (
+                <Button size="sm" variant="outline" onClick={() => setAddMapOpen(true)}>
+                  <Plus className="size-4" />
+                  Add maps to this stage
+                </Button>
+              )}
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {slotOrder.map((slotType) => (
+                <Card key={slotType} className="overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <span className="text-sm font-bold">
+                      {getSlotLabel(slotType, slotConfigs)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {mapsBySlot[slotType].length} map{mapsBySlot[slotType].length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <CardContent className="!p-1">
+                    {mapsBySlot[slotType].map((map) => (
+                      <BeatmapRow
+                        key={map.id}
+                        title={map.title}
+                        artist={map.artist}
+                        keys={map.keys}
+                        creator={map.creator}
+                        creatorPrefix="mapped by"
+                        difficultyName={map.difficulty_name}
+                        starRating={map.star_rating}
+                        beatmapsetId={map.beatmapset_id}
+                        slotBadge={{
+                          label: `${map.slot_type}${map.slot_number}`,
+                          color: getSlotColor(map.slot_type, slotConfigs),
+                          onClick: isOwner ? (e) => { e.stopPropagation(); setSlotMenuMap(map); setSlotMenuOpen(true); } : undefined,
+                        }}
+                        modChips={map.mod.match(/.{2}/g)?.map((m) => ({
+                          label: m,
+                          color: modColors[m] || '#666',
+                          icon: modIcons[m],
+                        }))}
+                        actions={
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${map.beatmapset_id}`, '_blank')} />
+                            <DownloadButton
+                              downloadUrl={`https://api.nerinyan.moe/d/${map.beatmapset_id}`}
+                              downloadName={`${map.artist} - ${map.title}`}
+                            />
+                            {isOwner && (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    render={
+                                      <Button
+                                        variant="ghost"
+                                        size="icon-xs"
+                                        onClick={() => { setEditingMap(map); setEditSlot(map.slot_type); setEditMod(map.mod); }}
+                                      />
+                                    }
+                                  >
+                                    <Pencil className="size-4" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Edit slot/mod</TooltipContent>
+                                </Tooltip>
+                                <RemoveButton onClick={() => handleRemoveMap(map.id)} />
+                              </>
+                            )}
+                          </div>
+                        }
+                      />
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
-        <Card variant="outlined" sx={{ py: 6, textAlign: 'center' }}>
-          <ViewListIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>
-            No stages yet
-          </Typography>
-          <Typography variant="body2" color="text.disabled" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+        <Card className="py-12 text-center">
+          <List className="mx-auto mb-2 size-10 text-muted-foreground" />
+          <h3 className="mb-1 text-lg font-semibold">No stages yet</h3>
+          <p className="mx-auto mb-6 max-w-[400px] text-sm text-muted-foreground">
             Stages are rounds of your tournament (e.g. Qualifiers, Group Stage, Finals). Create your first stage to start building your mappool.
-          </Typography>
+          </p>
           {isOwner && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setEditingStages(true)}
-            >
+            <Button onClick={() => setEditingStages(true)}>
+              <Plus className="size-4" />
               Add Stage
             </Button>
           )}
@@ -533,174 +520,174 @@ export default function MappoolTab({
       )}
 
       {/* Inline slot menu */}
-      <Menu
-        anchorEl={slotMenuAnchor}
-        open={!!slotMenuAnchor && !!slotMenuMap}
-        onClose={() => { setSlotMenuAnchor(null); setSlotMenuMap(null); }}
-        slotProps={{ paper: { sx: { minWidth: 140 } } }}
-      >
-        {tournamentSlots.map((s) => (
-          <MenuItem
-            key={s}
-            selected={slotMenuMap?.slot_type === s}
-            onClick={async () => {
-              if (!slotMenuMap || slotMenuMap.slot_type === s) {
-                setSlotMenuAnchor(null);
+      <DropdownMenu open={slotMenuOpen && !!slotMenuMap} onOpenChange={(o) => { if (!o) { setSlotMenuOpen(false); setSlotMenuMap(null); } }}>
+        <DropdownMenuTrigger className="hidden" />
+        <DropdownMenuContent className="min-w-[140px]">
+          {tournamentSlots.map((s) => (
+            <DropdownMenuItem
+              key={s}
+              className={cn('gap-3 text-[13px]', slotMenuMap?.slot_type === s && 'bg-accent')}
+              onSelect={async () => {
+                if (!slotMenuMap || slotMenuMap.slot_type === s) {
+                  setSlotMenuOpen(false);
+                  setSlotMenuMap(null);
+                  return;
+                }
+                try {
+                  const updated = await updateMap(tournament.abbreviation, slotMenuMap.id, { slot_type: s });
+                  setTournament((prev) => ({
+                    ...prev,
+                    stages: prev.stages?.map((stage) => ({
+                      ...stage,
+                      maps: stage.maps?.map((m) => m.id === updated.id ? { ...m, ...updated } : m),
+                    })),
+                  }));
+                } catch (err) {
+                  onError(err instanceof Error ? err.message : 'Failed to update slot');
+                }
+                setSlotMenuOpen(false);
                 setSlotMenuMap(null);
-                return;
-              }
-              try {
-                const updated = await updateMap(tournament.abbreviation, slotMenuMap.id, { slot_type: s });
-                setTournament((prev) => ({
-                  ...prev,
-                  stages: prev.stages?.map((stage) => ({
-                    ...stage,
-                    maps: stage.maps?.map((m) => m.id === updated.id ? { ...m, ...updated } : m),
-                  })),
-                }));
-              } catch (err) {
-                onError(err instanceof Error ? err.message : 'Failed to update slot');
-              }
-              setSlotMenuAnchor(null);
-              setSlotMenuMap(null);
-            }}
-            sx={{ fontSize: 13, gap: 1.5 }}
-          >
-            <SlotBadge label={s} color={getSlotColor(s, slotConfigs)} />
-            {getSlotLabel(s, slotConfigs)}
-          </MenuItem>
-        ))}
-      </Menu>
+              }}
+            >
+              <SlotBadge label={s} color={getSlotColor(s, slotConfigs)} />
+              {getSlotLabel(s, slotConfigs)}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Edit Map Dialog */}
-      <Dialog open={!!editingMap} onClose={() => setEditingMap(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>Edit Map</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>Slot Type</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.75 }}>
+      <Dialog open={!!editingMap} onOpenChange={(o) => { if (!o) setEditingMap(null); }}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Edit Map</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Slot Type</h4>
+              <div className="grid grid-cols-3 gap-1.5">
                 {tournamentSlots.map((s) => (
-                  <Chip
+                  <button
                     key={s}
-                    label={`${s} — ${getSlotLabel(s, slotConfigs)}`}
-                    size="small"
                     onClick={() => setEditSlot(s)}
-                    sx={{
-                      fontWeight: 'bold', cursor: 'pointer',
-                      backgroundColor: editSlot === s ? getSlotColor(s, slotConfigs) : 'action.hover',
-                      color: editSlot === s ? 'white' : 'text.primary',
-                      border: editSlot === s ? 'none' : '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  />
+                    className={cn(
+                      'cursor-pointer rounded-full px-2 py-1 text-xs font-bold transition-colors',
+                      editSlot === s
+                        ? 'text-white'
+                        : 'border bg-muted text-foreground',
+                    )}
+                    style={editSlot === s ? { backgroundColor: getSlotColor(s, slotConfigs) } : undefined}
+                  >
+                    {s} — {getSlotLabel(s, slotConfigs)}
+                  </button>
                 ))}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>Mod</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${MODS.length}, 1fr)`, gap: 0.75 }}>
+              </div>
+            </div>
+            <div>
+              <h4 className="mb-2 text-sm font-medium">Mod</h4>
+              <div className={cn('grid gap-1.5', `grid-cols-${MODS.length}`)}>
                 {MODS.map((m) => (
-                  <Chip
+                  <button
                     key={m}
-                    label={m}
-                    size="small"
-                    icon={modIcons[m] ? <Box component="img" src={modIcons[m]} sx={(theme) => ({ width: 18, height: 18, filter: editMod === m || theme.palette.mode === 'dark' ? 'none' : 'invert(1)' })} /> : undefined}
                     onClick={() => setEditMod(m)}
-                    sx={{
-                      fontWeight: 'bold', cursor: 'pointer',
-                      backgroundColor: editMod === m ? (modColors[m] || '#666') : 'action.hover',
-                      color: editMod === m ? 'white' : 'text.primary',
-                      border: editMod === m ? 'none' : '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  />
+                    className={cn(
+                      'flex cursor-pointer items-center justify-center gap-1 rounded-full px-2 py-1 text-xs font-bold transition-colors',
+                      editMod === m
+                        ? 'text-white'
+                        : 'border bg-muted text-foreground',
+                    )}
+                    style={editMod === m ? { backgroundColor: modColors[m] || '#666' } : undefined}
+                  >
+                    {modIcons[m] && (
+                      <img
+                        src={modIcons[m]}
+                        className={cn('size-[18px]', editMod !== m && 'dark:invert-0 invert')}
+                        alt=""
+                      />
+                    )}
+                    {m}
+                  </button>
                 ))}
-              </Box>
-            </Box>
-          </Stack>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingMap(null)}>Cancel</Button>
+            <Button
+              disabled={editSaving}
+              onClick={async () => {
+                if (!editingMap) return;
+                setEditSaving(true);
+                try {
+                  const updated = await updateMap(tournament.abbreviation, editingMap.id, {
+                    slot_type: editSlot,
+                    mod: editMod,
+                  });
+                  setTournament((prev) => ({
+                    ...prev,
+                    stages: prev.stages?.map((stage) => ({
+                      ...stage,
+                      maps: stage.maps?.map((m) => m.id === updated.id ? { ...m, ...updated } : m),
+                    })),
+                  }));
+                  setEditingMap(null);
+                } catch (err) {
+                  onError(err instanceof Error ? err.message : 'Failed to update map');
+                } finally {
+                  setEditSaving(false);
+                }
+              }}
+            >
+              {editSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setEditingMap(null)}>Cancel</Button>
-          <Button
-            variant="contained"
-            disabled={editSaving}
-            onClick={async () => {
-              if (!editingMap) return;
-              setEditSaving(true);
-              try {
-                const updated = await updateMap(tournament.abbreviation, editingMap.id, {
-                  slot_type: editSlot,
-                  mod: editMod,
-                });
-                setTournament((prev) => ({
-                  ...prev,
-                  stages: prev.stages?.map((stage) => ({
-                    ...stage,
-                    maps: stage.maps?.map((m) => m.id === updated.id ? { ...m, ...updated } : m),
-                  })),
-                }));
-                setEditingMap(null);
-              } catch (err) {
-                onError(err instanceof Error ? err.message : 'Failed to update map');
-              } finally {
-                setEditSaving(false);
-              }
-            }}
-          >
-            {editSaving ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Add Map Dialog */}
       <Dialog
         open={addMapOpen}
-        onClose={() => { setAddMapOpen(false); setFetchedBeatmapset(null); setMapInput(''); setMapError(''); }}
-        maxWidth="sm"
-        fullWidth
+        onOpenChange={(o) => { if (!o) { setAddMapOpen(false); setFetchedBeatmapset(null); setMapInput(''); setMapError(''); } }}
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Add Map to {currentStage?.name}
-          <IconButton size="small" onClick={() => setAddMapOpen(false)}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2.5} sx={{ mt: 1 }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Add Map to {currentStage?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
             {/* Fetch beatmap */}
-            <Stack direction="row" spacing={1}>
-              <TextField
-                label="Beatmap ID or URL"
-                fullWidth
-                size="small"
-                value={mapInput}
-                onChange={(e) => setMapInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && mapInput.trim() && handleFetchBeatmap()}
-                slotProps={{
-                  input: {
-                    startAdornment: <InputAdornment position="start"><LinkIcon fontSize="small" /></InputAdornment>,
-                  },
-                }}
-              />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Link className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Beatmap ID or URL"
+                  value={mapInput}
+                  onChange={(e) => setMapInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && mapInput.trim() && handleFetchBeatmap()}
+                  className="pl-8"
+                />
+              </div>
               <Button
-                variant="contained"
                 onClick={handleFetchBeatmap}
                 disabled={!mapInput.trim() || mapLoading}
-                sx={{ minWidth: 80 }}
+                className="min-w-[80px]"
               >
-                {mapLoading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Fetch'}
+                {mapLoading ? <Spinner className="size-5 text-white" /> : 'Fetch'}
               </Button>
-            </Stack>
+            </div>
 
-            {mapError && <Alert severity="error">{mapError}</Alert>}
+            {mapError && (
+              <Alert variant="destructive">
+                <AlertDescription>{mapError}</AlertDescription>
+              </Alert>
+            )}
 
             {/* Check Library */}
-            <Box>
+            <div>
               <Button
-                size="small"
-                variant="text"
-                startIcon={<FolderOpenIcon sx={{ fontSize: 16 }} />}
+                size="sm"
+                variant="ghost"
                 onClick={() => {
                   const opening = !showLibrary;
                   setShowLibrary(opening);
@@ -712,16 +699,15 @@ export default function MappoolTab({
                       .finally(() => setLibraryLoading(false));
                   }
                 }}
-                sx={{ fontSize: 12, textTransform: 'none', color: 'text.secondary' }}
+                className="text-xs text-muted-foreground"
               >
+                <FolderOpen className="size-4" />
                 {showLibrary ? 'Hide Library' : 'Check Library'}
               </Button>
               {showLibrary && (
-                <Box sx={{ mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-                  <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <TextField
-                      size="small"
-                      fullWidth
+                <div className="mt-2 overflow-hidden rounded-lg border">
+                  <div className="border-b p-2">
+                    <Input
                       placeholder="Search packs..."
                       value={librarySearch}
                       onChange={(e) => setLibrarySearch(e.target.value)}
@@ -734,23 +720,23 @@ export default function MappoolTab({
                             .finally(() => setLibraryLoading(false));
                         }
                       }}
-                      sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: 13 } }}
+                      className="text-[13px]"
                     />
-                  </Box>
-                  <Box sx={{ maxHeight: 280, overflow: 'auto' }}>
+                  </div>
+                  <div className="max-h-[280px] overflow-auto">
                     {libraryLoading ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                        <CircularProgress size={20} />
-                      </Box>
+                      <div className="flex justify-center py-6">
+                        <Spinner className="size-5" />
+                      </div>
                     ) : !libraryData || libraryData.packs.length === 0 ? (
-                      <Typography variant="body2" color="text.disabled" sx={{ p: 2, textAlign: 'center' }}>
+                      <p className="p-4 text-center text-sm text-muted-foreground">
                         No packs found
-                      </Typography>
+                      </p>
                     ) : (
                       <>
                         {libraryData.packs.map((pack) => (
-                          <Box key={pack.id}>
-                            <Box
+                          <div key={pack.id}>
+                            <div
                               onClick={() => {
                                 if (expandedPack?.share_code === pack.share_code) {
                                   setExpandedPack(null);
@@ -762,59 +748,49 @@ export default function MappoolTab({
                                   .catch(() => {})
                                   .finally(() => setExpandingPackCode(null));
                               }}
-                              sx={{
-                                px: 1.5, py: 1, cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: 1,
-                                bgcolor: 'action.hover',
-                                borderBottom: '1px solid', borderColor: 'divider',
-                                '&:hover': { opacity: 0.8 },
-                              }}
+                              className="flex cursor-pointer items-center gap-2 border-b bg-muted px-3 py-2 hover:opacity-80"
                             >
-                              <FolderOpenIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="caption" fontWeight="bold" sx={{ flex: 1 }}>
+                              <FolderOpen className="size-4 text-muted-foreground" />
+                              <span className="flex-1 text-xs font-bold">
                                 {pack.name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              </span>
+                              <span className="text-xs text-muted-foreground">
                                 {pack.beatmap_count} maps
-                              </Typography>
-                              {expandingPackCode === pack.share_code && <CircularProgress size={14} />}
-                            </Box>
+                              </span>
+                              {expandingPackCode === pack.share_code && <Spinner className="size-3.5" />}
+                            </div>
                             {expandedPack?.share_code === pack.share_code && expandedPack.beatmaps.map((bm) => (
-                              <Box
+                              <div
                                 key={bm.id}
                                 onClick={() => {
                                   setMapInput(bm.beatmapset_id.toString());
                                   setShowLibrary(false);
                                 }}
-                                sx={{
-                                  px: 1.5, py: 0.75, cursor: 'pointer',
-                                  display: 'flex', alignItems: 'center', gap: 1,
-                                  '&:hover': { bgcolor: 'action.hover' },
-                                  borderBottom: '1px solid', borderColor: 'divider',
-                                }}
+                                className="flex cursor-pointer items-center gap-2 border-b px-3 py-1.5 hover:bg-muted"
                               >
-                                <Box
-                                  component="img"
+                                <img
                                   src={`https://assets.ppy.sh/beatmaps/${bm.beatmapset_id}/covers/list.jpg`}
-                                  sx={{ width: 36, height: 36, borderRadius: 0.5, objectFit: 'cover', flexShrink: 0 }}
+                                  alt=""
+                                  className="size-9 shrink-0 rounded object-cover"
                                 />
-                                <Box sx={{ minWidth: 0, flex: 1 }}>
-                                  <Typography variant="body2" noWrap>{bm.artist} - {bm.title}</Typography>
-                                  <Typography variant="caption" color="text.secondary" noWrap>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm">{bm.artist} - {bm.title}</p>
+                                  <p className="truncate text-xs text-muted-foreground">
                                     {bm.difficulty_name && `[${bm.difficulty_name}]`} {bm.star_rating && ` ★ ${bm.star_rating.toFixed(2)}`}
-                                  </Typography>
-                                </Box>
-                              </Box>
+                                  </p>
+                                </div>
+                              </div>
                             ))}
-                          </Box>
+                          </div>
                         ))}
                       </>
                     )}
-                  </Box>
+                  </div>
                   {libraryData && libraryData.total > 10 && (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, p: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <div className="flex items-center justify-center gap-2 border-t p-2">
                       <Button
-                        size="small"
+                        size="sm"
+                        variant="ghost"
                         disabled={libraryPage <= 1 || libraryLoading}
                         onClick={() => {
                           const p = libraryPage - 1;
@@ -824,15 +800,16 @@ export default function MappoolTab({
                             .catch(() => {})
                             .finally(() => setLibraryLoading(false));
                         }}
-                        sx={{ fontSize: 11, minWidth: 0 }}
+                        className="text-[11px]"
                       >
                         Prev
                       </Button>
-                      <Typography variant="caption" sx={{ lineHeight: '30px' }}>
+                      <span className="text-xs leading-[30px]">
                         {libraryPage} / {Math.ceil(libraryData.total / 10)}
-                      </Typography>
+                      </span>
                       <Button
-                        size="small"
+                        size="sm"
+                        variant="ghost"
                         disabled={libraryPage >= Math.ceil(libraryData.total / 10) || libraryLoading}
                         onClick={() => {
                           const p = libraryPage + 1;
@@ -842,144 +819,139 @@ export default function MappoolTab({
                             .catch(() => {})
                             .finally(() => setLibraryLoading(false));
                         }}
-                        sx={{ fontSize: 11, minWidth: 0 }}
+                        className="text-[11px]"
                       >
                         Next
                       </Button>
-                    </Box>
+                    </div>
                   )}
-                </Box>
+                </div>
               )}
-            </Box>
+            </div>
 
             {/* Fetched beatmapset info */}
             {fetchedBeatmapset && (
               <>
-                <Paper sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <Box
-                      component="img"
-                      src={`https://assets.ppy.sh/beatmaps/${fetchedBeatmapset.beatmapset_id}/covers/list.jpg`}
-                      sx={{ width: 56, height: 56, borderRadius: 1, objectFit: 'cover' }}
-                    />
-                    <Box>
-                      <Typography variant="body2" fontWeight="bold">
-                        {fetchedBeatmapset.artist} - {fetchedBeatmapset.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        mapped by {fetchedBeatmapset.creator}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
+                <div className="flex items-center gap-3 rounded-lg border p-3">
+                  <img
+                    src={`https://assets.ppy.sh/beatmaps/${fetchedBeatmapset.beatmapset_id}/covers/list.jpg`}
+                    alt=""
+                    className="size-14 rounded-lg object-cover"
+                  />
+                  <div>
+                    <p className="text-sm font-bold">
+                      {fetchedBeatmapset.artist} - {fetchedBeatmapset.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      mapped by {fetchedBeatmapset.creator}
+                    </p>
+                  </div>
+                </div>
 
                 {/* Difficulty selection */}
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Select Difficulty</Typography>
-                  <Stack spacing={0.5}>
+                <div>
+                  <h4 className="mb-2 text-sm font-medium">Select Difficulty</h4>
+                  <div className="flex flex-col gap-1">
                     {fetchedBeatmapset.beatmaps.map((diff, i) => (
-                      <Paper
+                      <div
                         key={diff.beatmap_id}
                         onClick={() => setSelectedDiffIndex(i)}
-                        sx={{
-                          p: 1.5, cursor: 'pointer',
-                          border: '2px solid',
-                          borderColor: selectedDiffIndex === i ? 'primary.main' : 'divider',
-                          backgroundColor: selectedDiffIndex === i ? 'rgba(132,169,140,0.08)' : 'transparent',
-                          display: 'flex', alignItems: 'center', gap: 1.5,
-                          '&:hover': { borderColor: 'primary.main' },
-                        }}
+                        className={cn(
+                          'flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors hover:border-primary',
+                          selectedDiffIndex === i
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border',
+                        )}
                       >
-                        <Chip
-                          label={`${diff.keys}K`}
-                          size="small"
-                          sx={{
-                            height: 22, fontWeight: 'bold', fontSize: 11,
-                            backgroundColor: 'primary.main', color: 'white',
-                          }}
-                        />
-                        <Typography variant="body2" sx={{ flex: 1 }}>{diff.difficulty_name}</Typography>
-                        <Chip
-                          label={`★ ${diff.star_rating.toFixed(2)}`}
-                          size="small"
-                          sx={{ height: 20, fontSize: 11, fontWeight: 'bold', bgcolor: 'black', color: 'white' }}
-                        />
-                      </Paper>
+                        <span className="inline-flex h-[22px] items-center rounded-full bg-primary px-2 text-[11px] font-bold text-white">
+                          {diff.keys}K
+                        </span>
+                        <span className="flex-1 text-sm">{diff.difficulty_name}</span>
+                        <span className="inline-flex h-5 items-center rounded-full bg-black px-2 text-[11px] font-bold text-white">
+                          ★ {diff.star_rating.toFixed(2)}
+                        </span>
+                      </div>
                     ))}
-                  </Stack>
-                </Box>
+                  </div>
+                </div>
 
                 {/* Slot & Mod selection */}
                 {selectedDiffIndex !== null && (
                   <>
-                    <Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="subtitle2">Slot Type</Typography>
-                        <Button size="small" variant="text" onClick={() => { setAddMapOpen(false); onTabChange('slots'); }} sx={{ fontSize: 11, textTransform: 'none', p: 0, minWidth: 0 }}>
+                    <div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <h4 className="text-sm font-medium">Slot Type</h4>
+                        <button
+                          onClick={() => { setAddMapOpen(false); onTabChange('slots'); }}
+                          className="cursor-pointer p-0 text-[11px] text-muted-foreground hover:text-foreground"
+                        >
                           Edit Slots
-                        </Button>
-                      </Box>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.75 }}>
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
                         {tournamentSlots.map((s) => (
-                          <Chip
+                          <button
                             key={s}
-                            label={`${s} — ${getSlotLabel(s, slotConfigs)}`}
-                            size="small"
                             onClick={() => setSelectedSlot(s)}
-                            sx={{
-                              fontWeight: 'bold', cursor: 'pointer',
-                              backgroundColor: selectedSlot === s ? getSlotColor(s, slotConfigs) : 'action.hover',
-                              color: selectedSlot === s ? 'white' : 'text.primary',
-                              border: selectedSlot === s ? 'none' : '1px solid',
-                              borderColor: 'divider',
-                              '&:hover': { opacity: 0.85 },
-                            }}
-                          />
+                            className={cn(
+                              'cursor-pointer rounded-full px-2 py-1 text-xs font-bold transition-colors hover:opacity-85',
+                              selectedSlot === s
+                                ? 'text-white'
+                                : 'border bg-muted text-foreground',
+                            )}
+                            style={selectedSlot === s ? { backgroundColor: getSlotColor(s, slotConfigs) } : undefined}
+                          >
+                            {s} — {getSlotLabel(s, slotConfigs)}
+                          </button>
                         ))}
-                      </Box>
-                    </Box>
+                      </div>
+                    </div>
 
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ mb: 1 }}>Mod</Typography>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${MODS.length}, 1fr)`, gap: 0.75 }}>
+                    <div>
+                      <h4 className="mb-2 text-sm font-medium">Mod</h4>
+                      <div className={cn('grid gap-1.5', `grid-cols-${MODS.length}`)}>
                         {MODS.map((m) => (
-                          <Chip
+                          <button
                             key={m}
-                            label={m}
-                            size="small"
-                            icon={modIcons[m] ? <Box component="img" src={modIcons[m]} sx={(theme) => ({ width: 18, height: 18, filter: selectedMod === m || theme.palette.mode === 'dark' ? 'none' : 'invert(1)' })} /> : undefined}
                             onClick={() => setSelectedMod(m)}
-                            sx={{
-                              fontWeight: 'bold', cursor: 'pointer',
-                              backgroundColor: selectedMod === m ? (modColors[m] || '#666') : 'action.hover',
-                              color: selectedMod === m ? 'white' : 'text.primary',
-                              border: selectedMod === m ? 'none' : '1px solid',
-                              borderColor: 'divider',
-                              '&:hover': { opacity: 0.85 },
-                            }}
-                          />
+                            className={cn(
+                              'flex cursor-pointer items-center justify-center gap-1 rounded-full px-2 py-1 text-xs font-bold transition-colors hover:opacity-85',
+                              selectedMod === m
+                                ? 'text-white'
+                                : 'border bg-muted text-foreground',
+                            )}
+                            style={selectedMod === m ? { backgroundColor: modColors[m] || '#666' } : undefined}
+                          >
+                            {modIcons[m] && (
+                              <img
+                                src={modIcons[m]}
+                                className={cn('size-[18px]', selectedMod !== m && 'dark:invert-0 invert')}
+                                alt=""
+                              />
+                            )}
+                            {m}
+                          </button>
                         ))}
-                      </Box>
-                    </Box>
+                      </div>
+                    </div>
                   </>
                 )}
               </>
             )}
-          </Stack>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAddMapOpen(false); setFetchedBeatmapset(null); setMapInput(''); setMapError(''); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddMap}
+              disabled={!fetchedBeatmapset || selectedDiffIndex === null || addingMap}
+            >
+              {addingMap ? <Spinner className="size-4 text-white" /> : <Plus className="size-4" />}
+              {addingMap ? 'Adding...' : 'Add Map'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => { setAddMapOpen(false); setFetchedBeatmapset(null); setMapInput(''); setMapError(''); }}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleAddMap}
-            disabled={!fetchedBeatmapset || selectedDiffIndex === null || addingMap}
-            startIcon={addingMap ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <AddIcon />}
-          >
-            {addingMap ? 'Adding...' : 'Add Map'}
-          </Button>
-        </DialogActions>
       </Dialog>
     </>
   );

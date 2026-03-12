@@ -1,5 +1,5 @@
-import { Button } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 interface RemoveButtonProps {
   onClick: () => void;
@@ -9,19 +9,12 @@ interface RemoveButtonProps {
 export default function RemoveButton({ onClick, label = 'Remove' }: RemoveButtonProps) {
   return (
     <Button
-      size="small"
-      color="error"
-      variant="text"
-      startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
+      variant="destructive"
+      size="sm"
       onClick={onClick}
-      sx={{
-        fontSize: 12,
-        fontWeight: 600,
-        minWidth: 'auto',
-        px: 1,
-        py: 0.25,
-      }}
+      className="gap-1 font-semibold"
     >
+      <Trash2 className="size-3.5" />
       {label}
     </Button>
   );

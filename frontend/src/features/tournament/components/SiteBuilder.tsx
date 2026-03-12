@@ -1,52 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  TextField,
-  IconButton,
-  Paper,
-  Card,
-  CardContent,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Chip,
-  Alert,
-  Switch,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  CircularProgress,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import SaveIcon from '@mui/icons-material/Save';
-import UndoIcon from '@mui/icons-material/Undo';
-import RedoIcon from '@mui/icons-material/Redo';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import HomeIcon from '@mui/icons-material/Home';
-import CampaignIcon from '@mui/icons-material/Campaign';
-import GroupIcon from '@mui/icons-material/Group';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import ViewListIcon from '@mui/icons-material/ViewList';
-import TextFieldsIcon from '@mui/icons-material/TextFields';
-import ImageIcon from '@mui/icons-material/Image';
-import PreviewIcon from '@mui/icons-material/Preview';
-import EditIcon from '@mui/icons-material/Edit';
-import ViewStreamIcon from '@mui/icons-material/ViewStream';
-import DashboardIcon from '@mui/icons-material/Dashboard';
+  Plus,
+  Trash2,
+  GripVertical,
+  Save,
+  Undo2,
+  Redo2,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  Home,
+  Megaphone,
+  Users,
+  Trophy,
+  List,
+  Type,
+  ImageIcon,
+  Eye,
+  Pencil,
+  Rows3,
+  LayoutDashboard,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   getSite,
@@ -74,6 +48,35 @@ import {
   DEFAULT_CANVAS_SIZE,
   createBuilderElement,
 } from '../types/siteConfig';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Card } from '@/components/ui/card';
 
 // Re-export types for SiteRenderer
 export type { SiteConfig, SiteSection, SitePage };
@@ -81,13 +84,13 @@ export type { SiteConfig, SiteSection, SitePage };
 // ── Icon map (UI only, not in shared types) ──
 
 const SECTION_ICONS: Record<SectionType, React.ReactElement> = {
-  hero: <HomeIcon sx={{ fontSize: 18 }} />,
-  announcements: <CampaignIcon sx={{ fontSize: 18 }} />,
-  players: <GroupIcon sx={{ fontSize: 18 }} />,
-  bracket: <EmojiEventsIcon sx={{ fontSize: 18 }} />,
-  mappool: <ViewListIcon sx={{ fontSize: 18 }} />,
-  richtext: <TextFieldsIcon sx={{ fontSize: 18 }} />,
-  image: <ImageIcon sx={{ fontSize: 18 }} />,
+  hero: <Home className="size-[18px]" />,
+  announcements: <Megaphone className="size-[18px]" />,
+  players: <Users className="size-[18px]" />,
+  bracket: <Trophy className="size-[18px]" />,
+  mappool: <List className="size-[18px]" />,
+  richtext: <Type className="size-[18px]" />,
+  image: <ImageIcon className="size-[18px]" />,
 };
 
 const DEFAULT_CONFIG: SiteConfig = {
@@ -523,145 +526,178 @@ export default function SiteBuilder({ abbreviation }: SiteBuilderProps) {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', bgcolor: 'background.default' }}>
-        <CircularProgress size={32} />
-      </Box>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Spinner className="size-8" />
+      </div>
     );
   }
 
   if (!tournament) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Typography variant="h5" fontWeight="bold" sx={{ mb: 1 }}>Tournament not found</Typography>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+        <h2 className="text-xl font-bold mb-1">Tournament not found</h2>
         <Button onClick={() => navigate('/tournaments')}>Go back</Button>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default' }}>
+    <div className="flex flex-col h-screen bg-background">
       {/* Top bar */}
-      <Box sx={{
-        display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1,
-        borderBottom: '1px solid', borderColor: 'divider',
-        bgcolor: 'background.paper', flexShrink: 0,
-      }}>
-        <IconButton size="small" onClick={handleBack} sx={{ mr: 0.5 }}>
-          <ArrowBackIcon sx={{ fontSize: 20 }} />
-        </IconButton>
+      <div className="flex items-center gap-1.5 px-2 py-1 border-b border-border bg-card shrink-0">
+        <Button variant="ghost" size="icon-sm" onClick={handleBack} className="mr-0.5">
+          <ArrowLeft className="size-5" />
+        </Button>
 
         {tournament.logo_url && (
-          <Box component="img" src={tournament.logo_url} sx={{ height: 24, width: 24, borderRadius: 0.5, objectFit: 'cover' }} />
+          <img src={tournament.logo_url} className="h-6 w-6 rounded object-cover" alt="" />
         )}
-        <Typography variant="body2" fontWeight={700} sx={{ color: 'primary.main' }}>
+        <span className="text-sm font-bold text-primary">
           {tournament.abbreviation}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto' }}>
+        </span>
+        <span className="text-sm text-muted-foreground mr-auto">
           Site Editor
-        </Typography>
+        </span>
 
         {/* Undo / Redo */}
-        <Box sx={{ display: 'flex', gap: 0 }}>
-          <Tooltip title="Undo (Ctrl+Z)">
-            <span>
-              <IconButton size="small" onClick={undo} disabled={undoStack.length === 0}
-                sx={{ borderRadius: '6px 0 0 6px', border: '1px solid', borderColor: 'divider', borderRight: 'none', px: 0.75 }}>
-                <UndoIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </span>
+        <div className="flex">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon-xs"
+                  onClick={undo}
+                  disabled={undoStack.length === 0}
+                  className="rounded-r-none border-r-0"
+                />
+              }
+            >
+              <Undo2 className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
           </Tooltip>
-          <Tooltip title="Redo (Ctrl+Y)">
-            <span>
-              <IconButton size="small" onClick={redo} disabled={redoStack.length === 0}
-                sx={{ borderRadius: '0 6px 6px 0', border: '1px solid', borderColor: 'divider', px: 0.75 }}>
-                <RedoIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </span>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon-xs"
+                  onClick={redo}
+                  disabled={redoStack.length === 0}
+                  className="rounded-l-none"
+                />
+              }
+            >
+              <Redo2 className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
           </Tooltip>
-        </Box>
+        </div>
 
         {dirty && (
-          <Chip label="Unsaved" size="small" color="warning" variant="outlined" sx={{ height: 22, fontSize: 10 }} />
+          <Badge variant="outline" className="text-[10px] h-[22px] text-yellow-500 border-yellow-500/50">Unsaved</Badge>
         )}
 
         <Button
-          size="small"
-          variant={showPreview ? 'contained' : 'outlined'}
-          color="secondary"
-          startIcon={showPreview ? <EditIcon sx={{ fontSize: 14 }} /> : <PreviewIcon sx={{ fontSize: 14 }} />}
+          size="sm"
+          variant={showPreview ? 'default' : 'outline'}
           onClick={() => setShowPreview(!showPreview)}
-          sx={{ fontSize: 11 }}
+          className="text-[11px]"
         >
+          {showPreview ? <Pencil className="size-3.5 mr-1" /> : <Eye className="size-3.5 mr-1" />}
           {showPreview ? 'Editor' : 'Preview'}
         </Button>
 
         <Button
-          size="small"
-          variant="contained"
-          startIcon={<SaveIcon sx={{ fontSize: 14 }} />}
+          size="sm"
           onClick={handleSave}
           disabled={saving || !dirty}
-          sx={{ fontSize: 11 }}
+          className="text-[11px]"
         >
+          <Save className="size-3.5 mr-1" />
           {saving ? 'Saving...' : 'Save'}
         </Button>
-      </Box>
+      </div>
 
-      {error && <Alert severity="error" onClose={() => setError('')} sx={{ borderRadius: 0 }}>{error}</Alert>}
-      {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ borderRadius: 0 }}>{success}</Alert>}
+      {error && (
+        <Alert variant="destructive" className="rounded-none">
+          <AlertDescription className="flex items-center justify-between">
+            {error}
+            <Button variant="ghost" size="icon-xs" onClick={() => setError('')}>&times;</Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      {success && (
+        <Alert className="rounded-none border-green-500/30 bg-green-500/10">
+          <AlertDescription className="flex items-center justify-between text-green-400">
+            {success}
+            <Button variant="ghost" size="icon-xs" onClick={() => setSuccess('')}>&times;</Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Main area */}
       {showPreview ? (
-        <Box sx={{ flex: 1, overflow: 'auto' }}>
+        <div className="flex-1 overflow-auto">
           <SitePreview config={config} tournament={tournament} activePageId={selectedPageId} />
-        </Box>
+        </div>
       ) : (
-        <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: isCanvasMode ? '220px 1fr 280px' : '180px 1fr 260px', overflow: 'hidden' }}>
+        <div
+          className="flex-1 grid overflow-hidden"
+          style={{ gridTemplateColumns: isCanvasMode ? '220px 1fr 280px' : '180px 1fr 260px' }}
+        >
           {/* Left sidebar */}
           {isCanvasMode ? (
-            <Box sx={{ borderRight: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div className="border-r border-border overflow-hidden flex flex-col">
               {/* Page switcher */}
-              <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ mb: 0.75, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 10 }}>
+              <div className="p-1.5 border-b border-border">
+                <span className="text-[10px] font-bold text-muted-foreground mb-0.75 block uppercase tracking-wider">
                   Pages
-                </Typography>
-                <Stack spacing={0.25}>
+                </span>
+                <div className="flex flex-col gap-0.5">
                   {config.pages.map((page) => (
-                    <Box
+                    <div
                       key={page.id}
                       onClick={() => { setSelectedPageId(page.id); setSelectedSectionId(null); }}
-                      sx={{
-                        px: 1, py: 0.5, borderRadius: 0.5, cursor: 'pointer', fontSize: 11,
-                        bgcolor: selectedPageId === page.id ? 'primary.main' : 'transparent',
-                        color: selectedPageId === page.id ? 'white' : 'text.primary',
-                        display: 'flex', alignItems: 'center', gap: 0.5,
-                        '&:hover': { bgcolor: selectedPageId === page.id ? 'primary.main' : 'action.hover' },
-                      }}
+                      className={`px-1 py-0.5 rounded cursor-pointer text-[11px] flex items-center gap-0.5 ${
+                        selectedPageId === page.id
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted'
+                      }`}
                     >
-                      <DashboardIcon sx={{ fontSize: 12, opacity: 0.7 }} />
-                      <Typography variant="caption" fontSize={11} fontWeight={selectedPageId === page.id ? 600 : 400} noWrap>
+                      <LayoutDashboard className="size-3 opacity-70" />
+                      <span className={`text-[11px] truncate ${selectedPageId === page.id ? 'font-semibold' : ''}`}>
                         {page.name}
-                      </Typography>
-                    </Box>
+                      </span>
+                    </div>
                   ))}
-                </Stack>
-                <Box sx={{ display: 'flex', gap: 0.5, mt: 0.75 }}>
-                  <Button size="small" startIcon={<AddIcon sx={{ fontSize: 12 }} />} onClick={() => setAddPageOpen(true)}
-                    sx={{ fontSize: 10, textTransform: 'none', flex: 1, minWidth: 0 }}>
-                    Page
+                </div>
+                <div className="flex gap-0.5 mt-1">
+                  <Button size="xs" variant="ghost" onClick={() => setAddPageOpen(true)} className="flex-1 min-w-0 text-[10px]">
+                    <Plus className="size-3 mr-0.5" /> Page
                   </Button>
-                  <ToggleButtonGroup
-                    value={isCanvasMode ? 'canvas' : 'stack'}
-                    exclusive
-                    onChange={togglePageLayout}
-                    size="small"
-                    sx={{ '& .MuiToggleButton-root': { fontSize: 9, py: 0.25, px: 0.75, textTransform: 'none' } }}
+                  <ToggleGroup
+                    value={[isCanvasMode ? 'canvas' : 'stack']}
+                    className="h-6"
                   >
-                    <ToggleButton value="stack"><ViewStreamIcon sx={{ fontSize: 12 }} /></ToggleButton>
-                    <ToggleButton value="canvas"><DashboardIcon sx={{ fontSize: 12 }} /></ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-              </Box>
+                    <ToggleGroupItem
+                      value="stack"
+                      onClick={isCanvasMode ? togglePageLayout : undefined}
+                      className="h-6 px-1.5"
+                    >
+                      <Rows3 className="size-3" />
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="canvas"
+                      onClick={!isCanvasMode ? togglePageLayout : undefined}
+                      className="h-6 px-1.5"
+                    >
+                      <LayoutDashboard className="size-3" />
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+              </div>
               {/* Element tree + palette */}
               <ElementTree
                 elements={builderElements}
@@ -674,77 +710,79 @@ export default function SiteBuilder({ abbreviation }: SiteBuilderProps) {
                 onDuplicate={duplicateBuilderElement}
                 onAddElement={addBuilderElement}
               />
-            </Box>
+            </div>
           ) : (
-            <Box sx={{ borderRight: '1px solid', borderColor: 'divider', p: 1.5, overflow: 'auto' }}>
-              <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 10 }}>
+            <div className="border-r border-border p-1.5 overflow-auto">
+              <span className="text-[10px] font-bold text-muted-foreground mb-1 block uppercase tracking-wider">
                 Pages
-              </Typography>
-              <Stack spacing={0.5}>
+              </span>
+              <div className="flex flex-col gap-0.5">
                 {config.pages.map((page) => (
-                  <Box
+                  <div
                     key={page.id}
                     onClick={() => { setSelectedPageId(page.id); setSelectedSectionId(null); }}
-                    sx={{
-                      px: 1.5, py: 0.75, borderRadius: 1, cursor: 'pointer',
-                      bgcolor: selectedPageId === page.id ? 'primary.main' : 'transparent',
-                      color: selectedPageId === page.id ? 'white' : 'text.primary',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      '&:hover': { bgcolor: selectedPageId === page.id ? 'primary.main' : 'action.hover' },
-                    }}
+                    className={`px-1.5 py-[3px] rounded cursor-pointer flex items-center justify-between ${
+                      selectedPageId === page.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted'
+                    }`}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                    <div className="flex items-center gap-[3px] min-w-0">
                       {page.layout === 'canvas' ? (
-                        <DashboardIcon sx={{ fontSize: 13, opacity: 0.7 }} />
+                        <LayoutDashboard className="size-[13px] opacity-70" />
                       ) : (
-                        <ViewStreamIcon sx={{ fontSize: 13, opacity: 0.7 }} />
+                        <Rows3 className="size-[13px] opacity-70" />
                       )}
-                      <Typography variant="body2" fontSize={12} fontWeight={selectedPageId === page.id ? 600 : 400} noWrap>
+                      <span className={`text-xs truncate ${selectedPageId === page.id ? 'font-semibold' : ''}`}>
                         {page.name}
-                      </Typography>
-                    </Box>
+                      </span>
+                    </div>
                     {config.pages.length > 1 && selectedPageId === page.id && (
-                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); removePage(page.id); }}
-                        sx={{ p: 0.25, color: 'inherit', opacity: 0.7 }}>
-                        <DeleteIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
+                      <Button variant="ghost" size="icon-xs" className="p-0.5 opacity-70"
+                        onClick={(e) => { e.stopPropagation(); removePage(page.id); }}>
+                        <Trash2 className="size-3.5" />
+                      </Button>
                     )}
-                  </Box>
+                  </div>
                 ))}
-              </Stack>
+              </div>
               <Button
-                size="small"
-                startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                size="xs"
+                variant="ghost"
                 onClick={() => setAddPageOpen(true)}
-                sx={{ mt: 1, fontSize: 11, textTransform: 'none', width: '100%' }}
+                className="mt-1 text-[11px] w-full"
               >
-                Add Page
+                <Plus className="size-3.5 mr-1" /> Add Page
               </Button>
 
               {/* Layout mode toggle */}
               {selectedPage && (
-                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ mb: 0.75, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 10 }}>
+                <div className="mt-2 pt-2 border-t border-border">
+                  <span className="text-[10px] font-bold text-muted-foreground mb-1 block uppercase tracking-wider">
                     Layout
-                  </Typography>
-                  <ToggleButtonGroup
-                    value={isCanvasMode ? 'canvas' : 'stack'}
-                    exclusive
-                    onChange={togglePageLayout}
-                    size="small"
-                    fullWidth
-                    sx={{ '& .MuiToggleButton-root': { fontSize: 10, py: 0.5, textTransform: 'none' } }}
+                  </span>
+                  <ToggleGroup
+                    value={[isCanvasMode ? 'canvas' : 'stack']}
+                    className="w-full"
                   >
-                    <ToggleButton value="stack">
-                      <ViewStreamIcon sx={{ fontSize: 14, mr: 0.5 }} /> Stack
-                    </ToggleButton>
-                    <ToggleButton value="canvas">
-                      <DashboardIcon sx={{ fontSize: 14, mr: 0.5 }} /> Canvas
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
+                    <ToggleGroupItem
+                      value="stack"
+                      onClick={isCanvasMode ? togglePageLayout : undefined}
+                      className="flex-1 text-[10px] py-0.5 h-7"
+                    >
+                      <Rows3 className="size-3.5 mr-0.5" /> Stack
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="canvas"
+                      onClick={!isCanvasMode ? togglePageLayout : undefined}
+                      className="flex-1 text-[10px] py-0.5 h-7"
+                    >
+                      <LayoutDashboard className="size-3.5 mr-0.5" /> Canvas
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
               )}
-            </Box>
+            </div>
           )}
 
           {/* Center: Builder canvas or section list */}
@@ -765,67 +803,68 @@ export default function SiteBuilder({ abbreviation }: SiteBuilderProps) {
               onMoveElement={moveBuilderElement}
             />
           ) : (
-            <Box sx={{ p: 2, overflow: 'auto' }}>
-              <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 10 }}>
+            <div className="p-2 overflow-auto">
+              <span className="text-[10px] font-bold text-muted-foreground mb-1.5 block uppercase tracking-wider">
                 {selectedPage?.name} — Sections
-              </Typography>
+              </span>
               {selectedPage && selectedPage.sections.length === 0 ? (
-                <Box sx={{ py: 6, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.disabled" sx={{ mb: 1.5 }}>
+                <div className="py-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-1.5">
                     No sections yet. Add one to start building.
-                  </Typography>
-                  <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setAddSectionOpen(true)}>
-                    Add Section
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => setAddSectionOpen(true)}>
+                    <Plus className="size-4 mr-1" /> Add Section
                   </Button>
-                </Box>
+                </div>
               ) : (
-                <Stack spacing={1}>
+                <div className="flex flex-col gap-1">
                   {selectedPage?.sections.map((section, idx) => {
                     const reg = SECTION_REGISTRY[section.type];
                     return (
                       <Card
                         key={section.id}
-                        variant="outlined"
                         onClick={() => setSelectedSectionId(section.id)}
-                        sx={{
-                          cursor: 'pointer',
-                          borderColor: selectedSectionId === section.id ? 'primary.main' : 'divider',
-                          borderWidth: selectedSectionId === section.id ? 2 : 1,
-                          transition: 'border-color 0.15s',
-                        }}
+                        className={`cursor-pointer p-0 ${
+                          selectedSectionId === section.id
+                            ? 'border-primary border-2'
+                            : 'border'
+                        } transition-colors`}
                       >
-                        <CardContent sx={{ py: 1, px: 1.5, '&:last-child': { pb: 1 }, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <DragIndicatorIcon sx={{ fontSize: 16, color: 'text.disabled', cursor: 'grab' }} />
-                          <Box sx={{ color: 'primary.main', display: 'flex' }}>{SECTION_ICONS[section.type]}</Box>
-                          <Typography variant="body2" fontWeight={500} sx={{ flex: 1 }}>{reg.label}</Typography>
-                          <Stack direction="row" spacing={0.25}>
-                            <IconButton size="small" disabled={idx === 0} onClick={(e) => { e.stopPropagation(); moveSection(section.id, -1); }}>
-                              <ArrowUpwardIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                            <IconButton size="small" disabled={idx === selectedPage.sections.length - 1} onClick={(e) => { e.stopPropagation(); moveSection(section.id, 1); }}>
-                              <ArrowDownwardIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); removeSection(section.id); }}
-                              sx={{ '&:hover': { color: 'error.main' } }}>
-                              <DeleteIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Stack>
-                        </CardContent>
+                        <div className="py-1 px-1.5 flex items-center gap-1">
+                          <GripVertical className="size-4 text-muted-foreground cursor-grab" />
+                          <span className="text-primary flex">{SECTION_ICONS[section.type]}</span>
+                          <span className="text-sm font-medium flex-1">{reg.label}</span>
+                          <div className="flex items-center gap-0.5">
+                            <Button variant="ghost" size="icon-xs" disabled={idx === 0}
+                              onClick={(e) => { e.stopPropagation(); moveSection(section.id, -1); }}>
+                              <ArrowUp className="size-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon-xs" disabled={idx === selectedPage.sections.length - 1}
+                              onClick={(e) => { e.stopPropagation(); moveSection(section.id, 1); }}>
+                              <ArrowDown className="size-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon-xs"
+                              onClick={(e) => { e.stopPropagation(); removeSection(section.id); }}
+                              className="hover:text-destructive">
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        </div>
                       </Card>
                     );
                   })}
-                  <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setAddSectionOpen(true)}
-                    sx={{ alignSelf: 'flex-start', fontSize: 12, textTransform: 'none' }}>
-                    Add Section
+                  <Button size="sm" variant="outline" onClick={() => setAddSectionOpen(true)}
+                    className="self-start text-xs">
+                    <Plus className="size-4 mr-1" /> Add Section
                   </Button>
-                </Stack>
+                </div>
               )}
-            </Box>
+            </div>
           )}
 
           {/* Right: Style panel or Properties */}
           {isCanvasMode ? (
-            <Box sx={{ borderLeft: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+            <div className="border-l border-border overflow-hidden">
               <StylePanel
                 element={selectedSectionId ? builderElements[selectedSectionId] || null : null}
                 config={config}
@@ -834,14 +873,14 @@ export default function SiteBuilder({ abbreviation }: SiteBuilderProps) {
                 onUpdateName={updateBuilderElementName}
                 onUpdateTheme={(theme) => updateConfig({ ...config, theme })}
               />
-            </Box>
+            </div>
           ) : (
-            <Box sx={{ borderLeft: '1px solid', borderColor: 'divider', p: 1.5, overflow: 'auto' }}>
-              <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 10 }}>
+            <div className="border-l border-border p-1.5 overflow-auto">
+              <span className="text-[10px] font-bold text-muted-foreground mb-1 block uppercase tracking-wider">
                 Properties
-              </Typography>
+              </span>
               {selectedSection ? (
-                <Stack spacing={2}>
+                <div className="flex flex-col gap-2">
                   <SectionPropsEditor
                     section={selectedSection}
                     tournament={tournament}
@@ -850,68 +889,74 @@ export default function SiteBuilder({ abbreviation }: SiteBuilderProps) {
                   {/* Canvas position/size fields */}
                   {isCanvasMode && selectedSection.canvas && (
                     <>
-                      <Divider />
+                      <Separator />
                       <CanvasLayoutEditor
                         layout={selectedSection.canvas}
                         onChange={(layout) => updateSectionCanvas(selectedSection.id, layout)}
                       />
                     </>
                   )}
-                </Stack>
+                </div>
               ) : (
                 <ThemeEditor
                   theme={config.theme}
                   onChange={(theme) => updateConfig({ ...config, theme })}
                 />
               )}
-            </Box>
+            </div>
           )}
-        </Box>
+        </div>
       )}
 
       {/* Add Section Dialog */}
-      <Dialog open={addSectionOpen} onClose={() => setAddSectionOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Add Section</DialogTitle>
-        <DialogContent>
-          <Stack spacing={1} sx={{ mt: 1 }}>
+      <Dialog open={addSectionOpen} onOpenChange={setAddSectionOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Section</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-1 mt-1">
             {(Object.entries(SECTION_REGISTRY) as [SectionType, (typeof SECTION_REGISTRY)[SectionType]][]).map(([type, reg]) => (
-              <Paper
+              <div
                 key={type}
-                variant="outlined"
                 onClick={() => addSection(type as SectionType)}
-                sx={{
-                  p: 1.5, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 1.5,
-                  '&:hover': { borderColor: 'primary.main', bgcolor: 'rgba(132,169,140,0.05)' },
-                }}
+                className="p-1.5 cursor-pointer flex items-center gap-1.5 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-colors"
               >
-                <Box sx={{ color: 'primary.main', display: 'flex' }}>{SECTION_ICONS[type as SectionType]}</Box>
-                <Typography variant="body2" fontWeight={500}>{reg.label}</Typography>
-              </Paper>
+                <span className="text-primary flex">{SECTION_ICONS[type as SectionType]}</span>
+                <span className="text-sm font-medium">{reg.label}</span>
+              </div>
             ))}
-          </Stack>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Add Page Dialog */}
-      <Dialog open={addPageOpen} onClose={() => setAddPageOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Add Page</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Page Name" size="small" fullWidth value={newPageName} onChange={(e) => setNewPageName(e.target.value)} autoFocus />
-            <TextField
-              label="URL Path" size="small" fullWidth value={newPagePath} onChange={(e) => setNewPagePath(e.target.value)}
-              placeholder={newPageName ? `/${newPageName.toLowerCase().replace(/\s+/g, '-')}` : '/custom-page'}
-              helperText="Leave empty to auto-generate from name"
-            />
-          </Stack>
+      <Dialog open={addPageOpen} onOpenChange={setAddPageOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Page</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 mt-1">
+            <div>
+              <Label className="text-xs mb-1">Page Name</Label>
+              <Input value={newPageName} onChange={(e) => setNewPageName(e.target.value)} autoFocus />
+            </div>
+            <div>
+              <Label className="text-xs mb-1">URL Path</Label>
+              <Input
+                value={newPagePath}
+                onChange={(e) => setNewPagePath(e.target.value)}
+                placeholder={newPageName ? `/${newPageName.toLowerCase().replace(/\s+/g, '-')}` : '/custom-page'}
+              />
+              <p className="text-[11px] text-muted-foreground mt-0.5">Leave empty to auto-generate from name</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddPageOpen(false)}>Cancel</Button>
+            <Button onClick={addPage} disabled={!newPageName.trim()}>Add</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setAddPageOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={addPage} disabled={!newPageName.trim()}>Add</Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }
 
@@ -925,35 +970,40 @@ function CanvasLayoutEditor({
   onChange: (layout: Partial<CanvasItemLayout>) => void;
 }) {
   return (
-    <Stack spacing={1.5}>
-      <Typography variant="body2" fontWeight={600}>Position & Size</Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-        <TextField size="small" label="X" type="number" value={Math.round(layout.x)}
-          onChange={(e) => onChange({ x: parseInt(e.target.value) || 0 })}
-          slotProps={{ htmlInput: { style: { fontSize: 12 } } }}
-        />
-        <TextField size="small" label="Y" type="number" value={Math.round(layout.y)}
-          onChange={(e) => onChange({ y: parseInt(e.target.value) || 0 })}
-          slotProps={{ htmlInput: { style: { fontSize: 12 } } }}
-        />
-        <TextField size="small" label="W" type="number" value={Math.round(layout.width)}
-          onChange={(e) => onChange({ width: Math.max(50, parseInt(e.target.value) || 50) })}
-          slotProps={{ htmlInput: { min: 50, style: { fontSize: 12 } } }}
-        />
-        <TextField size="small" label="H" type="number" value={Math.round(layout.height)}
-          onChange={(e) => onChange({ height: Math.max(50, parseInt(e.target.value) || 50) })}
-          slotProps={{ htmlInput: { min: 50, style: { fontSize: 12 } } }}
-        />
-      </Box>
-      <TextField size="small" label="Layer (z-index)" type="number" value={layout.zIndex}
-        onChange={(e) => onChange({ zIndex: parseInt(e.target.value) || 0 })}
-        slotProps={{ htmlInput: { style: { fontSize: 12 } } }}
-      />
-      <FormControlLabel
-        control={<Switch size="small" checked={!!layout.locked} onChange={(_, v) => onChange({ locked: v })} />}
-        label={<Typography variant="body2">Lock position</Typography>}
-      />
-    </Stack>
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold">Position & Size</span>
+      <div className="grid grid-cols-2 gap-1">
+        <div>
+          <Label className="text-[10px]">X</Label>
+          <Input type="number" value={Math.round(layout.x)} className="text-xs h-7"
+            onChange={(e) => onChange({ x: parseInt(e.target.value) || 0 })} />
+        </div>
+        <div>
+          <Label className="text-[10px]">Y</Label>
+          <Input type="number" value={Math.round(layout.y)} className="text-xs h-7"
+            onChange={(e) => onChange({ y: parseInt(e.target.value) || 0 })} />
+        </div>
+        <div>
+          <Label className="text-[10px]">W</Label>
+          <Input type="number" value={Math.round(layout.width)} className="text-xs h-7"
+            onChange={(e) => onChange({ width: Math.max(50, parseInt(e.target.value) || 50) })} min={50} />
+        </div>
+        <div>
+          <Label className="text-[10px]">H</Label>
+          <Input type="number" value={Math.round(layout.height)} className="text-xs h-7"
+            onChange={(e) => onChange({ height: Math.max(50, parseInt(e.target.value) || 50) })} min={50} />
+        </div>
+      </div>
+      <div>
+        <Label className="text-[10px]">Layer (z-index)</Label>
+        <Input type="number" value={layout.zIndex} className="text-xs h-7"
+          onChange={(e) => onChange({ zIndex: parseInt(e.target.value) || 0 })} />
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <Switch size="sm" checked={!!layout.locked} onCheckedChange={(v) => onChange({ locked: v })} />
+        <span className="text-sm">Lock position</span>
+      </label>
+    </div>
   );
 }
 
@@ -971,63 +1021,95 @@ function SectionPropsEditor({
   const reg = SECTION_REGISTRY[section.type];
 
   return (
-    <Stack spacing={1.5}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-        <Box sx={{ color: 'primary.main', display: 'flex' }}>{SECTION_ICONS[section.type]}</Box>
-        <Typography variant="body2" fontWeight={600}>{reg.label}</Typography>
-      </Box>
-      <Divider />
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1 mb-0.5">
+        <span className="text-primary flex">{SECTION_ICONS[section.type]}</span>
+        <span className="text-sm font-semibold">{reg.label}</span>
+      </div>
+      <Separator />
 
       {section.type === 'hero' && (
         <>
-          <FormControlLabel control={<Switch size="small" checked={!!section.props.showLogo} onChange={(_, v) => onUpdate({ showLogo: v })} />}
-            label={<Typography variant="body2">Show Logo</Typography>} />
-          <FormControlLabel control={<Switch size="small" checked={!!section.props.showName} onChange={(_, v) => onUpdate({ showName: v })} />}
-            label={<Typography variant="body2">Show Name</Typography>} />
-          <FormControlLabel control={<Switch size="small" checked={!!section.props.showStatus} onChange={(_, v) => onUpdate({ showStatus: v })} />}
-            label={<Typography variant="body2">Show Status</Typography>} />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch size="sm" checked={!!section.props.showLogo} onCheckedChange={(v) => onUpdate({ showLogo: v })} />
+            <span className="text-sm">Show Logo</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch size="sm" checked={!!section.props.showName} onCheckedChange={(v) => onUpdate({ showName: v })} />
+            <span className="text-sm">Show Name</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch size="sm" checked={!!section.props.showStatus} onCheckedChange={(v) => onUpdate({ showStatus: v })} />
+            <span className="text-sm">Show Status</span>
+          </label>
         </>
       )}
 
       {section.type === 'announcements' && (
-        <TextField label="Max announcements" size="small" type="number" value={section.props.limit ?? 5}
-          onChange={(e) => onUpdate({ limit: parseInt(e.target.value) || 5 })}
-          slotProps={{ htmlInput: { min: 1, max: 20 } }} />
+        <div>
+          <Label className="text-xs">Max announcements</Label>
+          <Input type="number" value={String(section.props.limit ?? 5)} min={1} max={20}
+            onChange={(e) => onUpdate({ limit: parseInt(e.target.value) || 5 })} className="h-7 text-xs" />
+        </div>
       )}
 
       {section.type === 'players' && (
         <>
-          <FormControlLabel control={<Switch size="small" checked={!!section.props.showSeeds} onChange={(_, v) => onUpdate({ showSeeds: v })} />}
-            label={<Typography variant="body2">Show Seeds</Typography>} />
-          <FormControlLabel control={<Switch size="small" checked={!!section.props.showAvatars} onChange={(_, v) => onUpdate({ showAvatars: v })} />}
-            label={<Typography variant="body2">Show Avatars</Typography>} />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch size="sm" checked={!!section.props.showSeeds} onCheckedChange={(v) => onUpdate({ showSeeds: v })} />
+            <span className="text-sm">Show Seeds</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch size="sm" checked={!!section.props.showAvatars} onCheckedChange={(v) => onUpdate({ showAvatars: v })} />
+            <span className="text-sm">Show Avatars</span>
+          </label>
         </>
       )}
 
       {section.type === 'mappool' && (
-        <FormControl size="small" fullWidth>
-          <InputLabel>Stage</InputLabel>
-          <Select value={section.props.stage as string || ''} label="Stage" onChange={(e) => onUpdate({ stage: e.target.value })}>
-            <MenuItem value="">All Stages</MenuItem>
-            {tournament.stages?.map((s) => (<MenuItem key={s.id} value={s.name}>{s.name}</MenuItem>))}
+        <div>
+          <Label className="text-xs mb-1">Stage</Label>
+          <Select value={section.props.stage as string || ''} onValueChange={(v) => onUpdate({ stage: v })}>
+            <SelectTrigger size="sm" className="w-full text-xs">
+              <SelectValue placeholder="All Stages" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Stages</SelectItem>
+              {tournament.stages?.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
+            </SelectContent>
           </Select>
-        </FormControl>
+        </div>
       )}
 
       {section.type === 'richtext' && (
-        <TextField label="Content" size="small" multiline rows={6} fullWidth value={section.props.content as string || ''}
-          onChange={(e) => onUpdate({ content: e.target.value })} placeholder="Write text content here..." />
+        <div>
+          <Label className="text-xs mb-1">Content</Label>
+          <textarea
+            className="w-full min-h-[150px] rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm"
+            value={section.props.content as string || ''}
+            onChange={(e) => onUpdate({ content: e.target.value })}
+            placeholder="Write text content here..."
+          />
+        </div>
       )}
 
       {section.type === 'image' && (
         <>
-          <TextField label="Image URL" size="small" fullWidth value={section.props.url as string || ''} onChange={(e) => onUpdate({ url: e.target.value })} />
-          <TextField label="Alt Text" size="small" fullWidth value={section.props.alt as string || ''} onChange={(e) => onUpdate({ alt: e.target.value })} />
-          <FormControlLabel control={<Switch size="small" checked={!!section.props.fullWidth} onChange={(_, v) => onUpdate({ fullWidth: v })} />}
-            label={<Typography variant="body2">Full Width</Typography>} />
+          <div>
+            <Label className="text-xs mb-1">Image URL</Label>
+            <Input value={section.props.url as string || ''} onChange={(e) => onUpdate({ url: e.target.value })} className="h-7 text-xs" />
+          </div>
+          <div>
+            <Label className="text-xs mb-1">Alt Text</Label>
+            <Input value={section.props.alt as string || ''} onChange={(e) => onUpdate({ alt: e.target.value })} className="h-7 text-xs" />
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch size="sm" checked={!!section.props.fullWidth} onCheckedChange={(v) => onUpdate({ fullWidth: v })} />
+            <span className="text-sm">Full Width</span>
+          </label>
         </>
       )}
-    </Stack>
+    </div>
   );
 }
 
@@ -1035,31 +1117,36 @@ function SectionPropsEditor({
 
 function ThemeEditor({ theme, onChange }: { theme: SiteConfig['theme']; onChange: (theme: SiteConfig['theme']) => void }) {
   return (
-    <Stack spacing={1.5}>
-      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>Site Theme</Typography>
-      <Divider />
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold mb-0.5">Site Theme</span>
+      <Separator />
       {([['Primary Color', 'primaryColor'], ['Background', 'backgroundColor'], ['Text Color', 'textColor']] as const).map(([label, key]) => (
-        <Box key={key}>
-          <Typography variant="caption" color="text.secondary">{label}</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-            <Box component="input" type="color" value={theme[key]}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...theme, [key]: e.target.value })}
-              sx={{ width: 32, height: 32, border: '1px solid', borderColor: 'divider', borderRadius: 1, cursor: 'pointer', p: 0 }}
+        <div key={key}>
+          <span className="text-xs text-muted-foreground">{label}</span>
+          <div className="flex items-center gap-1 mt-0.5">
+            <input type="color" value={theme[key]}
+              onChange={(e) => onChange({ ...theme, [key]: e.target.value })}
+              className="w-8 h-8 border border-border rounded cursor-pointer p-0"
             />
-            <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{theme[key]}</Typography>
-          </Box>
-        </Box>
+            <span className="text-xs font-mono">{theme[key]}</span>
+          </div>
+        </div>
       ))}
-      <FormControl size="small" fullWidth>
-        <InputLabel>Font</InputLabel>
-        <Select value={theme.fontFamily} label="Font" onChange={(e) => onChange({ ...theme, fontFamily: e.target.value })} sx={{ fontSize: 12 }}>
-          <MenuItem value="Inter, sans-serif">Inter</MenuItem>
-          <MenuItem value="'Roboto', sans-serif">Roboto</MenuItem>
-          <MenuItem value="'Poppins', sans-serif">Poppins</MenuItem>
-          <MenuItem value="'Montserrat', sans-serif">Montserrat</MenuItem>
-          <MenuItem value="system-ui, sans-serif">System UI</MenuItem>
+      <div>
+        <Label className="text-xs mb-1">Font</Label>
+        <Select value={theme.fontFamily ?? 'Inter, sans-serif'} onValueChange={(v) => v && onChange({ ...theme, fontFamily: v })}>
+          <SelectTrigger size="sm" className="w-full text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Inter, sans-serif">Inter</SelectItem>
+            <SelectItem value="'Roboto', sans-serif">Roboto</SelectItem>
+            <SelectItem value="'Poppins', sans-serif">Poppins</SelectItem>
+            <SelectItem value="'Montserrat', sans-serif">Montserrat</SelectItem>
+            <SelectItem value="system-ui, sans-serif">System UI</SelectItem>
+          </SelectContent>
         </Select>
-      </FormControl>
-    </Stack>
+      </div>
+    </div>
   );
 }

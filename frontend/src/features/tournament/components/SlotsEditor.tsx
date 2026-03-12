@@ -1,20 +1,28 @@
 import { useState } from 'react';
+import { Plus, Trash2, Check, GripVertical } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card } from '@/components/ui/card';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  CircularProgress,
-  TextField,
-  IconButton,
-  Tooltip,
-  Card,
-  List,
-  ListItem,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CheckIcon from '@mui/icons-material/Check';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Spinner } from '@/components/ui/spinner';
 import {
   updateTournament,
   type Tournament,
@@ -43,11 +51,9 @@ export default function SlotsEditor({
   onUpdated,
   onError,
 }: SlotsEditorProps) {
-  // Build initial slot list from saved configs, falling back to defaults
   const [slots, setSlots] = useState<SlotEntry[]>(() => {
     const savedKeys = Object.keys(slotConfigs);
     if (savedKeys.length > 0) {
-      // Use saved config order, then append any defaults not already present
       const entries: SlotEntry[] = savedKeys.map((key) => ({
         key,
         label: slotConfigs[key].label,
@@ -60,7 +66,6 @@ export default function SlotsEditor({
       }
       return entries;
     }
-    // No saved config — use all defaults
     return SLOTS.map((key) => ({
       key,
       label: defaultSlotLabels[key] || key,
@@ -68,6 +73,7 @@ export default function SlotsEditor({
     }));
   });
   const [saving, setSaving] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [newLabel, setNewLabel] = useState('');
   const [newColor, setNewColor] = useState('#888888');
@@ -101,6 +107,7 @@ export default function SlotsEditor({
     setNewKey('');
     setNewLabel('');
     setNewColor('#888888');
+    setAddOpen(false);
   };
 
   const handleRemove = (key: string) => {
@@ -113,111 +120,193 @@ export default function SlotsEditor({
 
   if (!isOwner) {
     return (
-      <Card variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
-        <Typography color="text.disabled">Only the tournament owner can edit slots.</Typography>
+      <Card className="p-8 text-center">
+        <p className="text-muted-foreground">Only the tournament owner can edit slots.</p>
       </Card>
     );
   }
 
   return (
-    <Stack spacing={2}>
-      <List disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-        {slots.map((slot, i) => (
-          <ListItem key={i} divider={i < slots.length - 1} sx={{ py: 1, px: 2, gap: 1.5 }}>
-            {/* Color picker */}
-            <Box
-              component="input"
-              type="color"
-              value={slot.color}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSlot(i, 'color', e.target.value)}
-              sx={{
-                width: 28, height: 28, border: 'none', borderRadius: 1,
-                cursor: 'pointer', p: 0, background: 'none', flexShrink: 0,
-                '&::-webkit-color-swatch-wrapper': { p: 0 },
-                '&::-webkit-color-swatch': { borderRadius: 4, border: '1px solid rgba(0,0,0,0.2)' },
-              }}
-            />
+    <div className="flex flex-col gap-6">
+      {/* Slot table */}
+      <Card className="overflow-hidden">
+        <ScrollArea className="max-h-[480px]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10" />
+                <TableHead className="w-16">Color</TableHead>
+                <TableHead className="w-24">Key</TableHead>
+                <TableHead>Display Name</TableHead>
+                <TableHead className="w-20 text-center">Preview</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {slots.map((slot, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <GripVertical className="size-4 text-muted-foreground/40" />
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <label className="block cursor-pointer">
+                            <div
+                              className="size-7 rounded-md border border-border shadow-sm transition-shadow hover:shadow-md"
+                              style={{ backgroundColor: slot.color }}
+                            />
+                            <input
+                              type="color"
+                              value={slot.color}
+                              onChange={(e) => updateSlot(i, 'color', e.target.value)}
+                              className="sr-only"
+                            />
+                          </label>
+                        }
+                      >
+                        <span />
+                      </TooltipTrigger>
+                      <TooltipContent>Pick color</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      value={slot.key}
+                      onChange={(e) => updateSlot(i, 'key', e.target.value)}
+                      className="h-7 w-[70px] text-center text-xs font-bold"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      value={slot.label}
+                      onChange={(e) => updateSlot(i, 'label', e.target.value)}
+                      placeholder="Display name"
+                      className="h-7 text-sm"
+                    />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span
+                      className="inline-flex min-w-[48px] items-center justify-center rounded px-1.5 py-0.5 text-xs font-bold text-white"
+                      style={{ backgroundColor: slot.color }}
+                    >
+                      {slot.key || '??'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => handleRemove(slot.key)}
+                            className="text-muted-foreground hover:text-destructive"
+                          />
+                        }
+                      >
+                        <Trash2 className="size-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Remove slot</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {slots.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                    No slots configured. Add one below.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </Card>
 
-            {/* Slot key */}
-            <TextField
-              size="small"
-              value={slot.key}
-              onChange={(e) => updateSlot(i, 'key', e.target.value)}
-              sx={{
-                width: 70, '& .MuiInputBase-input': {
-                  py: 0.5, fontSize: 12, fontWeight: 'bold', textAlign: 'center',
-                  color: slot.color,
-                },
-                '& .MuiOutlinedInput-root': { backgroundColor: `${slot.color}20` },
-              }}
-            />
-
-            {/* Editable label */}
-            <TextField
-              size="small"
-              value={slot.label}
-              onChange={(e) => updateSlot(i, 'label', e.target.value)}
-              placeholder="Display name"
-              sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 14 } }}
-            />
-
-            {/* Delete */}
-            <Tooltip title="Remove slot">
-              <IconButton size="small" onClick={() => handleRemove(slot.key)}
-                sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                <DeleteIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-          </ListItem>
-        ))}
-      </List>
-
-      {/* Add new slot */}
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Box
-          component="input"
-          type="color"
-          value={newColor}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewColor(e.target.value)}
-          sx={{
-            width: 28, height: 28, border: 'none', borderRadius: 1,
-            cursor: 'pointer', p: 0, background: 'none', flexShrink: 0,
-            '&::-webkit-color-swatch-wrapper': { p: 0 },
-            '&::-webkit-color-swatch': { borderRadius: 4, border: '1px solid rgba(0,0,0,0.2)' },
-          }}
-        />
-        <TextField
-          size="small"
-          value={newKey}
-          onChange={(e) => setNewKey(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10))}
-          placeholder="Key (e.g. RC)"
-          sx={{ width: 100, '& .MuiInputBase-input': { py: 0.5, fontSize: 13 } }}
-        />
-        <TextField
-          size="small"
-          value={newLabel}
-          onChange={(e) => setNewLabel(e.target.value)}
-          placeholder="Display name (e.g. Rice)"
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 13 } }}
-        />
-        <Button size="small" variant="outlined" onClick={handleAdd} disabled={!newKey.trim() || !newLabel.trim()}
-          startIcon={<AddIcon />}>
-          Add
+      {/* Action buttons */}
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={() => setAddOpen(true)}>
+          <Plus data-icon="inline-start" className="size-4" />
+          Add Slot
         </Button>
-      </Stack>
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={handleSave}
-          disabled={saving}
-          startIcon={saving ? <CircularProgress size={14} sx={{ color: 'white' }} /> : <CheckIcon />}
-        >
-          {saving ? 'Saving...' : 'Save'}
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Spinner className="size-4 text-white" /> : <Check data-icon="inline-start" className="size-4" />}
+          {saving ? 'Saving...' : 'Save Slot Configuration'}
         </Button>
-      </Box>
-    </Stack>
+      </div>
+
+      {/* Add new slot dialog */}
+      <Dialog
+        open={addOpen}
+        onOpenChange={(o) => {
+          if (!o) { setAddOpen(false); setNewKey(''); setNewLabel(''); setNewColor('#888888'); }
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add New Slot</DialogTitle>
+            <DialogDescription>
+              Create a custom slot type for your mappool.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            {/* Color + Key row with live preview */}
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer">
+                <div
+                  className="size-10 rounded-lg border border-border shadow-sm transition-shadow hover:shadow-md"
+                  style={{ backgroundColor: newColor }}
+                />
+                <input
+                  type="color"
+                  value={newColor}
+                  onChange={(e) => setNewColor(e.target.value)}
+                  className="sr-only"
+                />
+              </label>
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <Label className="text-xs">Key</Label>
+                <Input
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10))}
+                  placeholder="e.g. RC"
+                  autoFocus
+                />
+              </div>
+              {/* Live preview */}
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[10px] text-muted-foreground">Preview</span>
+                <span
+                  className="inline-flex min-w-[48px] items-center justify-center rounded px-2 py-1 text-sm font-bold text-white"
+                  style={{ backgroundColor: newColor }}
+                >
+                  {newKey.trim().toUpperCase() || '??'}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">Display Name</Label>
+              <Input
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="e.g. Rice"
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAddOpen(false); setNewKey(''); setNewLabel(''); setNewColor('#888888'); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleAdd} disabled={!newKey.trim() || !newLabel.trim()}>
+              <Plus data-icon="inline-start" className="size-4" />
+              Add Slot
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

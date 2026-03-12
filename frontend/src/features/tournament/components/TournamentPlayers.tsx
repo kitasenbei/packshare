@@ -1,39 +1,40 @@
 import { useState, useCallback } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  TextField,
-  IconButton,
-  Chip,
+  Plus, Shuffle, X, Users, Upload, User, Link, Check, TriangleAlert,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
+import {
+  Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
+} from '@/components/ui/table';
+import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Card,
-  CardHeader,
-  CardContent,
-  Avatar,
-  Tooltip,
-  Badge,
-  CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import ShuffleIcon from '@mui/icons-material/Shuffle';
-import CloseIcon from '@mui/icons-material/Close';
-import GroupIcon from '@mui/icons-material/Group';
-import UploadIcon from '@mui/icons-material/Upload';
-import PersonIcon from '@mui/icons-material/Person';
-import LinkIcon from '@mui/icons-material/Link';
-import CheckIcon from '@mui/icons-material/Check';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogMedia,
+} from '@/components/ui/alert-dialog';
 import { getOsuUser } from '../../auth/api/auth';
 import {
   addPlayer as apiAddPlayer,
@@ -119,6 +120,7 @@ export default function TournamentPlayers({
   const [editingName, setEditingName] = useState<number | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [adding, setAdding] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
 
   const resetBracket = useCallback(async () => {
     const reset: BracketData = { matches: [], bestOf: bracketData.bestOf, generated: false };
@@ -238,262 +240,308 @@ export default function TournamentPlayers({
       onPlayersChanged([]);
       await resetBracket();
     } catch { /* silently fail */ }
+    setClearOpen(false);
   };
+
+  // ── Read-only view ──
 
   if (!isOwner) {
     const playerCount = players.length;
     return (
-      <Card variant="outlined">
-        <CardHeader
-          avatar={
-            <Badge badgeContent={playerCount} color="primary" showZero
-              sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 18, minWidth: 18 } }}>
-              <Avatar sx={{ width: 34, height: 34, bgcolor: 'action.hover' }}>
-                <GroupIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-              </Avatar>
-            </Badge>
-          }
-          title="Player Roster"
-          subheader={`${playerCount} player${playerCount !== 1 ? 's' : ''} registered`}
-          slotProps={{
-            title: { variant: 'subtitle2', fontWeight: 'bold' },
-            subheader: { variant: 'caption' },
-          }}
-          sx={{ pb: 0 }}
-        />
-        <CardContent sx={{ pt: 1.5 }}>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Avatar>
+              <AvatarFallback>
+                <Users className="size-4" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle className="text-sm font-bold">Player Roster</CardTitle>
+              <CardDescription className="text-xs">{`${playerCount} player${playerCount !== 1 ? 's' : ''} registered`}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
           {playerCount > 0 ? (
-            <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: 'action.hover' }}>
+            <Card className="overflow-hidden">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell sx={{ width: 48, fontWeight: 600, fontSize: 12 }}>Seed</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: 12 }}>Player</TableCell>
+                    <TableHead className="w-12 text-xs font-semibold">Seed</TableHead>
+                    <TableHead className="text-xs font-semibold">Player</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {players.map((player) => (
-                    <TableRow key={player.id} hover>
-                      <TableCell sx={{ py: 0.5 }}>
-                        <Avatar sx={{
-                          width: 24, height: 24, fontSize: 11, fontWeight: 'bold',
-                          bgcolor: player.seed <= 3 ? 'primary.main' : 'action.hover',
-                          color: player.seed <= 3 ? 'white' : 'text.secondary',
-                        }}>
+                    <TableRow key={player.id}>
+                      <TableCell className="py-1">
+                        <span className={`text-xs font-bold tabular-nums ${player.seed <= 3 ? 'text-primary' : 'text-muted-foreground'}`}>
                           {player.seed}
-                        </Avatar>
+                        </span>
                       </TableCell>
-                      <TableCell sx={{ py: 0.5 }}>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Avatar
-                            src={`https://a.ppy.sh/${player.osuId}`}
-                            variant="rounded"
-                            sx={{ width: 28, height: 28 }}
-                          />
-                          <Typography variant="body2">{player.name}</Typography>
-                        </Stack>
+                      <TableCell className="py-1">
+                        <div className="flex items-center gap-2">
+                          <Avatar size="sm">
+                            <AvatarImage src={`https://a.ppy.sh/${player.osuId}`} />
+                            <AvatarFallback>{player.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{player.name}</span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </Card>
           ) : (
-            <Box sx={{ py: 3, textAlign: 'center' }}>
-              <PersonIcon sx={{ fontSize: 36, color: 'text.disabled', mb: 0.5 }} />
-              <Typography variant="body2" color="text.disabled">
-                No players added yet
-              </Typography>
-            </Box>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <User />
+                </EmptyMedia>
+                <EmptyTitle>No players added yet</EmptyTitle>
+                <EmptyDescription>The tournament organizer hasn't added any players.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
         </CardContent>
       </Card>
     );
   }
 
+  // ── Owner view ──
+
   return (
-    <Stack spacing={2}>
+    <div className="flex flex-col gap-3">
       {/* Add player input + actions */}
-      <Stack direction="row" spacing={1} alignItems="flex-start">
-        <TextField
-          size="small"
-          placeholder="osu! user ID or profile link..."
-          value={playerInput}
-          onChange={(e) => { setPlayerInput(e.target.value); setPlayerError(''); }}
-          onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
-          fullWidth
-          error={!!playerError}
-          helperText={playerError}
-          slotProps={{
-            input: {
-              startAdornment: <PersonIcon sx={{ fontSize: 18, color: 'text.disabled', mr: 0.75 }} />,
-            },
-          }}
-        />
-        <Button variant="contained" onClick={handleAddPlayer} disabled={!playerInput.trim() || adding}
-          sx={{ minWidth: 40, px: 1, height: 40 }}>
-          {adding ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <AddIcon sx={{ fontSize: 20 }} />}
+      <div className="flex items-start gap-2">
+        <div className="flex-1">
+          <div className="relative">
+            <User className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder="osu! user ID or profile link..."
+              value={playerInput}
+              onChange={(e) => { setPlayerInput(e.target.value); setPlayerError(''); }}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
+              aria-invalid={!!playerError}
+            />
+          </div>
+          {playerError && (
+            <p className="mt-1 text-xs text-destructive">{playerError}</p>
+          )}
+        </div>
+        <Button onClick={handleAddPlayer} disabled={!playerInput.trim() || adding} size="icon" className="shrink-0">
+          {adding ? <Spinner /> : <Plus className="size-5" />}
         </Button>
-        <Tooltip title="Bulk import from list">
-          <Button variant="outlined" startIcon={<UploadIcon />}
-            onClick={() => setBulkImportOpen(true)} sx={{ fontSize: 12, flexShrink: 0, height: 40 }}>
-            Import Players
-          </Button>
+        <Tooltip>
+          <TooltipTrigger render={
+            <Button variant="outline" onClick={() => setBulkImportOpen(true)} className="shrink-0">
+              <Upload data-icon="inline-start" />
+              Import
+            </Button>
+          } />
+          <TooltipContent>Bulk import from list</TooltipContent>
         </Tooltip>
         {players.length > 1 && (
-          <Button variant="outlined" startIcon={<ShuffleIcon />} onClick={shuffleSeeds}
-            sx={{ fontSize: 12, flexShrink: 0, height: 40 }}>
-            Randomize Seed
-          </Button>
+          <Tooltip>
+            <TooltipTrigger render={
+              <Button variant="outline" onClick={shuffleSeeds} className="shrink-0">
+                <Shuffle data-icon="inline-start" />
+                Shuffle
+              </Button>
+            } />
+            <TooltipContent>Randomize seed order</TooltipContent>
+          </Tooltip>
         )}
-      </Stack>
+      </div>
 
-          {/* Player list */}
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <WarningAmberIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
-            <Typography variant="caption" color="text.disabled">
-              Editing players will reset the bracket
-            </Typography>
-          </Stack>
-          {players.length > 0 ? (
-            <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: 'action.hover' }}>
-                  <TableRow>
-                    <TableCell sx={{ width: 48, fontWeight: 600, fontSize: 12 }}>Seed</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: 12 }}>Player</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: 12 }}>Discord</TableCell>
-                    <TableCell sx={{ width: 48 }} />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {players.map((player) => (
-                    <TableRow key={player.id} hover>
-                      <TableCell sx={{ py: 0.5 }}>
-                        <Avatar sx={{
-                          width: 24, height: 24, fontSize: 11, fontWeight: 'bold',
-                          bgcolor: player.seed <= 3 ? 'primary.main' : 'action.hover',
-                          color: player.seed <= 3 ? 'white' : 'text.secondary',
-                        }}>
-                          {player.seed}
+      {/* Bracket reset warning */}
+      <Alert>
+        <TriangleAlert />
+        <AlertDescription>
+          Editing players will reset the bracket
+        </AlertDescription>
+      </Alert>
+
+      {/* Player list */}
+      {players.length > 0 ? (
+        <Card className="overflow-hidden">
+          <ScrollArea className="max-h-[500px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12 text-xs font-semibold">Seed</TableHead>
+                  <TableHead className="text-xs font-semibold">Player</TableHead>
+                  <TableHead className="text-xs font-semibold">Discord</TableHead>
+                  <TableHead className="w-12" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {players.map((player) => (
+                  <TableRow key={player.id}>
+                    <TableCell className="py-1">
+                      <span className={`text-xs font-bold tabular-nums ${player.seed <= 3 ? 'text-primary' : 'text-muted-foreground'}`}>
+                        {player.seed}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-1">
+                      <div className="flex items-center gap-2">
+                        <Avatar size="sm">
+                          <AvatarImage src={`https://a.ppy.sh/${player.osuId}`} />
+                          <AvatarFallback>{player.name[0]}</AvatarFallback>
                         </Avatar>
-                      </TableCell>
-                      <TableCell sx={{ py: 0.5 }}>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Avatar
-                            src={`https://a.ppy.sh/${player.osuId}`}
-                            variant="rounded"
-                            sx={{ width: 28, height: 28 }}
+                        {editingName === player.id ? (
+                          <Input
+                            className="h-7 w-40 py-0.5 text-[13px]"
+                            value={nameInput}
+                            onChange={(e) => setNameInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveName(player.id); if (e.key === 'Escape') setEditingName(null); }}
+                            onBlur={() => saveName(player.id)}
+                            autoFocus
                           />
-                          {editingName === player.id ? (
-                            <TextField
-                              size="small"
-                              value={nameInput}
-                              onChange={(e) => setNameInput(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') saveName(player.id); if (e.key === 'Escape') setEditingName(null); }}
-                              onBlur={() => saveName(player.id)}
-                              autoFocus
-                              sx={{ '& .MuiInputBase-input': { fontSize: 13, py: 0.5 } }}
-                            />
-                          ) : (
-                            <Typography variant="body2"
-                              onClick={() => { setEditingName(player.id); setNameInput(player.name); }}
-                              sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}>
-                              {player.name}
-                            </Typography>
-                          )}
-                        </Stack>
-                      </TableCell>
-                      <TableCell sx={{ py: 0.5 }}>
-                        {editingDiscord === player.id ? (
-                          <Stack direction="row" spacing={0.5} alignItems="center">
-                            <TextField
-                              size="small"
-                              placeholder="Discord username..."
-                              value={discordInput}
-                              onChange={(e) => setDiscordInput(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') saveDiscord(player.id); if (e.key === 'Escape') setEditingDiscord(null); }}
-                              autoFocus
-                              sx={{ '& .MuiInputBase-input': { fontSize: 13, py: 0.5 } }}
-                            />
-                            <IconButton size="small" onClick={() => saveDiscord(player.id)}>
-                              <CheckIcon sx={{ fontSize: 14, color: 'primary.main' }} />
-                            </IconButton>
-                          </Stack>
                         ) : (
-                          <Button size="small" variant={player.discord ? 'text' : 'contained'}
-                            onClick={() => { setEditingDiscord(player.id); setDiscordInput(player.discord || ''); }}
-                            startIcon={<LinkIcon sx={{ fontSize: 14 }} />}
-                            sx={{ fontSize: 11, textTransform: 'none', minWidth: 0, px: 0.75, ...(player.discord ? { color: 'primary.main' } : { bgcolor: '#5865F2', color: 'white', '&:hover': { bgcolor: '#4752C4' } }) }}>
-                            {player.discord || 'Link Discord'}
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <span
+                                  className="cursor-pointer text-sm hover:text-primary"
+                                  onClick={() => { setEditingName(player.id); setNameInput(player.name); }}
+                                />
+                              }
+                            >
+                              {player.name}
+                            </TooltipTrigger>
+                            <TooltipContent>Click to rename</TooltipContent>
+                          </Tooltip>
                         )}
-                      </TableCell>
-                      <TableCell sx={{ py: 0.5 }} align="right">
-                        <IconButton size="small" onClick={() => handleRemovePlayer(player.id)}
-                          sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                          <CloseIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Box sx={{ py: 3, textAlign: 'center' }}>
-              <PersonIcon sx={{ fontSize: 36, color: 'text.disabled', mb: 0.5 }} />
-              <Typography variant="body2" color="text.disabled">
-                No players added yet
-              </Typography>
-            </Box>
-          )}
-
-      {players.length > 0 && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button size="small" variant="text" color="error" onClick={handleClearAll} sx={{ fontSize: 12 }}>
-            Clear all
-          </Button>
-        </Box>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-1">
+                      {editingDiscord === player.id ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            className="h-7 w-40 py-0.5 text-[13px]"
+                            placeholder="Discord username..."
+                            value={discordInput}
+                            onChange={(e) => setDiscordInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveDiscord(player.id); if (e.key === 'Escape') setEditingDiscord(null); }}
+                            autoFocus
+                          />
+                          <Button variant="ghost" size="icon-xs" onClick={() => saveDiscord(player.id)}>
+                            <Check className="size-3.5 text-primary" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="xs"
+                          variant={player.discord ? 'ghost' : 'default'}
+                          onClick={() => { setEditingDiscord(player.id); setDiscordInput(player.discord || ''); }}
+                          className={player.discord ? 'text-primary' : 'bg-[#5865F2] hover:bg-[#4752C4] text-white'}
+                        >
+                          <Link data-icon="inline-start" />
+                          {player.discord || 'Link Discord'}
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-1 text-right">
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => handleRemovePlayer(player.id)}
+                              className="text-muted-foreground hover:text-destructive"
+                            />
+                          }
+                        >
+                          <X className="size-3.5" />
+                        </TooltipTrigger>
+                        <TooltipContent>Remove player</TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </Card>
+      ) : (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <User />
+            </EmptyMedia>
+            <EmptyTitle>No players added yet</EmptyTitle>
+            <EmptyDescription>Add players by osu! user ID or profile link, or bulk import a list.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
 
+      {players.length > 0 && (
+        <div className="flex justify-end">
+          <Button variant="destructive" size="xs" onClick={() => setClearOpen(true)}>
+            Clear all
+          </Button>
+        </div>
+      )}
+
+      {/* Clear all confirmation */}
+      <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <TriangleAlert />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Clear all players?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove all {players.length} players and reset the bracket. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleClearAll}>
+              Clear All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Bulk Import Dialog */}
-      <Dialog open={bulkImportOpen} onClose={() => setBulkImportOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <UploadIcon sx={{ fontSize: 20, color: 'primary.main' }} />
-          Bulk Import Players
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Paste osu! user IDs or profile links, one per line
-          </Typography>
-          <TextField
-            multiline
+      <Dialog open={bulkImportOpen} onOpenChange={(open) => { if (!open) setBulkImportOpen(false); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="size-5 text-primary" />
+              Bulk Import Players
+            </DialogTitle>
+            <DialogDescription>
+              Paste osu! user IDs or profile links, one per line
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
             rows={8}
-            fullWidth
             placeholder={"12345\nhttps://osu.ppy.sh/users/67890\n11111"}
             value={bulkInput}
             onChange={(e) => setBulkInput(e.target.value)}
             autoFocus
           />
           {bulkInput.trim() && (
-            <Chip
-              label={`${bulkInput.split('\n').filter((n) => n.trim()).length} players to import`}
-              size="small"
-              color="primary"
-              variant="outlined"
-              sx={{ mt: 1.5, height: 24, fontSize: 11 }}
-            />
+            <Badge variant="outline" className="w-fit text-[11px]">
+              {bulkInput.split('\n').filter((n) => n.trim()).length} players to import
+            </Badge>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkImportOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkImport} disabled={!bulkInput.trim()}>
+              <Upload data-icon="inline-start" />
+              Import
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setBulkImportOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleBulkImport} disabled={!bulkInput.trim()}
-            startIcon={<UploadIcon />}>
-            Import
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Stack>
+    </div>
   );
 }

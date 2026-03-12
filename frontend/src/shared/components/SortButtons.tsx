@@ -1,4 +1,4 @@
-import { Button, Stack } from '@mui/material';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface SortOption {
   key: string;
@@ -13,18 +13,19 @@ interface SortButtonsProps {
 
 export default function SortButtons({ value, onChange, options }: SortButtonsProps) {
   return (
-    <Stack direction="row" spacing={0.5}>
+    <ToggleGroup
+      value={[value]}
+      onValueChange={(newValue) => {
+        if (newValue.length > 0) onChange(newValue[newValue.length - 1]);
+      }}
+      variant="outline"
+      size="sm"
+    >
       {options.map((s) => (
-        <Button
-          key={s.key}
-          size="small"
-          variant={value === s.key ? 'contained' : 'text'}
-          onClick={() => onChange(s.key)}
-          sx={{ minWidth: 0, px: 1.5, fontSize: 12 }}
-        >
+        <ToggleGroupItem key={s.key} value={s.key}>
           {s.label}
-        </Button>
+        </ToggleGroupItem>
       ))}
-    </Stack>
+    </ToggleGroup>
   );
 }

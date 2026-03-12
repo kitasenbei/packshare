@@ -1,23 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  Avatar,
-  Chip,
-  Card,
-  CardContent,
-  Divider,
-  Stack,
-  LinearProgress,
-  Badge,
-  createTheme,
-  ThemeProvider,
-  CssBaseline,
-} from '@mui/material';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
-import StarIcon from '@mui/icons-material/Star';
+import { Trophy, Medal, Star } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { Separator } from '@/components/ui/separator';
 import { getSiteBySubdomain, type Tournament, type TournamentMap } from '../api/tournaments';
 import type { SiteConfig, SiteSection, SitePage as SitePageType, BuilderElement, ElementStyles } from '../types/siteConfig';
 
@@ -112,25 +96,6 @@ function setMeta(property: string, content: string) {
   el.content = content;
 }
 
-// ── Theme builder (shared) ──
-
-function buildSiteTheme(config: SiteConfig) {
-  const t = config.theme;
-  return createTheme({
-    palette: {
-      mode: 'dark',
-      primary: { main: t.primaryColor },
-      background: { default: t.backgroundColor, paper: lighten(t.backgroundColor, 0.05) },
-      text: { primary: t.textColor, secondary: adjustAlpha(t.textColor, 0.7) },
-      divider: adjustAlpha(t.textColor, 0.12),
-    },
-    typography: { fontFamily: t.fontFamily },
-    components: {
-      MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { backgroundImage: 'none' } } },
-    },
-  });
-}
-
 // ── Public page renderer (fetches data by subdomain) ──
 
 interface SiteRendererProps {
@@ -166,18 +131,18 @@ export default function SiteRenderer({ subdomain }: SiteRendererProps) {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', bgcolor: '#1a1a2e' }}>
-        <CircularProgress />
-      </Box>
+      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#1a1a2e' }}>
+        <Spinner className="size-8" />
+      </div>
     );
   }
 
   if (error || !config || !tournament) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', bgcolor: '#1a1a2e', color: '#fff' }}>
-        <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>404</Typography>
-        <Typography color="text.secondary">{error || 'Site not found'}</Typography>
-      </Box>
+      <div className="flex flex-col items-center justify-center min-h-screen text-white" style={{ backgroundColor: '#1a1a2e' }}>
+        <h1 className="text-3xl font-bold mb-1">404</h1>
+        <p className="text-white/60">{error || 'Site not found'}</p>
+      </div>
     );
   }
 
@@ -198,7 +163,6 @@ interface SitePreviewProps {
 export function SitePreview({ config, tournament, activePageId, compact }: SitePreviewProps) {
   const [currentPath, setCurrentPath] = useState('/');
 
-  const theme = useMemo(() => buildSiteTheme(config), [config]);
   useGoogleFont(config.theme.fontFamily);
 
   // If activePageId is provided (editor mode), sync to that page
@@ -224,87 +188,128 @@ export function SitePreview({ config, tournament, activePageId, compact }: SiteP
     seed: p.seed,
   }));
 
+  const t = config.theme;
+  const bgPaper = lighten(t.backgroundColor, 0.05);
+  const textSecondary = adjustAlpha(t.textColor, 0.7);
+  const dividerColor = adjustAlpha(t.textColor, 0.12);
+
   return (
-    <ThemeProvider theme={theme}>
-      {!compact && <CssBaseline />}
-      <Box sx={{ minHeight: compact ? 'auto' : '100vh', bgcolor: 'background.default', borderRadius: compact ? 2 : 0 }}>
-        {/* Navigation */}
-        {config.pages.length > 1 && (
-          <Box sx={{
-            position: compact ? 'relative' : 'sticky', top: 0, zIndex: 100,
-            bgcolor: 'background.paper',
-            borderBottom: '1px solid', borderColor: 'divider',
-            ...(compact ? { borderRadius: '8px 8px 0 0' } : { backdropFilter: 'blur(8px)' }),
-          }}>
-            <Box sx={{ maxWidth: compact ? '100%' : 1000, mx: 'auto', px: compact ? 1.5 : 3, display: 'flex', alignItems: 'center', gap: 0.5, height: compact ? 36 : 48 }}>
-              {tournament.logo_url && (
-                <Box
-                  component="img"
-                  src={tournament.logo_url}
-                  alt={tournament.name}
-                  sx={{ height: compact ? 20 : 28, width: compact ? 20 : 28, borderRadius: 1, objectFit: 'cover', mr: 1 }}
-                />
-              )}
-              <Typography variant="body2" fontWeight={700} sx={{ mr: 2, color: 'primary.main', fontSize: compact ? 11 : 13 }}>
-                {tournament.abbreviation}
-              </Typography>
-              {config.pages.map((page) => (
-                <Box
-                  key={page.id}
-                  onClick={() => setCurrentPath(page.path)}
-                  sx={{
-                    px: compact ? 1 : 1.5, py: compact ? 0.5 : 0.75, borderRadius: 1, cursor: 'pointer',
-                    fontSize: compact ? 10 : 13, fontWeight: currentPath === page.path ? 600 : 400,
-                    color: currentPath === page.path ? 'primary.main' : 'text.secondary',
-                    bgcolor: currentPath === page.path ? adjustAlpha(config.theme.primaryColor, 0.1) : 'transparent',
-                    '&:hover': { bgcolor: adjustAlpha(config.theme.primaryColor, 0.08) },
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {page.name}
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        )}
-
-        {/* Page content */}
-        {currentPage?.layout === 'canvas' ? (
-          <CanvasPageRenderer
-            page={currentPage}
-            tournament={tournament}
-            config={config}
-            players={players}
-            bracketData={bracketData}
-            compact={compact}
-          />
-        ) : (
-          <Box sx={{ maxWidth: compact ? '100%' : 1000, mx: 'auto', px: compact ? 1.5 : 3, py: compact ? 2 : 4 }}>
-            {currentPage?.sections.map((section) => (
-              <Box key={section.id} sx={{ mb: compact ? 2 : 4 }}>
-                <SectionRendererComponent
-                  section={section}
-                  tournament={tournament}
-                  config={config}
-                  players={players}
-                  bracketData={bracketData}
-                  compact={compact}
-                />
-              </Box>
+    <div
+      style={{
+        minHeight: compact ? 'auto' : '100vh',
+        backgroundColor: t.backgroundColor,
+        color: t.textColor,
+        fontFamily: t.fontFamily,
+        borderRadius: compact ? 8 : 0,
+      }}
+    >
+      {/* Navigation */}
+      {config.pages.length > 1 && (
+        <div
+          style={{
+            position: compact ? 'relative' : 'sticky',
+            top: 0,
+            zIndex: 100,
+            backgroundColor: bgPaper,
+            borderBottom: `1px solid ${dividerColor}`,
+            ...(compact
+              ? { borderRadius: '8px 8px 0 0' }
+              : { backdropFilter: 'blur(8px)' }),
+          }}
+        >
+          <div
+            className="flex items-center"
+            style={{
+              maxWidth: compact ? '100%' : 1000,
+              margin: '0 auto',
+              padding: compact ? '0 6px' : '0 12px',
+              gap: 2,
+              height: compact ? 36 : 48,
+            }}
+          >
+            {tournament.logo_url && (
+              <img
+                src={tournament.logo_url}
+                alt={tournament.name}
+                style={{
+                  height: compact ? 20 : 28,
+                  width: compact ? 20 : 28,
+                  borderRadius: 4,
+                  objectFit: 'cover',
+                  marginRight: 4,
+                }}
+              />
+            )}
+            <span
+              style={{
+                fontWeight: 700,
+                color: t.primaryColor,
+                fontSize: compact ? 11 : 13,
+                marginRight: 8,
+              }}
+            >
+              {tournament.abbreviation}
+            </span>
+            {config.pages.map((page) => (
+              <div
+                key={page.id}
+                onClick={() => setCurrentPath(page.path)}
+                style={{
+                  padding: compact ? '2px 4px' : '3px 6px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontSize: compact ? 10 : 13,
+                  fontWeight: currentPath === page.path ? 600 : 400,
+                  color: currentPath === page.path ? t.primaryColor : textSecondary,
+                  backgroundColor: currentPath === page.path
+                    ? adjustAlpha(t.primaryColor, 0.1)
+                    : 'transparent',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {page.name}
+              </div>
             ))}
-          </Box>
-        )}
+          </div>
+        </div>
+      )}
 
-        {/* Footer */}
-        {!compact && (
-          <Box sx={{ textAlign: 'center', py: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.5 }}>
-              Powered by PackShare
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    </ThemeProvider>
+      {/* Page content */}
+      {currentPage?.layout === 'canvas' ? (
+        <CanvasPageRenderer
+          page={currentPage}
+          tournament={tournament}
+          config={config}
+          players={players}
+          bracketData={bracketData}
+          compact={compact}
+        />
+      ) : (
+        <div style={{ maxWidth: compact ? '100%' : 1000, margin: '0 auto', padding: compact ? '8px 6px' : '16px 12px' }}>
+          {currentPage?.sections.map((section) => (
+            <div key={section.id} style={{ marginBottom: compact ? 8 : 16 }}>
+              <SectionRendererComponent
+                section={section}
+                tournament={tournament}
+                config={config}
+                players={players}
+                bracketData={bracketData}
+                compact={compact}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
+      {!compact && (
+        <div className="text-center py-3" style={{ borderTop: `1px solid ${dividerColor}` }}>
+          <span className="text-xs opacity-50" style={{ color: textSecondary }}>
+            Powered by PackShare
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -326,11 +331,11 @@ function CanvasPageRenderer({
   if (rootIds.length === 0) return null;
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
       {rootIds.map((id) => (
         <ElementRenderer key={id} elementId={id} elements={elements} />
       ))}
-    </Box>
+    </div>
   );
 }
 
@@ -342,42 +347,41 @@ function ElementRenderer({ elementId, elements }: { elementId: string; elements:
 
   if (el.type === 'text') {
     return (
-      <Typography component="div" sx={{ ...css, whiteSpace: 'pre-wrap' }}>
+      <div style={{ ...css, whiteSpace: 'pre-wrap' }}>
         {el.content || ''}
-      </Typography>
+      </div>
     );
   }
 
   if (el.type === 'image') {
     return el.content ? (
-      <Box component="img" src={el.content} sx={{ display: 'block', ...css }} />
+      <img src={el.content} style={{ display: 'block', ...css }} />
     ) : null;
   }
 
   if (el.type === 'button') {
     const Wrapper = el.href ? 'a' : 'div';
     return (
-      <Box
-        component={Wrapper}
+      <Wrapper
         {...(el.href ? { href: el.href, target: '_blank', rel: 'noopener noreferrer' } : {})}
-        sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', cursor: 'pointer', ...css }}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', cursor: 'pointer', ...css }}
       >
         {el.content || 'Button'}
-      </Box>
+      </Wrapper>
     );
   }
 
   if (el.type === 'divider' || el.type === 'spacer') {
-    return <Box sx={css} />;
+    return <div style={css} />;
   }
 
   // Container
   return (
-    <Box sx={css}>
+    <div style={css}>
       {el.children.map((childId) => (
         <ElementRenderer key={childId} elementId={childId} elements={elements} />
       ))}
-    </Box>
+    </div>
   );
 }
 
@@ -474,49 +478,56 @@ function HeroSection({ tournament, props, config, compact }: { tournament: Tourn
   const showStatus = props.showStatus !== false;
 
   return (
-    <Box sx={{
-      position: 'relative', borderRadius: compact ? 2 : 3, overflow: 'hidden',
-      minHeight: compact ? 120 : 240, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      textAlign: 'center', py: compact ? 3 : 6, px: compact ? 2 : 3,
-    }}>
+    <div
+      className="relative overflow-hidden flex flex-col items-center justify-center text-center"
+      style={{
+        borderRadius: compact ? 8 : 12,
+        minHeight: compact ? 120 : 240,
+        padding: compact ? '12px 8px' : '24px 12px',
+      }}
+    >
       {tournament.banner_url && (
-        <Box
-          component="img"
+        <img
           src={tournament.banner_url}
-          sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3 }}
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+          alt=""
         />
       )}
-      <Box sx={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, transparent 0%, ${config.theme.backgroundColor} 100%)` }} />
+      <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, transparent 0%, ${config.theme.backgroundColor} 100%)` }} />
 
-      <Box sx={{ position: 'relative', zIndex: 1 }}>
+      <div className="relative z-10">
         {showLogo && tournament.logo_url && (
-          <Box
-            component="img"
+          <img
             src={tournament.logo_url}
             alt={tournament.name}
-            sx={{ height: compact ? 40 : 80, maxWidth: compact ? 100 : 200, objectFit: 'contain', mb: compact ? 1 : 2 }}
-          />
-        )}
-        {showName && (
-          <Typography variant={compact ? 'h5' : 'h3'} fontWeight="bold" sx={{ mb: 1 }}>
-            {tournament.name}
-          </Typography>
-        )}
-        {showStatus && (
-          <Chip
-            label={tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
-            size="small"
-            sx={{
-              fontWeight: 600, fontSize: 11, height: 24,
-              bgcolor: tournament.status === 'live' ? 'error.main'
-                : tournament.status === 'completed' ? 'success.main'
-                : 'primary.main',
-              color: '#fff',
+            style={{
+              height: compact ? 40 : 80,
+              maxWidth: compact ? 100 : 200,
+              objectFit: 'contain',
+              marginBottom: compact ? 4 : 8,
             }}
           />
         )}
-      </Box>
-    </Box>
+        {showName && (
+          <h2 className="font-bold mb-1" style={{ fontSize: compact ? '1.25rem' : '1.875rem' }}>
+            {tournament.name}
+          </h2>
+        )}
+        {showStatus && (
+          <span
+            className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full text-white"
+            style={{
+              backgroundColor:
+                tournament.status === 'live' ? '#ef4444'
+                : tournament.status === 'completed' ? '#22c55e'
+                : config.theme.primaryColor,
+            }}
+          >
+            {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -529,30 +540,28 @@ function AnnouncementsSection({ tournament, props }: { tournament: Tournament; p
   if (announcements.length === 0) return null;
 
   return (
-    <Box>
-      <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Announcements</Typography>
-      <Stack spacing={1.5}>
+    <div>
+      <h3 className="text-lg font-bold mb-2">Announcements</h3>
+      <div className="flex flex-col gap-1.5">
         {announcements.map((a) => (
-          <Card key={a.id} variant="outlined">
-            <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-              <Typography variant="subtitle2" fontWeight={600}>{a.title}</Typography>
-              <Typography variant="caption" color="text.secondary">
+          <div key={a.id} className="border rounded-lg">
+            <div className="py-1.5 px-2">
+              <p className="text-sm font-semibold">{a.title}</p>
+              <span className="text-xs opacity-60">
                 {new Date(a.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-              </Typography>
-              {(a.body || a.image) && <Divider sx={{ my: 1 }} />}
+              </span>
+              {(a.body || a.image) && <Separator className="my-1" />}
               {a.image && (
-                <Box component="img" src={a.image} sx={{ width: '100%', borderRadius: 1, mb: a.body ? 1 : 0 }} />
+                <img src={a.image} className="w-full rounded mb-1" alt="" />
               )}
               {a.body && (
-                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
-                  {a.body}
-                </Typography>
+                <p className="text-sm opacity-70 whitespace-pre-wrap">{a.body}</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 }
 
@@ -565,35 +574,55 @@ function PlayersSection({ players, props, config, compact }: { players: Player[]
   if (players.length === 0) return null;
 
   return (
-    <Box>
-      <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Players</Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: compact ? '1fr 1fr' : { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 1 }}>
+    <div>
+      <h3 className="text-lg font-bold mb-2">Players</h3>
+      <div
+        className="grid gap-1"
+        style={{
+          gridTemplateColumns: compact
+            ? '1fr 1fr'
+            : 'repeat(auto-fill, minmax(200px, 1fr))',
+        }}
+      >
         {players.map((p) => (
-          <Card key={p.id} variant="outlined" sx={{ display: 'flex', alignItems: 'center', gap: compact ? 1 : 1.5, px: compact ? 1 : 2, py: compact ? 0.75 : 1.5 }}>
+          <div
+            key={p.id}
+            className="flex items-center border rounded-lg"
+            style={{
+              gap: compact ? 4 : 6,
+              padding: compact ? '3px 4px' : '6px 8px',
+            }}
+          >
             {showAvatars && (
-              <Avatar
+              <img
                 src={`https://a.ppy.sh/${p.osu_id}`}
-                sx={{ width: compact ? 24 : 36, height: compact ? 24 : 36 }}
+                className="rounded-full"
+                style={{ width: compact ? 24 : 36, height: compact ? 24 : 36 }}
+                alt=""
               />
             )}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600} noWrap sx={{ fontSize: compact ? 11 : undefined }}>{p.name}</Typography>
-            </Box>
+            <div className="flex-1 min-w-0">
+              <p className={`font-semibold truncate ${compact ? 'text-[11px]' : 'text-sm'}`}>{p.name}</p>
+            </div>
             {showSeeds && (
-              <Chip
-                label={`#${p.seed}`}
-                size="small"
-                sx={{
-                  height: compact ? 18 : 22, fontSize: compact ? 9 : 11, fontWeight: 'bold',
-                  bgcolor: p.seed <= 2 ? config.theme.primaryColor : 'action.hover',
-                  color: p.seed <= 2 ? '#fff' : 'text.secondary',
+              <span
+                className="text-[11px] font-bold px-1.5 rounded-full"
+                style={{
+                  height: compact ? 18 : 22,
+                  lineHeight: compact ? '18px' : '22px',
+                  fontSize: compact ? 9 : 11,
+                  backgroundColor: p.seed <= 2 ? config.theme.primaryColor : 'rgba(255,255,255,0.08)',
+                  color: p.seed <= 2 ? '#fff' : 'inherit',
+                  opacity: p.seed <= 2 ? 1 : 0.6,
                 }}
-              />
+              >
+                #{p.seed}
+              </span>
             )}
-          </Card>
+          </div>
         ))}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 
@@ -602,12 +631,12 @@ function PlayersSection({ players, props, config, compact }: { players: Player[]
 function BracketSection({ players, bracketData, config }: { players: Player[]; bracketData: BracketData; config: SiteConfig }) {
   if (!bracketData.generated || bracketData.matches.length === 0) {
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
-        <Avatar sx={{ width: 48, height: 48, mx: 'auto', mb: 1, bgcolor: 'action.hover' }}>
-          <EmojiEventsIcon sx={{ color: 'text.disabled' }} />
-        </Avatar>
-        <Typography variant="body2" color="text.disabled">Bracket not yet generated</Typography>
-      </Box>
+      <div className="text-center py-4">
+        <div className="w-12 h-12 mx-auto mb-1 rounded-full flex items-center justify-center bg-white/5">
+          <Trophy className="size-6 opacity-30" />
+        </div>
+        <p className="text-sm opacity-40">Bracket not yet generated</p>
+      </div>
     );
   }
 
@@ -636,38 +665,46 @@ function BracketSection({ players, bracketData, config }: { players: Player[]; b
   const champion = finalsMatch?.winner ?? null;
 
   return (
-    <Box>
-      <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Bracket</Typography>
+    <div>
+      <h3 className="text-lg font-bold mb-2">Bracket</h3>
 
       {champion !== null && (
-        <Card variant="outlined" sx={{
-          mb: 3, overflow: 'hidden',
-          borderColor: 'rgba(245,200,66,0.4)',
-          background: 'linear-gradient(135deg, rgba(245,200,66,0.12) 0%, rgba(245,200,66,0.03) 100%)',
-        }}>
-          <Box sx={{ textAlign: 'center', py: 3, position: 'relative' }}>
-            <StarIcon sx={{ position: 'absolute', top: 12, left: '20%', fontSize: 14, color: 'rgba(245,200,66,0.3)', transform: 'rotate(-15deg)' }} />
-            <StarIcon sx={{ position: 'absolute', top: 20, right: '25%', fontSize: 10, color: 'rgba(245,200,66,0.25)', transform: 'rotate(20deg)' }} />
-            <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              badgeContent={<MilitaryTechIcon sx={{ fontSize: 18, color: '#f5c842' }} />}>
-              <Avatar sx={{ width: 56, height: 56, mx: 'auto', bgcolor: 'rgba(245,200,66,0.15)', border: '2px solid rgba(245,200,66,0.4)' }}>
-                <EmojiEventsIcon sx={{ fontSize: 28, color: '#f5c842' }} />
-              </Avatar>
-            </Badge>
-            <Typography variant="h6" fontWeight="bold" sx={{ mt: 1.5 }}>{getPlayerName(champion)}</Typography>
-            <Chip
-              icon={<EmojiEventsIcon sx={{ fontSize: '14px !important', color: '#f5c842 !important' }} />}
-              label="Champion"
-              size="small"
-              variant="outlined"
-              sx={{ mt: 0.5, height: 24, fontSize: 11, fontWeight: 600, borderColor: 'rgba(245,200,66,0.4)', color: '#f5c842' }}
-            />
-          </Box>
-        </Card>
+        <div
+          className="mb-3 rounded-lg border overflow-hidden"
+          style={{
+            borderColor: 'rgba(245,200,66,0.4)',
+            background: 'linear-gradient(135deg, rgba(245,200,66,0.12) 0%, rgba(245,200,66,0.03) 100%)',
+          }}
+        >
+          <div className="text-center py-3 relative">
+            <Star className="absolute top-3 left-[20%] size-3.5 text-[rgba(245,200,66,0.3)] -rotate-15" />
+            <Star className="absolute top-5 right-[25%] size-2.5 text-[rgba(245,200,66,0.25)] rotate-20" />
+            <div className="relative inline-block">
+              <div
+                className="w-14 h-14 mx-auto rounded-full flex items-center justify-center"
+                style={{
+                  backgroundColor: 'rgba(245,200,66,0.15)',
+                  border: '2px solid rgba(245,200,66,0.4)',
+                }}
+              >
+                <Trophy className="size-7 text-[#f5c842]" />
+              </div>
+              <Medal className="absolute -bottom-1 -right-1 size-[18px] text-[#f5c842]" />
+            </div>
+            <h3 className="text-lg font-bold mt-1.5">{getPlayerName(champion)}</h3>
+            <span
+              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border mt-0.5"
+              style={{ borderColor: 'rgba(245,200,66,0.4)', color: '#f5c842' }}
+            >
+              <Trophy className="size-3.5 text-[#f5c842]" />
+              Champion
+            </span>
+          </div>
+        </div>
       )}
 
-      <Box sx={{ overflowX: 'auto', pb: 2 }}>
-        <Box sx={{ display: 'flex', gap: 0, minWidth: totalRounds * 240 }}>
+      <div className="overflow-x-auto pb-2">
+        <div className="flex" style={{ minWidth: totalRounds * 240 }}>
           {Array.from({ length: totalRounds }, (_, round) => {
             const roundMatches = bracketData.matches
               .filter((m) => m.round === round)
@@ -675,57 +712,62 @@ function BracketSection({ players, bracketData, config }: { players: Player[]; b
             const isLast = round === totalRounds - 1;
 
             return (
-              <Box key={round} sx={{ flex: 1, minWidth: 220, px: 1 }}>
-                <Chip
-                  label={roundLabels(round)}
-                  size="small"
-                  variant={isLast ? 'filled' : 'outlined'}
-                  icon={isLast ? <EmojiEventsIcon sx={{ fontSize: '14px !important' }} /> : undefined}
-                  sx={{
-                    display: 'flex', width: 'fit-content', mx: 'auto', mb: 1.5,
-                    height: 24, fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5,
-                    ...(isLast ? { bgcolor: 'primary.main', color: 'white' } : { borderColor: 'divider' }),
+              <div key={round} className="flex-1 px-1" style={{ minWidth: 220 }}>
+                <span
+                  className="flex items-center gap-1 w-fit mx-auto mb-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border"
+                  style={isLast
+                    ? { backgroundColor: config.theme.primaryColor, color: 'white', borderColor: 'transparent' }
+                    : { borderColor: adjustAlpha(config.theme.textColor, 0.12) }
+                  }
+                >
+                  {isLast && <Trophy className="size-3.5" />}
+                  {roundLabels(round)}
+                </span>
+                <div
+                  className="flex flex-col justify-around"
+                  style={{
+                    height: Math.max(roundMatches.length * 100, bracketData.matches.filter((m) => m.round === 0).length * 100),
                   }}
-                />
-                <Box sx={{
-                  display: 'flex', flexDirection: 'column', justifyContent: 'space-around',
-                  height: Math.max(roundMatches.length * 100, bracketData.matches.filter((m) => m.round === 0).length * 100),
-                }}>
+                >
                   {roundMatches.map((match) => {
                     const isBye = (match.player1 === null || match.player2 === null) && match.winner !== null && match.round === 0;
                     const isFinished = match.winner !== null;
 
                     return (
-                      <Card key={match.id} variant="outlined" sx={{
-                        overflow: 'hidden',
-                        borderColor: isFinished ? 'primary.main' : 'divider',
-                        opacity: isBye ? 0.35 : 1,
-                        mb: 1,
-                      }}>
+                      <div
+                        key={match.id}
+                        className="border rounded-lg overflow-hidden mb-1"
+                        style={{
+                          borderColor: isFinished ? config.theme.primaryColor : adjustAlpha(config.theme.textColor, 0.12),
+                          opacity: isBye ? 0.35 : 1,
+                        }}
+                      >
                         {!isBye && match.player1 && match.player2 && (
-                          <LinearProgress
-                            variant="determinate"
-                            value={isFinished ? 100 : ((match.score1 + match.score2) / bracketData.bestOf) * 100}
-                            sx={{ height: 2, bgcolor: 'transparent', '& .MuiLinearProgress-bar': { bgcolor: isFinished ? 'primary.main' : 'text.disabled' } }}
+                          <div
+                            className="h-0.5"
+                            style={{
+                              background: isFinished ? config.theme.primaryColor : adjustAlpha(config.theme.textColor, 0.3),
+                              width: isFinished ? '100%' : `${((match.score1 + match.score2) / bracketData.bestOf) * 100}%`,
+                            }}
                           />
                         )}
                         <BracketSlot name={getPlayerName(match.player1)} seed={getPlayerSeed(match.player1)}
                           score={match.score1} isWinner={match.winner === match.player1 && match.winner !== null}
                           isTBD={match.player1 === null} winsNeeded={winsNeeded} primaryColor={config.theme.primaryColor} />
-                        <Divider />
+                        <Separator />
                         <BracketSlot name={getPlayerName(match.player2)} seed={getPlayerSeed(match.player2)}
                           score={match.score2} isWinner={match.winner === match.player2 && match.winner !== null}
                           isTBD={match.player2 === null} winsNeeded={winsNeeded} primaryColor={config.theme.primaryColor} />
-                      </Card>
+                      </div>
                     );
                   })}
-                </Box>
-              </Box>
+                </div>
+              </div>
             );
           })}
-        </Box>
-      </Box>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -733,34 +775,47 @@ function BracketSlot({ name, seed, score, isWinner, isTBD, winsNeeded, primaryCo
   name: string; seed: number | null; score: number; isWinner: boolean; isTBD: boolean; winsNeeded: number; primaryColor: string;
 }) {
   return (
-    <Box sx={{
-      display: 'flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 0.75,
-      backgroundColor: isWinner ? adjustAlpha(primaryColor, 0.1) : 'transparent',
-    }}>
+    <div
+      className="flex items-center gap-[3px] px-1.5 py-[3px]"
+      style={{ backgroundColor: isWinner ? adjustAlpha(primaryColor, 0.1) : 'transparent' }}
+    >
       {seed !== null && (
-        <Avatar sx={{
-          width: 20, height: 20, fontSize: 9, fontWeight: 'bold',
-          bgcolor: seed <= 2 ? 'primary.main' : 'action.hover',
-          color: seed <= 2 ? 'white' : 'text.disabled',
-        }}>
+        <span
+          className="inline-flex items-center justify-center rounded-full text-[9px] font-bold"
+          style={{
+            width: 20,
+            height: 20,
+            backgroundColor: seed <= 2 ? primaryColor : 'rgba(255,255,255,0.08)',
+            color: seed <= 2 ? 'white' : 'rgba(255,255,255,0.4)',
+          }}
+        >
           {seed}
-        </Avatar>
+        </span>
       )}
-      <Typography variant="body2" sx={{
-        flex: 1, minWidth: 0, fontWeight: isWinner ? 700 : 400,
-        color: isTBD ? 'text.disabled' : isWinner ? 'primary.main' : 'text.primary',
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13,
-      }}>
+      <span
+        className="flex-1 min-w-0 truncate text-[13px]"
+        style={{
+          fontWeight: isWinner ? 700 : 400,
+          color: isTBD ? 'rgba(255,255,255,0.3)' : isWinner ? primaryColor : 'inherit',
+        }}
+      >
         {name}
-      </Typography>
+      </span>
       {!isTBD && (
-        <Chip label={score} size="small" sx={{
-          height: 22, minWidth: 22, fontWeight: 'bold', fontSize: 12,
-          bgcolor: score >= winsNeeded ? 'primary.main' : 'action.hover',
-          color: score >= winsNeeded ? 'white' : 'text.secondary',
-        }} />
+        <span
+          className="inline-flex items-center justify-center rounded-full text-xs font-bold"
+          style={{
+            height: 22,
+            minWidth: 22,
+            backgroundColor: score >= winsNeeded ? primaryColor : 'rgba(255,255,255,0.08)',
+            color: score >= winsNeeded ? 'white' : 'inherit',
+            opacity: score >= winsNeeded ? 1 : 0.6,
+          }}
+        >
+          {score}
+        </span>
       )}
-    </Box>
+    </div>
   );
 }
 
@@ -780,7 +835,7 @@ function MappoolSection({ tournament, props, config }: { tournament: Tournament;
   const getSlotColor = (slotType: string) => slotConfigs[slotType]?.color || config.theme.primaryColor;
 
   return (
-    <Box>
+    <div>
       {stages.map((stage) => {
         if (!stage.maps?.length) return null;
 
@@ -792,53 +847,54 @@ function MappoolSection({ tournament, props, config }: { tournament: Tournament;
         }
 
         return (
-          <Box key={stage.id} sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>{stage.name}</Typography>
+          <div key={stage.id} className="mb-3">
+            <h3 className="text-lg font-bold mb-2">{stage.name}</h3>
             {Object.entries(grouped).map(([slotType, maps]) => (
-              <Box key={slotType} sx={{ mb: 2 }}>
-                <Chip
-                  label={slotConfigs[slotType]?.label || slotType}
-                  size="small"
-                  sx={{ mb: 1, height: 22, fontSize: 11, fontWeight: 'bold', bgcolor: getSlotColor(slotType), color: '#fff' }}
-                />
-                <Stack spacing={0.5}>
+              <div key={slotType} className="mb-2">
+                <span
+                  className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full text-white mb-1"
+                  style={{ backgroundColor: getSlotColor(slotType) }}
+                >
+                  {slotConfigs[slotType]?.label || slotType}
+                </span>
+                <div className="flex flex-col gap-0.5">
                   {maps.map((map) => (
-                    <Card key={map.id} variant="outlined" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1 }}>
-                      <Box
-                        component="img"
+                    <div key={map.id} className="flex items-center gap-1.5 px-2 py-1 border rounded-lg">
+                      <img
                         src={`https://assets.ppy.sh/beatmaps/${map.beatmapset_id}/covers/list.jpg`}
-                        sx={{ width: 48, height: 36, borderRadius: 0.5, objectFit: 'cover', flexShrink: 0 }}
+                        className="rounded object-cover shrink-0"
+                        style={{ width: 48, height: 36 }}
                         onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = 'none'; }}
+                        alt=""
                       />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" fontWeight={600} noWrap>{map.title}</Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                          {map.artist} • {map.creator}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{map.title}</p>
+                        <p className="text-xs opacity-60 truncate">
+                          {map.artist} &bull; {map.creator}
                           {map.difficulty_name && ` [${map.difficulty_name}]`}
-                        </Typography>
-                      </Box>
-                      <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-0.5 shrink-0">
                         {map.mod && map.mod !== 'NM' && (
-                          <Chip label={map.mod} size="small" sx={{ height: 20, fontSize: 10, fontWeight: 'bold' }} />
+                          <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10">
+                            {map.mod}
+                          </span>
                         )}
                         {map.star_rating && (
-                          <Chip
-                            label={`${map.star_rating.toFixed(2)}★`}
-                            size="small"
-                            variant="outlined"
-                            sx={{ height: 20, fontSize: 10 }}
-                          />
+                          <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full border border-white/20">
+                            {map.star_rating.toFixed(2)}★
+                          </span>
                         )}
-                      </Stack>
-                    </Card>
+                      </div>
+                    </div>
                   ))}
-                </Stack>
-              </Box>
+                </div>
+              </div>
             ))}
-          </Box>
+          </div>
         );
       })}
-    </Box>
+    </div>
   );
 }
 
@@ -849,9 +905,9 @@ function RichTextSection({ props }: { props: Record<string, unknown> }) {
   if (!content) return null;
 
   return (
-    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+    <p className="text-base whitespace-pre-wrap" style={{ lineHeight: 1.7 }}>
       {content}
-    </Typography>
+    </p>
   );
 }
 
@@ -865,16 +921,13 @@ function ImageSection({ props }: { props: Record<string, unknown> }) {
   if (!url) return null;
 
   return (
-    <Box
-      component="img"
+    <img
       src={url}
       alt={alt}
-      sx={{
-        display: 'block',
+      className="block max-w-full rounded-lg"
+      style={{
         width: fullWidth ? '100%' : 'auto',
-        maxWidth: '100%',
-        borderRadius: 2,
-        mx: fullWidth ? 0 : 'auto',
+        margin: fullWidth ? 0 : '0 auto',
       }}
     />
   );

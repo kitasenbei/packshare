@@ -1,25 +1,11 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  TextField,
-  Paper,
-  Chip,
-  Alert,
-  CircularProgress,
-  Divider,
-  Avatar,
-} from '@mui/material';
-import LanguageIcon from '@mui/icons-material/Language';
-import PublishIcon from '@mui/icons-material/Publish';
-import UnpublishedIcon from '@mui/icons-material/Unpublished';
-import SaveIcon from '@mui/icons-material/Save';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import WebIcon from '@mui/icons-material/Web';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Globe, Upload, CircleOff, Save, ExternalLink, Globe2, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 import { useNavigate } from 'react-router-dom';
 import {
   getSite,
@@ -42,8 +28,6 @@ export default function SiteSettings({ tournament }: SiteSettingsProps) {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [subdomainDirty, setSubdomainDirty] = useState(false);
 
   useEffect(() => {
@@ -57,7 +41,6 @@ export default function SiteSettings({ tournament }: SiteSettingsProps) {
 
   const handleSaveSubdomain = async () => {
     setSaving(true);
-    setError('');
     try {
       const config = site?.config || JSON.stringify({
         theme: { primaryColor: '#52796f', backgroundColor: '#2f3e46', textColor: '#cad2c5', fontFamily: 'Inter, sans-serif' },
@@ -77,10 +60,9 @@ export default function SiteSettings({ tournament }: SiteSettingsProps) {
       const saved = await saveSite(tournament.abbreviation, { subdomain, config });
       setSite(saved);
       setSubdomainDirty(false);
-      setSuccess('Subdomain saved!');
-      setTimeout(() => setSuccess(''), 2000);
+      toast.success('Subdomain saved!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -91,14 +73,16 @@ export default function SiteSettings({ tournament }: SiteSettingsProps) {
       await handleSaveSubdomain();
     }
     setPublishing(true);
-    setError('');
     try {
       const updated = await publishSite(tournament.abbreviation, !site?.published);
       setSite(updated);
-      setSuccess(updated.published ? 'Site published!' : 'Site unpublished');
-      setTimeout(() => setSuccess(''), 2000);
+      if (updated.published) {
+        toast.success('Site published!');
+      } else {
+        toast('Site unpublished');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to publish');
+      toast.error(err instanceof Error ? err.message : 'Failed to publish');
     } finally {
       setPublishing(false);
     }
@@ -107,15 +91,13 @@ export default function SiteSettings({ tournament }: SiteSettingsProps) {
   const handleDelete = async () => {
     if (!confirm('Delete your site? This removes all pages and sections.')) return;
     setDeleting(true);
-    setError('');
     try {
       await deleteSite(tournament.abbreviation);
       setSite(null);
       setSubdomain(tournament.abbreviation.toLowerCase());
-      setSuccess('Site deleted');
-      setTimeout(() => setSuccess(''), 2000);
+      toast.success('Site deleted');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
       setDeleting(false);
     }
@@ -123,9 +105,9 @@ export default function SiteSettings({ tournament }: SiteSettingsProps) {
 
   if (loading) {
     return (
-      <Box sx={{ py: 6, textAlign: 'center' }}>
-        <CircularProgress size={24} />
-      </Box>
+      <div className="py-6 text-center">
+        <Spinner className="size-6" />
+      </div>
     );
   }
 
@@ -143,136 +125,126 @@ export default function SiteSettings({ tournament }: SiteSettingsProps) {
   })();
 
   return (
-    <Stack spacing={2.5}>
-      {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
-      {success && <Alert severity="success" onClose={() => setSuccess('')}>{success}</Alert>}
-
+    <div className="flex flex-col gap-2.5">
       {/* Hero card */}
-      <Paper variant="outlined" sx={{ p: 3 }}>
-        <Stack spacing={2.5}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
-              <WebIcon sx={{ fontSize: 22 }} />
-            </Avatar>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight="bold">Tournament Website</Typography>
-              <Typography variant="body2" color="text.secondary">
+      <div className="border rounded-lg p-3">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground">
+              <Globe2 className="size-[22px]" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold">Tournament Website</p>
+              <p className="text-sm text-muted-foreground">
                 {hasSite ? 'Your site is configured' : 'Create a website for your tournament'}
-              </Typography>
-            </Box>
+              </p>
+            </div>
             {site?.published && (
-              <Chip
-                icon={<LanguageIcon sx={{ fontSize: '14px !important' }} />}
-                label="Live"
-                size="small"
-                color="success"
-                sx={{ height: 24, fontSize: 11, fontWeight: 600 }}
-              />
+              <Badge variant="default" className="h-6 text-[11px] font-semibold bg-green-600 text-white">
+                <Globe className="size-3.5" data-icon="inline-start" />
+                Live
+              </Badge>
             )}
-          </Box>
+          </div>
 
           {/* Stats row */}
           {hasSite && (
             <>
-              <Divider />
-              <Box sx={{ display: 'flex', gap: 3 }}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Pages</Typography>
-                  <Typography variant="h6" fontWeight="bold">{pageCount}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Sections</Typography>
-                  <Typography variant="h6" fontWeight="bold">{sectionCount}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Status</Typography>
-                  <Typography variant="h6" fontWeight="bold" color={site?.published ? 'success.main' : 'text.secondary'}>
+              <Separator />
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-xs text-muted-foreground">Pages</p>
+                  <p className="text-lg font-bold">{pageCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Sections</p>
+                  <p className="text-lg font-bold">{sectionCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className={`text-lg font-bold ${site?.published ? 'text-green-500' : 'text-muted-foreground'}`}>
                     {site?.published ? 'Published' : 'Draft'}
-                  </Typography>
-                </Box>
-              </Box>
+                  </p>
+                </div>
+              </div>
             </>
           )}
 
-          <Divider />
+          <Separator />
 
           {/* Subdomain */}
-          <Box>
-            <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Subdomain</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <TextField
-                size="small"
+          <div>
+            <p className="text-sm font-semibold mb-1">Subdomain</p>
+            <div className="flex items-center gap-1">
+              <Input
                 value={subdomain}
                 onChange={(e) => { setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setSubdomainDirty(true); }}
-                sx={{ flex: 1, '& .MuiInputBase-input': { fontSize: 13, fontFamily: 'monospace' } }}
+                className="flex-1 text-[13px] font-mono"
                 placeholder={tournament.abbreviation.toLowerCase()}
               />
-              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: 12, flexShrink: 0 }}>
+              <span className="text-sm text-muted-foreground font-mono text-xs shrink-0">
                 .packshare.gg
-              </Typography>
+              </span>
               {subdomainDirty && (
                 <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<SaveIcon sx={{ fontSize: 14 }} />}
+                  size="sm"
+                  variant="outline"
                   onClick={handleSaveSubdomain}
                   disabled={saving || !subdomain.trim()}
-                  sx={{ fontSize: 11, flexShrink: 0 }}
+                  className="text-[11px] shrink-0"
                 >
+                  <Save className="size-3.5" data-icon="inline-start" />
                   {saving ? '...' : 'Save'}
                 </Button>
               )}
-            </Box>
-          </Box>
+            </div>
+          </div>
 
           {/* Actions */}
-          <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap' }}>
+          <div className="flex flex-row flex-wrap gap-1.5">
             <Button
-              variant="contained"
-              startIcon={<EditIcon />}
               onClick={() => navigate(`/tournaments/${tournament.abbreviation}/editor`)}
             >
+              <Pencil data-icon="inline-start" />
               {hasSite ? 'Open Editor' : 'Create Site'}
             </Button>
 
             {hasSite && (
               <Button
-                variant={site?.published ? 'outlined' : 'contained'}
-                color={site?.published ? 'warning' : 'success'}
-                startIcon={site?.published ? <UnpublishedIcon /> : <PublishIcon />}
+                variant={site?.published ? 'outline' : 'default'}
+                className={!site?.published ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
                 onClick={handlePublish}
                 disabled={publishing}
               >
+                {site?.published ? <CircleOff data-icon="inline-start" /> : <Upload data-icon="inline-start" />}
                 {publishing ? '...' : site?.published ? 'Unpublish' : 'Publish'}
               </Button>
             )}
 
             {site?.published && site.subdomain && (
               <Button
-                variant="outlined"
-                startIcon={<OpenInNewIcon />}
-                href={`/site/${site.subdomain}`}
-                target="_blank"
+                variant="outline"
+                render={<a href={`/site/${site.subdomain}`} target="_blank" rel="noopener noreferrer" />}
               >
+                <ExternalLink data-icon="inline-start" />
                 View Site
               </Button>
             )}
 
             {hasSite && (
               <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
+                variant="destructive"
                 onClick={handleDelete}
                 disabled={deleting}
-                sx={{ ml: 'auto !important' }}
+                className="ml-auto"
               >
+                <Trash2 data-icon="inline-start" />
                 {deleting ? '...' : 'Delete Site'}
               </Button>
             )}
-          </Stack>
-        </Stack>
-      </Paper>
-    </Stack>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,26 +1,20 @@
 import { useState, useCallback } from 'react';
+import { RotateCcw, Trophy, Medal, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  Chip,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
-  DialogActions,
-  Card,
-  Avatar,
-  Divider,
-  Badge,
-  LinearProgress,
-  FormControl,
-  Select,
-  MenuItem,
-} from '@mui/material';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
-import StarIcon from '@mui/icons-material/Star';
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { saveBracket } from '../api/tournaments';
 import type { Player, BracketData, Match } from './TournamentPlayers';
 
@@ -208,94 +202,85 @@ export default function TournamentBracket({
   const winsNeeded = Math.ceil(bracketData.bestOf / 2);
 
   return (
-    <Box>
+    <div>
       {/* Controls */}
       {isOwner && (
-        <Stack spacing={1.5} sx={{ mb: 2 }}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
+        <div className="flex flex-col gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground shrink-0">
               Best of
-            </Typography>
-            <FormControl size="small" fullWidth>
-              <Select
-                value={bracketData.bestOf}
-                onChange={(e) => persist({ ...bracketData, bestOf: e.target.value as number, generated: false, matches: [] })}
-                sx={{ fontSize: 13 }}
-              >
+            </span>
+            <Select
+              value={String(bracketData.bestOf)}
+              onValueChange={(val) => persist({ ...bracketData, bestOf: Number(val), generated: false, matches: [] })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {[3, 5, 7, 9, 11, 13].map((bo) => (
-                  <MenuItem key={bo} value={bo} sx={{ fontSize: 13 }}>{bo}</MenuItem>
+                  <SelectItem key={bo} value={String(bo)}>{bo}</SelectItem>
                 ))}
-              </Select>
-            </FormControl>
-          </Stack>
+              </SelectContent>
+            </Select>
+          </div>
 
           {players.length < 2 && (
-            <Typography variant="caption" color="text.disabled">
+            <span className="text-xs text-muted-foreground/50">
               Add at least 2 players in the Players tab to generate a bracket
-            </Typography>
+            </span>
           )}
 
           {!bracketData.generated ? (
             <Button
-              variant="contained"
-              startIcon={<EmojiEventsIcon />}
               onClick={handleGenerate}
               disabled={players.length < 2}
-              sx={{ alignSelf: 'flex-end' }}
+              className="self-end"
             >
+              <Trophy data-icon="inline-start" />
               Generate Bracket
             </Button>
           ) : (
-            <Button variant="outlined" startIcon={<RestartAltIcon />} onClick={handleReset}
-              sx={{ alignSelf: 'flex-end' }}>
+            <Button variant="outline" onClick={handleReset} className="self-end">
+              <RotateCcw data-icon="inline-start" />
               Reset Bracket
             </Button>
           )}
-        </Stack>
+        </div>
       )}
 
       {/* Champion banner */}
       {champion !== null && (
-        <Card variant="outlined" sx={{
-          mb: 3, overflow: 'hidden',
-          borderColor: 'rgba(245,200,66,0.4)',
-          background: 'linear-gradient(135deg, rgba(245,200,66,0.12) 0%, rgba(245,200,66,0.03) 100%)',
-        }}>
-          <Box sx={{ textAlign: 'center', py: 3, position: 'relative' }}>
-            <StarIcon sx={{ position: 'absolute', top: 12, left: '20%', fontSize: 14, color: 'rgba(245,200,66,0.3)', transform: 'rotate(-15deg)' }} />
-            <StarIcon sx={{ position: 'absolute', top: 20, right: '25%', fontSize: 10, color: 'rgba(245,200,66,0.25)', transform: 'rotate(20deg)' }} />
-            <StarIcon sx={{ position: 'absolute', bottom: 16, left: '30%', fontSize: 12, color: 'rgba(245,200,66,0.2)', transform: 'rotate(10deg)' }} />
+        <div
+          className="mb-4 overflow-hidden rounded-xl border border-[rgba(245,200,66,0.4)] ring-1 ring-foreground/10"
+          style={{ background: 'linear-gradient(135deg, rgba(245,200,66,0.12) 0%, rgba(245,200,66,0.03) 100%)' }}
+        >
+          <div className="text-center py-6 relative">
+            <Star className="absolute top-3 left-[20%] size-3.5 text-[rgba(245,200,66,0.3)] -rotate-[15deg]" />
+            <Star className="absolute top-5 right-[25%] size-2.5 text-[rgba(245,200,66,0.25)] rotate-[20deg]" />
+            <Star className="absolute bottom-4 left-[30%] size-3 text-[rgba(245,200,66,0.2)] rotate-[10deg]" />
 
-            <Badge
-              overlap="circular"
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              badgeContent={<MilitaryTechIcon sx={{ fontSize: 18, color: '#f5c842' }} />}
-            >
-              <Avatar sx={{
-                width: 56, height: 56, mx: 'auto',
-                bgcolor: 'rgba(245,200,66,0.15)', border: '2px solid rgba(245,200,66,0.4)',
-              }}>
-                <EmojiEventsIcon sx={{ fontSize: 28, color: '#f5c842' }} />
-              </Avatar>
-            </Badge>
-            <Typography variant="h6" fontWeight="bold" sx={{ mt: 1.5 }}>
+            <div className="relative inline-block">
+              <div className="flex items-center justify-center size-14 mx-auto rounded-full bg-[rgba(245,200,66,0.15)] border-2 border-[rgba(245,200,66,0.4)]">
+                <Trophy className="size-7 text-[#f5c842]" />
+              </div>
+              <Medal className="absolute -bottom-1 -right-1 size-[18px] text-[#f5c842]" />
+            </div>
+            <h6 className="text-lg font-bold mt-2">
               {getPlayerName(champion)}
-            </Typography>
-            <Chip
-              icon={<EmojiEventsIcon sx={{ fontSize: '14px !important', color: '#f5c842 !important' }} />}
-              label="Champion"
-              size="small"
-              variant="outlined"
-              sx={{ mt: 0.5, height: 24, fontSize: 11, fontWeight: 600, borderColor: 'rgba(245,200,66,0.4)', color: '#f5c842' }}
-            />
-          </Box>
-        </Card>
+            </h6>
+            <Badge variant="outline" className="mt-1 h-6 text-[11px] font-semibold border-[rgba(245,200,66,0.4)] text-[#f5c842]">
+              <Trophy className="size-3.5 text-[#f5c842]" data-icon="inline-start" />
+              Champion
+            </Badge>
+          </div>
+        </div>
       )}
 
       {/* Bracket Visualization */}
       {bracketData.generated && totalRounds > 0 && (
-        <Box sx={{ overflowX: 'auto', pb: 2 }}>
-          <Box sx={{ display: 'flex', gap: 0, minWidth: totalRounds * 240 }}>
+        <div className="overflow-x-auto pb-2">
+          <div className="flex" style={{ minWidth: totalRounds * 240 }}>
             {Array.from({ length: totalRounds }, (_, round) => {
               const roundMatches = bracketData.matches
                 .filter((m) => m.round === round)
@@ -303,59 +288,47 @@ export default function TournamentBracket({
               const isLast = round === totalRounds - 1;
 
               return (
-                <Box key={round} sx={{ flex: 1, minWidth: 220, px: 1 }}>
-                  <Chip
-                    label={roundLabels(round)}
-                    size="small"
-                    variant={isLast ? 'filled' : 'outlined'}
-                    icon={isLast ? <EmojiEventsIcon sx={{ fontSize: '14px !important' }} /> : undefined}
-                    sx={{
-                      display: 'flex', width: 'fit-content', mx: 'auto', mb: 1.5,
-                      height: 24, fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5,
-                      ...(isLast ? { bgcolor: 'primary.main', color: 'white' } : { borderColor: 'divider' }),
-                    }}
-                  />
+                <div key={round} className="flex-1 min-w-[220px] px-1">
+                  <div className="flex justify-center mb-2">
+                    <Badge
+                      variant={isLast ? 'default' : 'outline'}
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                    >
+                      {isLast && <Trophy className="size-3.5" data-icon="inline-start" />}
+                      {roundLabels(round)}
+                    </Badge>
+                  </div>
 
-                  <Box sx={{
-                    display: 'flex', flexDirection: 'column', justifyContent: 'space-around',
-                    height: roundMatches.length > 0 ? Math.max(roundMatches.length * 100, bracketData.matches.filter((m) => m.round === 0).length * 100) : 'auto',
-                  }}>
+                  <div
+                    className="flex flex-col justify-around"
+                    style={{
+                      height: roundMatches.length > 0
+                        ? Math.max(roundMatches.length * 100, bracketData.matches.filter((m) => m.round === 0).length * 100)
+                        : 'auto',
+                    }}
+                  >
                     {roundMatches.map((match) => {
                       const isBye = (match.player1 === null || match.player2 === null) && match.winner !== null && match.round === 0;
                       const isFinished = match.winner !== null;
                       const canEdit = isOwner && match.player1 !== null && match.player2 !== null && !isBye;
 
                       return (
-                        <Card
+                        <div
                           key={match.id}
-                          variant="outlined"
+                          className={`overflow-hidden rounded-xl ring-1 transition-all mb-1 ${
+                            isFinished ? 'ring-primary' : 'ring-foreground/10'
+                          } ${isBye ? 'opacity-35' : ''} ${
+                            canEdit ? 'cursor-pointer hover:ring-primary hover:shadow-md hover:scale-[1.02]' : ''
+                          }`}
                           onClick={canEdit ? () => openScoreDialog(match) : undefined}
-                          sx={{
-                            overflow: 'hidden',
-                            cursor: canEdit ? 'pointer' : 'default',
-                            borderColor: isFinished ? 'primary.main' : 'divider',
-                            opacity: isBye ? 0.35 : 1,
-                            transition: 'all 0.15s',
-                            '&:hover': canEdit ? {
-                              borderColor: 'primary.main',
-                              boxShadow: '0 2px 8px rgba(132,169,140,0.2)',
-                              transform: 'scale(1.02)',
-                            } : {},
-                            mb: 1,
-                          }}
                         >
                           {!isBye && match.player1 && match.player2 && (
-                            <LinearProgress
-                              variant="determinate"
-                              value={isFinished ? 100 : ((match.score1 + match.score2) / bracketData.bestOf) * 100}
-                              sx={{
-                                height: 2,
-                                bgcolor: 'transparent',
-                                '& .MuiLinearProgress-bar': {
-                                  bgcolor: isFinished ? 'primary.main' : 'text.disabled',
-                                },
-                              }}
-                            />
+                            <div className="h-0.5 bg-transparent overflow-hidden">
+                              <div
+                                className={`h-full transition-all ${isFinished ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                                style={{ width: `${isFinished ? 100 : ((match.score1 + match.score2) / bracketData.bestOf) * 100}%` }}
+                              />
+                            </div>
                           )}
                           <MatchSlot
                             name={getPlayerName(match.player1)}
@@ -365,7 +338,7 @@ export default function TournamentBracket({
                             isTBD={match.player1 === null}
                             winsNeeded={winsNeeded}
                           />
-                          <Divider />
+                          <Separator />
                           <MatchSlot
                             name={getPlayerName(match.player2)}
                             seed={getPlayerSeed(match.player2)}
@@ -374,135 +347,118 @@ export default function TournamentBracket({
                             isTBD={match.player2 === null}
                             winsNeeded={winsNeeded}
                           />
-                        </Card>
+                        </div>
                       );
                     })}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               );
             })}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
 
       {/* Empty state */}
       {!bracketData.generated && !isOwner && (
-        <Card variant="outlined" sx={{ textAlign: 'center', py: 5 }}>
-          <Avatar sx={{ width: 56, height: 56, mx: 'auto', mb: 1.5, bgcolor: 'action.hover' }}>
-            <EmojiEventsIcon sx={{ fontSize: 28, color: 'text.disabled' }} />
-          </Avatar>
-          <Typography variant="body1" fontWeight={600} sx={{ mb: 0.5 }}>
+        <div className="rounded-xl ring-1 ring-foreground/10 text-center py-10">
+          <div className="flex items-center justify-center size-14 mx-auto mb-2 rounded-full bg-muted">
+            <Trophy className="size-7 text-muted-foreground/50" />
+          </div>
+          <p className="font-semibold mb-1">
             Bracket not yet generated
-          </Typography>
-          <Typography variant="body2" color="text.disabled">
+          </p>
+          <p className="text-sm text-muted-foreground/50">
             The tournament organizer hasn't set up the bracket yet
-          </Typography>
-        </Card>
+          </p>
+        </div>
       )}
 
       {/* Score Dialog */}
-      <Dialog open={!!scoreDialog} onClose={() => setScoreDialog(null)} maxWidth="xs" fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3, overflow: 'hidden' } } }}>
-        {scoreDialog && (() => {
-          const p1Name = getPlayerName(scoreDialog.player1);
-          const p2Name = getPlayerName(scoreDialog.player2);
-          const p1Wins = editScore1 >= winsNeeded;
-          const p2Wins = editScore2 >= winsNeeded;
-          const hasWinner = p1Wins || p2Wins;
+      <Dialog open={!!scoreDialog} onOpenChange={(open) => { if (!open) setScoreDialog(null); }}>
+        <DialogContent className="sm:max-w-sm overflow-hidden">
+          {scoreDialog && (() => {
+            const p1Name = getPlayerName(scoreDialog.player1);
+            const p2Name = getPlayerName(scoreDialog.player2);
+            const p1Wins = editScore1 >= winsNeeded;
+            const p2Wins = editScore2 >= winsNeeded;
+            const hasWinner = p1Wins || p2Wins;
 
-          return (
-            <>
-              {/* Header with Bo info */}
-              <Box sx={{ px: 3, pt: 2.5, pb: 1.5, textAlign: 'center' }}>
-                <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: 10, fontFamily: 'inherit' }}>
-                  Best of {bracketData.bestOf} · First to {winsNeeded}
-                </Typography>
-              </Box>
+            return (
+              <>
+                {/* Header with Bo info */}
+                <div className="text-center">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                    Best of {bracketData.bestOf} · First to {winsNeeded}
+                  </span>
+                </div>
 
-              <DialogContent sx={{ px: 3, pt: 0, pb: 2 }}>
                 {/* Scoreboard */}
-                <Box sx={{
-                  display: 'flex', alignItems: 'center', gap: 1,
-                  border: '1px solid', borderColor: hasWinner ? 'primary.main' : 'divider',
-                  borderRadius: 2, overflow: 'hidden',
-                  transition: 'border-color 0.2s',
-                }}>
+                <div className={`flex items-center gap-0 border rounded-lg overflow-hidden transition-colors ${hasWinner ? 'border-primary' : 'border-border'}`}>
                   {/* Player 1 */}
-                  <Box sx={{
-                    flex: 1, py: 2, px: 2,
-                    textAlign: 'center',
-                    backgroundColor: p1Wins ? 'rgba(132,169,140,0.08)' : 'transparent',
-                    transition: 'background-color 0.2s',
-                  }}>
-                    <Typography variant="body2" fontWeight={p1Wins ? 700 : 500} noWrap
-                      sx={{ color: p1Wins ? 'primary.main' : 'text.primary', mb: 1.5 }}>
+                  <div className={`flex-1 py-4 px-3 text-center transition-colors ${p1Wins ? 'bg-primary/10' : ''}`}>
+                    <p className={`text-sm truncate mb-2 ${p1Wins ? 'font-bold text-primary' : 'font-medium'}`}>
                       {p1Name}
-                    </Typography>
-                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                      <Button size="small" variant="outlined" onClick={() => setEditScore1(Math.max(0, editScore1 - 1))}
+                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="outline" size="icon-xs"
+                        onClick={() => setEditScore1(Math.max(0, editScore1 - 1))}
                         disabled={editScore1 <= 0}
-                        sx={{ minWidth: 32, width: 32, height: 32, p: 0, fontSize: 18, fontWeight: 300 }}>
+                        className="text-lg font-light"
+                      >
                         −
                       </Button>
-                      <Typography variant="body1" sx={{
-                        minWidth: 40, textAlign: 'center', fontSize: 32, fontWeight: 700,
-                        color: p1Wins ? 'primary.main' : 'text.primary',
-                      }}>
+                      <span className={`text-[32px] font-bold min-w-[40px] text-center ${p1Wins ? 'text-primary' : ''}`}>
                         {editScore1}
-                      </Typography>
-                      <Button size="small" variant="outlined" onClick={() => setEditScore1(Math.min(winsNeeded, editScore1 + 1))}
+                      </span>
+                      <Button variant="outline" size="icon-xs"
+                        onClick={() => setEditScore1(Math.min(winsNeeded, editScore1 + 1))}
                         disabled={editScore1 >= winsNeeded}
-                        sx={{ minWidth: 32, width: 32, height: 32, p: 0, fontSize: 18, fontWeight: 300 }}>
+                        className="text-lg font-light"
+                      >
                         +
                       </Button>
-                    </Stack>
-                  </Box>
+                    </div>
+                  </div>
 
                   {/* Divider */}
-                  <Divider orientation="vertical" flexItem />
+                  <Separator orientation="vertical" className="h-auto self-stretch" />
 
                   {/* Player 2 */}
-                  <Box sx={{
-                    flex: 1, py: 2, px: 2,
-                    textAlign: 'center',
-                    backgroundColor: p2Wins ? 'rgba(132,169,140,0.08)' : 'transparent',
-                    transition: 'background-color 0.2s',
-                  }}>
-                    <Typography variant="body2" fontWeight={p2Wins ? 700 : 500} noWrap
-                      sx={{ color: p2Wins ? 'primary.main' : 'text.primary', mb: 1.5 }}>
+                  <div className={`flex-1 py-4 px-3 text-center transition-colors ${p2Wins ? 'bg-primary/10' : ''}`}>
+                    <p className={`text-sm truncate mb-2 ${p2Wins ? 'font-bold text-primary' : 'font-medium'}`}>
                       {p2Name}
-                    </Typography>
-                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                      <Button size="small" variant="outlined" onClick={() => setEditScore2(Math.max(0, editScore2 - 1))}
+                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="outline" size="icon-xs"
+                        onClick={() => setEditScore2(Math.max(0, editScore2 - 1))}
                         disabled={editScore2 <= 0}
-                        sx={{ minWidth: 32, width: 32, height: 32, p: 0, fontSize: 18, fontWeight: 300 }}>
+                        className="text-lg font-light"
+                      >
                         −
                       </Button>
-                      <Typography variant="body1" sx={{
-                        minWidth: 40, textAlign: 'center', fontSize: 32, fontWeight: 700,
-                        color: p2Wins ? 'primary.main' : 'text.primary',
-                      }}>
+                      <span className={`text-[32px] font-bold min-w-[40px] text-center ${p2Wins ? 'text-primary' : ''}`}>
                         {editScore2}
-                      </Typography>
-                      <Button size="small" variant="outlined" onClick={() => setEditScore2(Math.min(winsNeeded, editScore2 + 1))}
+                      </span>
+                      <Button variant="outline" size="icon-xs"
+                        onClick={() => setEditScore2(Math.min(winsNeeded, editScore2 + 1))}
                         disabled={editScore2 >= winsNeeded}
-                        sx={{ minWidth: 32, width: 32, height: 32, p: 0, fontSize: 18, fontWeight: 300 }}>
+                        className="text-lg font-light"
+                      >
                         +
                       </Button>
-                    </Stack>
-                  </Box>
-                </Box>
+                    </div>
+                  </div>
+                </div>
 
                 {/* No-show */}
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="text.disabled" sx={{ mb: 0.5, display: 'block' }}>
+                <div>
+                  <span className="text-xs text-muted-foreground/50 block mb-1">
                     No-show
-                  </Typography>
-                  <Stack direction="row" spacing={1}>
+                  </span>
+                  <div className="flex gap-2">
                     <Button
-                      size="small"
-                      variant={editNoShow === scoreDialog.player1 ? 'contained' : 'outlined'}
-                      color={editNoShow === scoreDialog.player1 ? 'error' : 'inherit'}
+                      size="sm"
+                      variant={editNoShow === scoreDialog.player1 ? 'destructive' : 'outline'}
                       onClick={() => {
                         if (editNoShow === scoreDialog.player1) {
                           setEditNoShow(null);
@@ -512,14 +468,13 @@ export default function TournamentBracket({
                           setEditScore2(winsNeeded);
                         }
                       }}
-                      sx={{ flex: 1, textTransform: 'none', fontSize: 12 }}
+                      className="flex-1 text-xs"
                     >
                       {p1Name}
                     </Button>
                     <Button
-                      size="small"
-                      variant={editNoShow === scoreDialog.player2 ? 'contained' : 'outlined'}
-                      color={editNoShow === scoreDialog.player2 ? 'error' : 'inherit'}
+                      size="sm"
+                      variant={editNoShow === scoreDialog.player2 ? 'destructive' : 'outline'}
                       onClick={() => {
                         if (editNoShow === scoreDialog.player2) {
                           setEditNoShow(null);
@@ -529,39 +484,35 @@ export default function TournamentBracket({
                           setEditScore1(winsNeeded);
                         }
                       }}
-                      sx={{ flex: 1, textTransform: 'none', fontSize: 12 }}
+                      className="flex-1 text-xs"
                     >
                       {p2Name}
                     </Button>
-                  </Stack>
-                </Box>
+                  </div>
+                </div>
 
                 {/* Winner banner */}
                 {hasWinner && (
-                  <Box sx={{
-                    mt: 2, py: 1, px: 2, borderRadius: 1.5,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
-                    backgroundColor: 'rgba(132,169,140,0.1)',
-                  }}>
-                    <EmojiEventsIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                    <Typography variant="body2" fontWeight={600} color="primary.main">
+                  <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-md bg-primary/10">
+                    <Trophy className="size-4 text-primary" />
+                    <span className="text-sm font-semibold text-primary">
                       {p1Wins ? p1Name : p2Name} wins
-                    </Typography>
-                  </Box>
+                    </span>
+                  </div>
                 )}
-              </DialogContent>
 
-              <DialogActions sx={{ px: 3, pb: 2.5 }}>
-                <Button onClick={() => setScoreDialog(null)} sx={{ color: 'text.secondary' }}>Cancel</Button>
-                <Button variant="contained" onClick={handleSaveScore}>
-                  Save
-                </Button>
-              </DialogActions>
-            </>
-          );
-        })()}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setScoreDialog(null)}>Cancel</Button>
+                  <Button onClick={handleSaveScore}>
+                    Save
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
       </Dialog>
-    </Box>
+    </div>
   );
 }
 
@@ -583,44 +534,28 @@ function MatchSlot({
   winsNeeded: number;
 }) {
   return (
-    <Box sx={{
-      display: 'flex', alignItems: 'center', gap: 0.75,
-      px: 1.5, py: 0.75,
-      backgroundColor: isWinner ? 'rgba(132,169,140,0.1)' : 'transparent',
-      transition: 'background-color 0.15s',
-    }}>
+    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${isWinner ? 'bg-primary/10' : ''}`}>
       {seed !== null && (
-        <Avatar sx={{
-          width: 20, height: 20, fontSize: 9, fontWeight: 'bold',
-          bgcolor: seed <= 2 ? 'primary.main' : 'action.hover',
-          color: seed <= 2 ? 'white' : 'text.disabled',
-        }}>
+        <div className={`flex items-center justify-center size-5 rounded-full text-[9px] font-bold ${
+          seed <= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+        }`}>
           {seed}
-        </Avatar>
+        </div>
       )}
-      <Typography
-        variant="body2"
-        sx={{
-          flex: 1, minWidth: 0,
-          fontWeight: isWinner ? 700 : 400,
-          color: isTBD ? 'text.disabled' : isWinner ? 'primary.main' : 'text.primary',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          fontSize: 13,
-        }}
+      <span
+        className={`flex-1 min-w-0 text-[13px] truncate ${
+          isWinner ? 'font-bold text-primary' : isTBD ? 'text-muted-foreground/50' : ''
+        }`}
       >
         {name}
-      </Typography>
+      </span>
       {!isTBD && (
-        <Chip
-          label={score}
-          size="small"
-          sx={{
-            height: 22, minWidth: 22, fontWeight: 'bold', fontSize: 12,
-            bgcolor: score >= winsNeeded ? 'primary.main' : 'action.hover',
-            color: score >= winsNeeded ? 'white' : 'text.secondary',
-          }}
-        />
+        <span className={`inline-flex items-center justify-center h-[22px] min-w-[22px] rounded-full text-xs font-bold px-1 ${
+          score >= winsNeeded ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+        }`}>
+          {score}
+        </span>
       )}
-    </Box>
+    </div>
   );
 }

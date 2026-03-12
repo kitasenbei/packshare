@@ -1,26 +1,22 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  TextField,
-  Checkbox,
-  FormControlLabel,
-  FormGroup,
-  IconButton,
-  Chip,
-  Alert,
-  CircularProgress,
-  Tooltip,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Trash2, Copy, KeyRound } from 'lucide-react';
 import { type User, type AuthMode } from '../api/auth';
 import { createKey, listKeys, revokeKey, type AccessKey } from '../api/keys';
 
@@ -48,7 +44,6 @@ export default function KeyManager({ user, authMode }: KeyManagerProps) {
 
   // Newly created key display
   const [newKey, setNewKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<AccessKey | null>(null);
@@ -103,8 +98,7 @@ export default function KeyManager({ user, authMode }: KeyManagerProps) {
   const handleCopy = () => {
     if (newKey) {
       navigator.clipboard.writeText(newKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      toast.success('Key copied!');
     }
   };
 
@@ -125,201 +119,182 @@ export default function KeyManager({ user, authMode }: KeyManagerProps) {
 
   if (!user) {
     return (
-      <Box sx={{ textAlign: 'center', py: 8 }}>
-        <VpnKeyIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-        <Typography variant="h6" color="text.secondary">
-          Sign in to manage access keys
-        </Typography>
-      </Box>
+      <div className="py-16 text-center">
+        <KeyRound className="mx-auto mb-4 size-12 text-muted-foreground" />
+        <h2 className="text-lg text-muted-foreground">Sign in to manage access keys</h2>
+      </div>
     );
   }
 
   if (authMode === 'key') {
     return (
-      <Box sx={{ textAlign: 'center', py: 8 }}>
-        <VpnKeyIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-        <Typography variant="h6" color="text.secondary">
-          Key management requires OAuth sign-in
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+      <div className="py-16 text-center">
+        <KeyRound className="mx-auto mb-4 size-12 text-muted-foreground" />
+        <h2 className="text-lg text-muted-foreground">Key management requires OAuth sign-in</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
           You're currently signed in with an access key. Sign in with osu! to manage keys.
-        </Typography>
-      </Box>
+        </p>
+      </div>
     );
   }
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center py-16">
+        <Spinner className="size-6 text-primary" />
+      </div>
     );
   }
 
   return (
-    <Box>
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
-        Access Keys
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+    <div>
+      <h1 className="mb-3 text-xl font-bold">Access Keys</h1>
+      <p className="mb-6 text-sm text-muted-foreground">
         Create access keys to let others act under your account with limited permissions.
         Keys can be used to sign in from other devices or shared with tournament staff.
-      </Typography>
+      </p>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {/* New key display */}
       {newKey && (
-        <Alert
-          severity="success"
-          sx={{ mb: 3 }}
-          onClose={() => { setNewKey(null); setCopied(false); }}
-          action={
-            <Tooltip title={copied ? 'Copied!' : 'Copy key'}>
-              <IconButton size="small" onClick={handleCopy}>
-                <ContentCopyIcon fontSize="small" />
-              </IconButton>
+        <div className="mb-6 rounded-lg border border-green-500/30 bg-green-500/10 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-bold">Key created! Copy it now — it won't be shown again.</p>
+            <Tooltip>
+              <TooltipTrigger render={<Button variant="ghost" size="icon-xs" onClick={handleCopy} />}>
+                <Copy className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent>Copy key</TooltipContent>
             </Tooltip>
-          }
-        >
-          <Typography variant="body2" fontWeight="bold" sx={{ mb: 0.5 }}>
-            Key created! Copy it now — it won't be shown again.
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              fontFamily: 'monospace',
-              wordBreak: 'break-all',
-              backgroundColor: 'rgba(0,0,0,0.05)',
-              p: 1,
-              borderRadius: 1,
-            }}
-          >
+          </div>
+          <code className="block break-all rounded bg-black/5 p-2 text-sm dark:bg-white/5">
             {newKey}
-          </Typography>
-        </Alert>
+          </code>
+          <button
+            onClick={() => setNewKey(null)}
+            className="mt-2 text-xs text-muted-foreground hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
       )}
 
       {/* Create form */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2 }}>
-          Create New Key
-        </Typography>
-        <TextField
-          fullWidth
-          label="Key Name"
-          placeholder="e.g. Tournament Staff, Work PC"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          sx={{ mb: 2 }}
-          size="small"
-        />
-        <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
-          Permissions
-        </Typography>
-        <FormGroup row sx={{ mb: 2 }}>
-          {PERMISSION_OPTIONS.map((opt) => (
-            <FormControlLabel
-              key={opt.value}
-              control={
+      <Card className="mb-6 p-6">
+        <h3 className="mb-4 font-bold">Create New Key</h3>
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium">Key Name</label>
+          <Input
+            placeholder="e.g. Tournament Staff, Work PC"
+            value={name}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+          />
+        </div>
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-bold">Permissions</label>
+          <div className="flex flex-wrap gap-4">
+            {PERMISSION_OPTIONS.map((opt) => (
+              <label key={opt.value} className="flex items-start gap-2 cursor-pointer">
                 <Checkbox
                   checked={selectedPerms.includes(opt.value)}
-                  onChange={() => togglePerm(opt.value)}
-                  size="small"
+                  onCheckedChange={() => togglePerm(opt.value)}
+                  className="mt-0.5"
                 />
-              }
-              label={
-                <Box>
-                  <Typography variant="body2">{opt.label}</Typography>
-                  <Typography variant="caption" color="text.secondary">{opt.description}</Typography>
-                </Box>
-              }
-            />
-          ))}
-        </FormGroup>
-        <TextField
-          label="Expires in (days)"
-          placeholder="Leave empty for no expiry"
-          value={expiresInDays}
-          onChange={(e) => setExpiresInDays(e.target.value.replace(/\D/g, ''))}
-          size="small"
-          sx={{ mb: 2, width: 200 }}
-        />
-        <Box>
-          <Button
-            variant="contained"
-            onClick={handleCreate}
-            disabled={creating || !name.trim() || selectedPerms.length === 0}
-            startIcon={creating ? <CircularProgress size={16} /> : <VpnKeyIcon />}
-          >
-            Create Key
-          </Button>
-        </Box>
-      </Paper>
+                <div>
+                  <span className="text-sm">{opt.label}</span>
+                  <span className="block text-xs text-muted-foreground">{opt.description}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium">Expires in (days)</label>
+          <Input
+            placeholder="Leave empty for no expiry"
+            value={expiresInDays}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExpiresInDays(e.target.value.replace(/\D/g, ''))}
+            className="w-[200px]"
+          />
+        </div>
+        <Button
+          onClick={handleCreate}
+          disabled={creating || !name.trim() || selectedPerms.length === 0}
+        >
+          {creating ? <Spinner className="size-4" /> : <KeyRound className="size-4" />}
+          Create Key
+        </Button>
+      </Card>
 
       {/* Key list */}
-      <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2 }}>
-        Your Keys ({keys.length})
-      </Typography>
+      <h3 className="mb-4 font-bold">Your Keys ({keys.length})</h3>
       {keys.length === 0 ? (
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="text.secondary">No access keys yet</Typography>
-        </Paper>
+        <Card className="p-6 text-center">
+          <p className="text-muted-foreground">No access keys yet</p>
+        </Card>
       ) : (
-        keys.map((key) => (
-          <Paper key={key.id} sx={{ p: 2, mb: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <VpnKeyIcon sx={{ color: 'text.secondary' }} />
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body1" fontWeight="bold">
-                {key.name}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                {key.permissions.map((p) => (
-                  <Chip key={p} label={p} size="small" sx={{ height: 20, fontSize: 10 }} />
-                ))}
-              </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                Created {formatDate(key.created_at)}
-                {key.last_used_at && ` · Last used ${formatDate(key.last_used_at)}`}
-                {key.expires_at && ` · Expires ${formatDate(key.expires_at)}`}
-              </Typography>
-            </Box>
-            <Tooltip title="Revoke key">
-              <IconButton
-                color="error"
-                onClick={() => setDeleteTarget(key)}
-                size="small"
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
-          </Paper>
-        ))
+        <div className="flex flex-col gap-3">
+          {keys.map((key) => (
+            <Card key={key.id} className="flex items-center gap-3 p-4">
+              <KeyRound className="size-5 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="font-bold">{key.name}</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {key.permissions.map((p) => (
+                    <Badge key={p} variant="secondary" className="h-5 text-[10px]">{p}</Badge>
+                  ))}
+                </div>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Created {formatDate(key.created_at)}
+                  {key.last_used_at && ` · Last used ${formatDate(key.last_used_at)}`}
+                  {key.expires_at && ` · Expires ${formatDate(key.expires_at)}`}
+                </span>
+              </div>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => setDeleteTarget(key)}
+                      className="text-destructive"
+                    />
+                  }
+                >
+                  <Trash2 className="size-4" />
+                </TooltipTrigger>
+                <TooltipContent>Revoke key</TooltipContent>
+              </Tooltip>
+            </Card>
+          ))}
+        </div>
       )}
 
       {/* Delete confirmation */}
-      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle>Revoke Access Key</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to revoke <b>{deleteTarget?.name}</b>? Anyone using this key will immediately lose access.
-          </Typography>
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Revoke Access Key</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to revoke <b>{deleteTarget?.name}</b>? Anyone using this key will immediately lose access.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteTarget && handleRevoke(deleteTarget)}
+            >
+              Revoke
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={() => deleteTarget && handleRevoke(deleteTarget)}
-          >
-            Revoke
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

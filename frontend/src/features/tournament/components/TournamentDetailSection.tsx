@@ -1,41 +1,49 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  Chip,
-  CircularProgress,
-  Alert,
-  TextField,
-  IconButton,
-  Tabs,
-  Tab,
-  Snackbar,
-  Avatar,
-  Tooltip,
-  Breadcrumbs,
-  Card,
-  CardHeader,
-  ButtonGroup,
-} from '@mui/material';
 import { Link } from 'react-router-dom';
-import EditIcon from '@mui/icons-material/Edit';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import GroupIcon from '@mui/icons-material/Group';
-import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import CodeIcon from '@mui/icons-material/Code';
-import DnsIcon from '@mui/icons-material/Dns';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import ViewListIcon from '@mui/icons-material/ViewList';
-import SettingsIcon from '@mui/icons-material/Settings';
-import CampaignIcon from '@mui/icons-material/Campaign';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import LiveTvIcon from '@mui/icons-material/LiveTv';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuBadge,
+} from '@/components/ui/sidebar';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Pencil,
+  ExternalLink,
+  Check,
+  X,
+  Copy,
+  Users,
+  GitBranch,
+  Code,
+  Server,
+  List,
+  Settings,
+  Megaphone,
+  Clock,
+  Tv,
+  CheckCircle2,
+} from 'lucide-react';
 import type { User } from '../../auth/api/auth';
 import { palette } from '../../../shared/theme/palette';
 import { placeholderBanner, placeholderLogo } from '../utils/placeholders';
@@ -57,9 +65,9 @@ import SettingsTab from './SettingsTab';
 import PaywallDialog from './PaywallDialog';
 
 const statusIcons: Record<string, React.ReactElement> = {
-  upcoming: <ScheduleIcon />,
-  live: <LiveTvIcon />,
-  completed: <CheckCircleIcon />,
+  upcoming: <Clock className="size-3" />,
+  live: <Tv className="size-3" />,
+  completed: <CheckCircle2 className="size-3" />,
 };
 
 interface TournamentDetailSectionProps {
@@ -84,7 +92,6 @@ export default function TournamentDetailSection({
   const [editingName, setEditingName] = useState(false);
   const [editName, setEditName] = useState(tournament.name);
   const [savingName, setSavingName] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [showPaywall, setShowPaywall] = useState(false);
 
   // Players, bracket, announcements (from API)
@@ -119,14 +126,14 @@ export default function TournamentDetailSection({
       onUpdated(updated);
       setEditingName(false);
     } catch (err) {
-      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update' });
+      toast.error(err instanceof Error ? err.message : 'Failed to update');
     }
     setSavingName(false);
   };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/t/${tournament.abbreviation}`);
-    setSnackbar({ open: true, message: 'Link copied!' });
+    toast.info('Link copied!');
   };
 
   const handleTournamentChanged = (updated: Tournament) => {
@@ -135,232 +142,278 @@ export default function TournamentDetailSection({
   };
 
   const handleError = (msg: string) => {
-    setSnackbar({ open: true, message: msg });
+    toast.error(msg);
   };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress sx={{ color: 'primary.main' }} />
-      </Box>
+      <div className="flex justify-center py-16">
+        <Spinner className="size-6 text-primary" />
+      </div>
     );
   }
 
   return (
     <>
       {/* Breadcrumb nav */}
-      <Breadcrumbs separator={<NavigateNextIcon sx={{ fontSize: 14 }} />} sx={{ mb: 2 }}>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
-          onClick={onBack}
-        >
-          Tournaments
-        </Typography>
-        <Typography variant="body2" fontWeight={600}>
-          {tournament.name}
-        </Typography>
-      </Breadcrumbs>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink className="cursor-pointer text-sm" onClick={onBack}>
+              Tournaments
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-sm font-semibold">{tournament.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       {/* Hero card */}
-      <Card variant="outlined" sx={{ overflow: 'hidden' }}>
-        <Box sx={{ background: `linear-gradient(180deg, ${palette.mid}15 0%, ${palette.light}08 100%)` }}>
-        {/* Banner */}
-        <Box
-          sx={{ aspectRatio: '4/1', position: 'relative', cursor: isOwner ? 'pointer' : 'default' }}
-        >
-          <Box
-            component="img"
-            src={tournament.banner_url || placeholderBanner}
-            sx={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              maskImage: 'linear-gradient(180deg, black 40%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(180deg, black 40%, transparent 100%)',
-            }}
-          />
-        </Box>
-        <CardHeader
-          avatar={
-            <Avatar
-              src={tournament.logo_url || placeholderLogo}
-              variant="rounded"
-              sx={{ width: 48, height: 48 }}
+      <Card className="overflow-hidden">
+        <div style={{ background: `linear-gradient(180deg, ${palette.mid}15 0%, ${palette.light}08 100%)` }}>
+          {/* Banner */}
+          <div className="relative" style={{ aspectRatio: '4/1' }}>
+            <img
+              src={tournament.banner_url || placeholderBanner}
+              alt=""
+              className="size-full object-cover"
+              style={{
+                maskImage: 'linear-gradient(180deg, black 40%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(180deg, black 40%, transparent 100%)',
+              }}
             />
-          }
-          title={
-            editingName ? (
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <TextField
-                  size="small"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-                  sx={{ flex: 1, '& .MuiInputBase-input': { py: 0.5, fontSize: 16, fontWeight: 'bold' } }}
-                  autoFocus
-                />
-                <IconButton size="small" onClick={handleSaveName} disabled={savingName}>
-                  <CheckIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton size="small" onClick={() => { setEditingName(false); setEditName(tournament.name); }}>
-                  <CloseIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Stack>
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                <Typography variant="subtitle1" fontWeight="bold">{tournament.name}</Typography>
-                {isOwner && (
-                  <Tooltip title="Rename">
-                    <IconButton size="small" onClick={() => setEditingName(true)} sx={{ p: 0.25 }}>
-                      <EditIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                    </IconButton>
-                  </Tooltip>
+          </div>
+
+          {/* Header row */}
+          <div className="flex items-start justify-between px-4 pb-0">
+            <div className="flex items-center gap-3">
+              <img
+                src={tournament.logo_url || placeholderLogo}
+                alt=""
+                className="size-12 rounded-lg object-cover"
+              />
+              <div>
+                {editingName ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                      className="h-7 flex-1 text-base font-bold"
+                      autoFocus
+                    />
+                    <Button variant="ghost" size="icon-xs" onClick={handleSaveName} disabled={savingName}>
+                      <Check className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon-xs" onClick={() => { setEditingName(false); setEditName(tournament.name); }}>
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base font-bold">{tournament.name}</span>
+                    {isOwner && (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => setEditingName(true)}
+                              className="text-muted-foreground"
+                            />
+                          }
+                        >
+                          <Pencil className="size-3.5" />
+                        </TooltipTrigger>
+                        <TooltipContent>Rename</TooltipContent>
+                      </Tooltip>
+                    )}
+                    <span
+                      className="ml-1 inline-flex h-[22px] items-center gap-1 rounded-full px-2 text-[11px] font-bold capitalize text-white"
+                      style={{ backgroundColor: `${statusColors[tournament.status]}dd` }}
+                    >
+                      {statusIcons[tournament.status]}
+                      {tournament.status}
+                    </span>
+                  </div>
                 )}
-                <Chip
-                  icon={statusIcons[tournament.status]}
-                  label={tournament.status}
-                  size="small"
-                  sx={{
-                    height: 22, fontSize: 11, fontWeight: 'bold', textTransform: 'capitalize', ml: 0.5,
-                    backgroundColor: `${statusColors[tournament.status]}dd`,
-                    color: 'white',
-                    '& .MuiChip-icon': { color: 'white', fontSize: 12, ml: 0.5 },
-                  }}
-                />
-              </Box>
-            )
-          }
-          action={
-            <ButtonGroup size="small" variant="outlined" sx={{ mt: 0.5 }}>
-              <Tooltip title="Copy link">
-                <Button onClick={handleCopyLink} sx={{ minWidth: 36, px: 1 }}>
-                  <ContentCopyIcon sx={{ fontSize: 16 }} />
-                </Button>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <ButtonGroup className="mt-1">
+              <Tooltip>
+                <TooltipTrigger render={<Button variant="outline" size="sm" onClick={handleCopyLink} className="px-2" />}>
+                  <Copy className="size-4" />
+                </TooltipTrigger>
+                <TooltipContent>Copy link</TooltipContent>
               </Tooltip>
-              <Tooltip title="Open public page">
-                <Button component={Link} to={`/t/${tournament.abbreviation}`} target="_blank" sx={{ minWidth: 36, px: 1 }}>
-                  <OpenInNewIcon sx={{ fontSize: 16 }} />
-                </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="px-2"
+                      render={<Link to={`/t/${tournament.abbreviation}`} target="_blank" />}
+                    />
+                  }
+                >
+                  <ExternalLink className="size-4" />
+                </TooltipTrigger>
+                <TooltipContent>Open public page</TooltipContent>
               </Tooltip>
             </ButtonGroup>
-          }
-          sx={{ pb: 0 }}
-        />
+          </div>
 
-        {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
+          {error && (
+            <Alert variant="destructive" className="mx-4 mt-2">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        {/* Tab bar */}
-        <Tabs
-          value={detailTab}
-          onChange={(_, v) => setDetailTab(v as typeof detailTab)}
-          sx={{
-            minHeight: 40, px: 2,
-            '& .MuiTab-root': {
-              fontWeight: 600, fontSize: 13,
-              minHeight: 40, py: 0, px: 2,
-              gap: 0.75,
-            },
-          }}
-        >
-          <Tab icon={<ViewListIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Mappool" value="mappool" />
-          <Tab icon={<GroupIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Players" value="players" />
-          <Tab icon={<AccountTreeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Bracket" value="bracket" />
-          <Tab icon={<DnsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Slots" value="slots" />
-          <Tab icon={<CampaignIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="News" value="news" />
-          {isOwner && <Tab icon={<CodeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Website (Soon)" value="website" disabled sx={{ opacity: 0.4 }} />}
-          <Tab icon={<SettingsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Settings" value="details" />
-        </Tabs>
+          {/* Sidebar + Content */}
+          <SidebarProvider defaultOpen={true} className="min-h-0 items-start">
+            <Sidebar collapsible="none" className="h-auto border-r bg-transparent">
+              <SidebarContent>
+                <SidebarGroup>
+                  <SidebarGroupLabel>Tournament</SidebarGroupLabel>
+                  <SidebarMenu>
+                    {([
+                      { key: 'mappool', label: 'Mappool', icon: List },
+                      { key: 'players', label: 'Players', icon: Users },
+                      { key: 'bracket', label: 'Bracket', icon: GitBranch },
+                      { key: 'slots', label: 'Slots', icon: Server },
+                      { key: 'news', label: 'News', icon: Megaphone },
+                    ] as const).map(({ key, label, icon: Icon }) => (
+                      <SidebarMenuItem key={key}>
+                        <SidebarMenuButton
+                          isActive={detailTab === key}
+                          onClick={() => setDetailTab(key)}
+                        >
+                          <Icon />
+                          <span>{label}</span>
+                        </SidebarMenuButton>
+                        {key === 'players' && players.length > 0 && (
+                          <SidebarMenuBadge>{players.length}</SidebarMenuBadge>
+                        )}
+                        {key === 'mappool' && (tournament.stages?.reduce((n, s) => n + (s.maps?.length ?? 0), 0) ?? 0) > 0 && (
+                          <SidebarMenuBadge>{tournament.stages?.reduce((n, s) => n + (s.maps?.length ?? 0), 0)}</SidebarMenuBadge>
+                        )}
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroup>
+                {isOwner && (
+                  <SidebarGroup>
+                    <SidebarGroupLabel>Management</SidebarGroupLabel>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton disabled className="opacity-40">
+                          <Code />
+                          <span>Website (Soon)</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          isActive={detailTab === 'details'}
+                          onClick={() => setDetailTab('details')}
+                        >
+                          <Settings />
+                          <span>Settings</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroup>
+                )}
+                {!isOwner && (
+                  <SidebarGroup>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          isActive={detailTab === 'details'}
+                          onClick={() => setDetailTab('details')}
+                        >
+                          <Settings />
+                          <span>Settings</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroup>
+                )}
+              </SidebarContent>
+            </Sidebar>
 
-        {/* Tab content */}
-        <Box sx={{ p: 2.5 }}>
-        {/* Mappool */}
-        {detailTab === 'mappool' && (
-          <MappoolTab
-            tournament={tournament}
-            isOwner={isOwner}
-            slotConfigs={slotConfigs}
-            onTournamentChanged={handleTournamentChanged}
-            onError={handleError}
-            onTabChange={(tab) => setDetailTab(tab as typeof detailTab)}
-          />
-        )}
-
-        {/* Players */}
-        {detailTab === 'players' && (
-          <TournamentPlayers
-            tournamentAbbrev={tournament.abbreviation}
-            isOwner={isOwner}
-            players={players}
-            bracketData={bracketData}
-            onPlayersChanged={setPlayers}
-            onBracketChanged={setBracketData}
-          />
-        )}
-
-        {/* Bracket */}
-        {detailTab === 'bracket' && (
-          <TournamentBracket
-            tournamentAbbrev={tournament.abbreviation}
-            isOwner={isOwner}
-            players={players}
-            bracketData={bracketData}
-            onBracketChanged={setBracketData}
-          />
-        )}
-
-        {/* Slots */}
-        {detailTab === 'slots' && (
-          <SlotsEditor
-            tournament={tournament}
-            slotConfigs={slotConfigs}
-            isOwner={isOwner}
-            onUpdated={handleTournamentChanged}
-            onError={handleError}
-          />
-        )}
-
-        {/* News */}
-        {detailTab === 'news' && (
-          <TournamentAnnouncements
-            tournamentAbbrev={tournament.abbreviation}
-            isOwner={isOwner}
-            announcements={announcements}
-            onAnnouncementsChanged={setAnnouncements}
-          />
-        )}
-
-        {/* Website */}
-        {detailTab === 'website' && isOwner && (
-          <SiteSettings tournament={tournament} />
-        )}
-
-        {/* Settings */}
-        {detailTab === 'details' && (
-          <SettingsTab
-            tournament={tournament}
-            isOwner={isOwner}
-            onTournamentChanged={handleTournamentChanged}
-            onDeleted={onDeleted}
-            onError={handleError}
-          />
-        )}
-      </Box>
-      </Box>
+            {/* Content area */}
+            <div className="min-w-0 flex-1 p-4">
+              {detailTab === 'mappool' && (
+                <MappoolTab
+                  tournament={tournament}
+                  isOwner={isOwner}
+                  slotConfigs={slotConfigs}
+                  onTournamentChanged={handleTournamentChanged}
+                  onError={handleError}
+                  onTabChange={(tab) => setDetailTab(tab as typeof detailTab)}
+                />
+              )}
+              {detailTab === 'players' && (
+                <TournamentPlayers
+                  tournamentAbbrev={tournament.abbreviation}
+                  isOwner={isOwner}
+                  players={players}
+                  bracketData={bracketData}
+                  onPlayersChanged={setPlayers}
+                  onBracketChanged={setBracketData}
+                />
+              )}
+              {detailTab === 'bracket' && (
+                <TournamentBracket
+                  tournamentAbbrev={tournament.abbreviation}
+                  isOwner={isOwner}
+                  players={players}
+                  bracketData={bracketData}
+                  onBracketChanged={setBracketData}
+                />
+              )}
+              {detailTab === 'slots' && (
+                <SlotsEditor
+                  tournament={tournament}
+                  slotConfigs={slotConfigs}
+                  isOwner={isOwner}
+                  onUpdated={handleTournamentChanged}
+                  onError={handleError}
+                />
+              )}
+              {detailTab === 'news' && (
+                <TournamentAnnouncements
+                  tournamentAbbrev={tournament.abbreviation}
+                  isOwner={isOwner}
+                  announcements={announcements}
+                  onAnnouncementsChanged={setAnnouncements}
+                />
+              )}
+              {isOwner && detailTab === 'website' && (
+                <SiteSettings tournament={tournament} />
+              )}
+              {detailTab === 'details' && (
+                <SettingsTab
+                  tournament={tournament}
+                  isOwner={isOwner}
+                  onTournamentChanged={handleTournamentChanged}
+                  onDeleted={onDeleted}
+                  onError={handleError}
+                />
+              )}
+            </div>
+          </SidebarProvider>
+        </div>
       </Card>
 
       {/* Paywall */}
       <PaywallDialog open={showPaywall} onClose={() => setShowPaywall(false)} />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={2000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity="info" sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

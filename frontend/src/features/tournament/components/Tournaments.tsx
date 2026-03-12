@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   Select,
-  MenuItem,
-  CircularProgress,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import type { User } from '../../auth/api/auth';
 import { listTournaments, createTournament, deleteTournament, type Tournament } from '../api/tournaments';
 import TournamentCard from './TournamentCard';
@@ -96,43 +99,40 @@ export default function Tournaments({ user }: TournamentsProps) {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center py-8">
+        <Spinner className="size-6" />
+      </div>
     );
   }
 
   return (
-    <Box>
+    <div>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Box>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h4 className="text-2xl font-bold mb-1">
             Tournament Mappools
-          </Typography>
-          <Typography color="text.secondary">
+          </h4>
+          <p className="text-muted-foreground">
             Host and share professional tournament mappools
-          </Typography>
-        </Box>
+          </p>
+        </div>
         {user && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setDialogOpen(true)}
-          >
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus data-icon="inline-start" />
             Create Tournament
           </Button>
         )}
-      </Box>
+      </div>
 
       {/* Tournament List */}
       {tournaments.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography color="text.secondary" variant="h6">No tournaments yet</Typography>
-          <Typography color="text.secondary" variant="body2">Create your first tournament to get started</Typography>
-        </Box>
+        <div className="text-center py-8">
+          <h6 className="text-lg text-muted-foreground">No tournaments yet</h6>
+          <p className="text-sm text-muted-foreground">Create your first tournament to get started</p>
+        </div>
       ) : (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-2">
           {tournaments.map((tournament) => (
             <TournamentCard
               key={tournament.id}
@@ -142,58 +142,73 @@ export default function Tournaments({ user }: TournamentsProps) {
               onDelete={(e) => handleDelete(tournament.abbreviation, e)}
             />
           ))}
-        </Stack>
+        </div>
       )}
 
       {/* Create Tournament Dialog */}
-      <Dialog open={dialogOpen} onClose={handleClose} maxWidth="xs" fullWidth>
-        <DialogTitle>Create Tournament</DialogTitle>
-        <DialogContent>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            <TextField
-              label="Tournament Name"
-              fullWidth
-              value={tournamentName}
-              onChange={(e) => setTournamentName(e.target.value)}
-              placeholder="e.g. Community Cup 2024"
-              autoFocus
-            />
-            <TextField
-              label="Abbreviation (URL slug)"
-              fullWidth
-              value={abbreviation}
-              onChange={(e) => setAbbreviation(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-              placeholder="e.g. cc-2024"
-              helperText={abbreviation ? `URL: /t/${abbreviation}` : 'Used in the tournament URL'}
-            />
-            <FormControl fullWidth>
-              <InputLabel>Format</InputLabel>
-              <Select value={format} label="Format" onChange={(e) => setFormat(e.target.value)}>
-                <MenuItem value="1v1">1v1</MenuItem>
-                <MenuItem value="2v2">2v2</MenuItem>
-                <MenuItem value="3v3">3v3</MenuItem>
-                <MenuItem value="4v4">4v4</MenuItem>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Create Tournament</DialogTitle>
+            <DialogDescription className="sr-only">Fill in the details to create a new tournament.</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="tournament-name">Tournament Name</Label>
+              <Input
+                id="tournament-name"
+                value={tournamentName}
+                onChange={(e) => setTournamentName(e.target.value)}
+                placeholder="e.g. Community Cup 2024"
+                autoFocus
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="abbreviation">Abbreviation (URL slug)</Label>
+              <Input
+                id="abbreviation"
+                value={abbreviation}
+                onChange={(e) => setAbbreviation(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                placeholder="e.g. cc-2024"
+              />
+              <p className="text-xs text-muted-foreground">
+                {abbreviation ? `URL: /t/${abbreviation}` : 'Used in the tournament URL'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Format</Label>
+              <Select value={format} onValueChange={(v) => v && setFormat(v)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1v1">1v1</SelectItem>
+                  <SelectItem value="2v2">2v2</SelectItem>
+                  <SelectItem value="3v3">3v3</SelectItem>
+                  <SelectItem value="4v4">4v4</SelectItem>
+                </SelectContent>
               </Select>
-            </FormControl>
-          </Stack>
+            </div>
+          </div>
 
           {error && (
-            <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+            <p className="text-sm text-destructive mt-2">
               {error}
-            </Typography>
+            </p>
           )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClose}>Cancel</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!canSubmit || submitting}
+            >
+              {submitting ? <Spinner /> : 'Create'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={!canSubmit || submitting}
-          >
-            {submitting ? <CircularProgress size={20} /> : 'Create'}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

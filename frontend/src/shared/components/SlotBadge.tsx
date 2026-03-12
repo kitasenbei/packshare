@@ -1,4 +1,4 @@
-import { Box } from '@mui/material';
+import { cn } from '@/lib/utils';
 
 interface SlotBadgeProps {
   label: string;
@@ -8,24 +8,15 @@ interface SlotBadgeProps {
 
 export default function SlotBadge({ label, color, onClick }: SlotBadgeProps) {
   return (
-    <Box
+    <div
       onClick={onClick}
-      sx={{
-        backgroundColor: color,
-        color: 'white',
-        px: 1.5,
-        py: 0.5,
-        borderRadius: 1,
-        fontWeight: 'bold',
-        fontSize: 14,
-        minWidth: 48,
-        textAlign: 'center',
-        flexShrink: 0,
-        cursor: onClick ? 'pointer' : 'default',
-        '&:hover': onClick ? { opacity: 0.8 } : {},
-      }}
+      className={cn(
+        'shrink-0 min-w-[48px] rounded px-1.5 py-0.5 text-center text-sm font-bold text-white',
+        onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default',
+      )}
+      style={{ backgroundColor: color }}
     >
       {label}
-    </Box>
+    </div>
   );
 }

@@ -1,25 +1,19 @@
 import { useState, useRef } from 'react';
+import { Plus, Trash2, Pencil, Megaphone, ImageIcon, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  TextField,
-  IconButton,
-  Card,
-  CardContent,
-  Divider,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import CampaignIcon from '@mui/icons-material/Campaign';
-import ImageIcon from '@mui/icons-material/Image';
-import CloseIcon from '@mui/icons-material/Close';
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   uploadImage,
   createAnnouncement,
@@ -148,139 +142,149 @@ export default function TournamentAnnouncements({
   };
 
   return (
-    <Stack spacing={2}>
+    <div className="flex flex-col gap-3">
       {isOwner && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={handleOpenNew}>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={handleOpenNew}>
+            <Plus data-icon="inline-start" />
             New Announcement
           </Button>
-        </Box>
+        </div>
       )}
 
       {announcements.length === 0 ? (
-        <Box sx={{ py: 4, textAlign: 'center' }}>
-          <CampaignIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
-          <Typography variant="body2" color="text.disabled">
+        <div className="py-8 text-center">
+          <Megaphone className="size-10 text-muted-foreground/50 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground/50">
             No announcements yet
-          </Typography>
-        </Box>
+          </p>
+        </div>
       ) : (
-        <Stack spacing={1.5}>
+        <div className="flex flex-col gap-2">
           {announcements.map((a) => (
-            <Card key={a.id} variant="outlined">
-              <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="subtitle2" fontWeight={600}>{a.title}</Typography>
-                    <Typography variant="caption" color="text.disabled">{formatDate(a.createdAt)}</Typography>
-                  </Box>
+            <Card key={a.id}>
+              <CardContent className="py-2.5 px-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">{a.title}</p>
+                    <span className="text-xs text-muted-foreground/50">{formatDate(a.createdAt)}</span>
+                  </div>
                   {isOwner && (
-                    <Stack direction="row" spacing={0.25}>
-                      <IconButton size="small" onClick={() => handleOpenEdit(a)}
-                        sx={{ color: 'text.disabled', '&:hover': { color: 'primary.main' } }}>
-                        <EditIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => setDeleteConfirm(a.id)}
-                        sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                        <DeleteIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Stack>
+                    <div className="flex items-center gap-0.5">
+                      <Button variant="ghost" size="icon-xs" onClick={() => handleOpenEdit(a)} className="text-muted-foreground hover:text-primary">
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-xs" onClick={() => setDeleteConfirm(a.id)} className="text-muted-foreground hover:text-destructive">
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   )}
-                </Box>
-                {(a.body || a.image) && <Divider sx={{ my: 1 }} />}
+                </div>
+                {(a.body || a.image) && <Separator className="my-2" />}
                 {a.image && (
-                  <Box
-                    component="img"
+                  <img
                     src={a.image}
-                    sx={{ width: '100%', borderRadius: 1, mb: a.body ? 1 : 0 }}
+                    className={`w-full rounded ${a.body ? 'mb-2' : ''}`}
+                    alt=""
                   />
                 )}
                 {a.body && (
-                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {a.body}
-                  </Typography>
+                  </p>
                 )}
               </CardContent>
             </Card>
           ))}
-        </Stack>
+        </div>
       )}
 
       {/* Create / Edit dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingId ? 'Edit Announcement' : 'New Announcement'}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Title"
-              size="small"
-              fullWidth
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-            />
-            <TextField
-              label="Body (optional)"
-              size="small"
-              fullWidth
-              multiline
-              rows={4}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Write your announcement..."
-            />
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) setDialogOpen(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit Announcement' : 'New Announcement'}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {editingId ? 'Edit an existing announcement.' : 'Create a new announcement.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="ann-title">Title</Label>
+              <Input
+                id="ann-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="ann-body">Body (optional)</Label>
+              <Textarea
+                id="ann-body"
+                rows={4}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your announcement..."
+              />
+            </div>
             {image ? (
-              <Box sx={{ position: 'relative' }}>
-                <Box component="img" src={image} sx={{ width: '100%', borderRadius: 1 }} />
-                <IconButton
-                  size="small"
+              <div className="relative">
+                <img src={image} className="w-full rounded" alt="" />
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => setImage(undefined)}
-                  sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}
+                  className="absolute top-1 right-1 bg-black/50 text-white hover:bg-black/70"
                 >
-                  <CloseIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Box>
+                  <X className="size-4" />
+                </Button>
+              </div>
             ) : (
               <>
                 <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
-                  style={{ display: 'none' }}
+                  className="hidden"
                 />
                 <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<ImageIcon />}
+                  variant="outline"
+                  size="sm"
                   onClick={() => imageInputRef.current?.click()}
                   disabled={uploading}
-                  sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+                  className="self-start"
                 >
+                  <ImageIcon data-icon="inline-start" />
                   {uploading ? 'Uploading...' : 'Upload Eyecatcher'}
                 </Button>
               </>
             )}
-          </Stack>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={!title.trim() || saving}>
+              {editingId ? 'Save' : 'Post'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!title.trim() || saving}>
-            {editingId ? 'Save' : 'Post'}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Delete confirmation */}
-      <Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} maxWidth="xs">
-        <DialogTitle>Delete Announcement</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2">Are you sure? This cannot be undone.</Typography>
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Delete Announcement</DialogTitle>
+            <DialogDescription>
+              Are you sure? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>
-            Delete
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Stack>
+    </div>
   );
 }

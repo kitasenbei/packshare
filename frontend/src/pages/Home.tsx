@@ -1,24 +1,18 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  Button,
-  Avatar,
-  CircularProgress,
-  Stack,
-  Chip,
-  Alert,
-  Popover,
-} from '@mui/material';
 import { Link } from 'react-router-dom';
-import AddIcon from '@mui/icons-material/Add';
-import ExploreIcon from '@mui/icons-material/Explore';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import FolderIcon from '@mui/icons-material/Folder';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import {
+  Plus,
+  Compass,
+  Music,
+  Eye,
+  Folder,
+  TrendingUp,
+} from 'lucide-react';
 import type { User } from '../features/auth/api/auth';
 import { getLoginUrl } from '../features/auth/api/auth';
 import { getMyPacks, browsePacks, type Pack, type BrowsePacksResult } from '../features/pack/api/packs';
@@ -26,9 +20,10 @@ import PackCard from '../features/pack/components/PackCard';
 
 interface HomeProps {
   user?: User | null;
+  onOpenCreatePack: () => void;
 }
 
-export default function Home({ user }: HomeProps) {
+export default function Home({ user, onOpenCreatePack }: HomeProps) {
   const [recentPacks, setRecentPacks] = useState<BrowsePacksResult | null>(null);
   const [popularPacks, setPopularPacks] = useState<BrowsePacksResult | null>(null);
   const [myPacks, setMyPacks] = useState<Pack[]>([]);
@@ -58,303 +53,193 @@ export default function Home({ user }: HomeProps) {
     return () => { cancelled = true; };
   }, [user]);
 
-  const [statsAnchor, setStatsAnchor] = useState<HTMLElement | null>(null);
-
   const totalPacks = recentPacks?.total ?? 0;
   const myPackCount = myPacks.length;
   const myTotalMaps = myPacks.reduce((sum, p) => sum + p.beatmaps.length, 0);
   const myTotalViews = myPacks.reduce((sum, p) => sum + p.views, 0);
 
   return (
-    <Box>
+    <div>
       {/* Header */}
       {user ? (
-        <>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar
-                src={user.avatar_url}
-                sx={{ width: 48, height: 48, border: 3, borderColor: 'primary.main' }}
-              />
-              <Box>
-                <Typography variant="h5" fontWeight="bold">
-                  Welcome back, {user.username}
-                </Typography>
-                <Button
-                  size="small"
-                  onClick={(e) => setStatsAnchor(e.currentTarget)}
-                  sx={{ color: 'text.secondary', p: 0, minWidth: 0, fontSize: 13, '&:hover': { color: 'primary.main', backgroundColor: 'transparent' } }}
-                >
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src={user.avatar_url}
+              alt=""
+              className="size-12 rounded-full border-[3px] border-primary"
+            />
+            <div>
+              <h2 className="text-xl font-bold">Welcome back, {user.username}</h2>
+              <Popover>
+                <PopoverTrigger render={<button className="text-[13px] text-muted-foreground hover:text-primary" />}>
                   See stats
-                </Button>
-                <Popover
-                  open={!!statsAnchor}
-                  anchorEl={statsAnchor}
-                  onClose={() => setStatsAnchor(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                  slotProps={{ paper: { sx: { p: 2, mt: 1, minWidth: 200 } } }}
-                >
-                  <Stack spacing={1.5}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <FolderIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                      <Typography variant="body2"><strong>{myPackCount}</strong> Packs</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <MusicNoteIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                      <Typography variant="body2"><strong>{myTotalMaps}</strong> Maps</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <VisibilityIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                      <Typography variant="body2"><strong>{myTotalViews.toLocaleString()}</strong> Views</Typography>
-                    </Box>
-                  </Stack>
-                </Popover>
-              </Box>
-            </Box>
-            <Stack direction="row" spacing={1}>
-              <Button
-                component={Link}
-                to="/create"
-                variant="contained"
-                startIcon={<AddIcon />}
-                sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-              >
-                New Pack
-              </Button>
-              <Button
-                component={Link}
-                to="/my-packs"
-                variant="outlined"
-                startIcon={<FolderIcon />}
-                sx={{ borderColor: 'primary.main', color: 'primary.main', '&:hover': { borderColor: 'primary.dark' } }}
-              >
-                My Packs
-              </Button>
-            </Stack>
-          </Box>
-        </>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px]" align="start">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <Folder className="size-5 text-primary" />
+                      <span className="text-sm"><strong>{myPackCount}</strong> Packs</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Music className="size-5 text-primary" />
+                      <span className="text-sm"><strong>{myTotalMaps}</strong> Maps</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Eye className="size-5 text-primary" />
+                      <span className="text-sm"><strong>{myTotalViews.toLocaleString()}</strong> Views</span>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={onOpenCreatePack}>
+              <Plus className="size-4" />
+              New Pack
+            </Button>
+            <Button variant="outline" render={<Link to="/my-packs" />}>
+              <Folder className="size-4" />
+              My Packs
+            </Button>
+          </div>
+        </div>
       ) : (
-        <Paper
-          sx={{
-            p: 4,
-            mb: 3,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-            <Box>
-              <Typography variant="h4" fontWeight="bold" sx={{ mb: 0.5, color: 'text.primary' }}>
+        <Card className="mb-6 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="mb-1 text-2xl font-bold">
                 pack
-                <Box
-                  component="span"
-                  sx={{
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    px: 0.75,
-                    py: 0.25,
-                    borderRadius: 0.5,
-                    ml: 0.75,
-                    fontSize: '0.8em',
-                  }}
-                >
+                <span className="ml-1.5 rounded bg-primary px-1.5 py-0.5 text-[0.8em] text-primary-foreground">
                   share
-                </Box>
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
+                </span>
+              </h1>
+              <p className="text-muted-foreground">
                 Create, share, and discover osu! mania beatmap packs
-              </Typography>
+              </p>
               {totalPacks > 0 && (
-                <Typography variant="body2" color="text.disabled" sx={{ mt: 0.5 }}>
+                <p className="mt-1 text-sm text-muted-foreground/60">
                   {totalPacks} packs shared by the community
-                </Typography>
+                </p>
               )}
-            </Box>
-            <Stack direction="row" spacing={1.5}>
-              <Button
-                variant="contained"
-                href={getLoginUrl()}
-                startIcon={
-                  <Box
-                    component="img"
-                    src="https://upload.wikimedia.org/wikipedia/commons/1/1e/Osu%21_Logo_2016.svg"
-                    sx={{ width: 18, height: 18 }}
-                  />
-                }
-                sx={{
-                  backgroundColor: 'primary.main',
-                  '&:hover': { backgroundColor: 'primary.dark' },
-                  px: 3,
-                }}
-              >
+            </div>
+            <div className="flex gap-3">
+              <Button render={<a href={getLoginUrl()} />} className="gap-1.5 px-4">
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/1/1e/Osu%21_Logo_2016.svg"
+                  alt=""
+                  className="size-[18px]"
+                />
                 Sign in with osu!
               </Button>
-              <Button
-                component={Link}
-                to="/explore"
-                variant="outlined"
-                sx={{
-                  borderColor: 'divider',
-                  color: 'text.primary',
-                  '&:hover': { borderColor: 'primary.main' },
-                }}
-              >
+              <Button variant="outline" render={<Link to="/explore" />}>
                 Browse Packs
               </Button>
-            </Stack>
-          </Box>
-        </Paper>
+            </div>
+          </div>
+        </Card>
       )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress sx={{ color: 'primary.main' }} />
-        </Box>
+        <div className="flex justify-center py-16">
+          <Spinner className="size-6 text-primary" />
+        </div>
       )}
 
       {!loading && (
         <>
           {/* Popular Packs */}
           {popularPacks && popularPacks.packs.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <TrendingUpIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                <Typography variant="subtitle1" fontWeight="bold">
-                  Popular
-                </Typography>
-              </Box>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <div className="mb-6">
+              <div className="mb-3 flex items-center gap-2">
+                <TrendingUp className="size-5 text-primary" />
+                <h3 className="text-base font-bold">Popular</h3>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
                 {popularPacks.packs.map((pack, i) => (
-                  <Paper
+                  <Link
                     key={pack.id}
-                    component={Link}
                     to={`/pack/${pack.share_code}`}
-                    sx={{
-                      flex: 1,
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      overflow: 'hidden',
-                      transition: 'box-shadow 0.2s',
-                      '&:hover': { boxShadow: 2 },
-                    }}
+                    className="overflow-hidden rounded-lg border bg-card text-card-foreground no-underline transition-shadow hover:shadow-md"
                   >
-                    {/* Cover strip from first few beatmapsets */}
-                    <Box sx={{ height: 72, position: 'relative', overflow: 'hidden', backgroundColor: 'action.hover', display: 'flex' }}>
+                    {/* Cover strip */}
+                    <div className="relative flex h-[72px] overflow-hidden bg-muted">
                       {pack.beatmapset_ids?.slice(0, 5).map((id) => (
-                        <Box
+                        <img
                           key={id}
-                          component="img"
                           src={`https://assets.ppy.sh/beatmaps/${id}/covers/cover.jpg`}
-                          sx={{
-                            flex: 1,
-                            minWidth: 0,
-                            height: '100%',
-                            objectFit: 'cover',
-                            opacity: 0.7,
-                          }}
+                          alt=""
+                          className="h-full min-w-0 flex-1 object-cover opacity-70"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                       ))}
-                      <Chip
-                        label={`#${i + 1}`}
-                        size="small"
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          left: 8,
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: 11,
-                          height: 22,
-                        }}
-                      />
-                    </Box>
-                    <Box sx={{ p: 2 }}>
-                      <Typography variant="body1" fontWeight="bold" noWrap>
-                        {pack.name}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                        <Avatar src={pack.user.avatar_url} sx={{ width: 20, height: 20 }} />
-                        <Typography variant="caption" color="text.secondary">
-                          {pack.user.username}
-                        </Typography>
-                        <Box sx={{ flex: 1 }} />
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <VisibilityIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary">
-                            {pack.views.toLocaleString()} views
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <MusicNoteIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary">
-                            {pack.beatmap_count} beatmaps
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Paper>
+                      <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">
+                        #{i + 1}
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <p className="truncate font-bold">{pack.name}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <img src={pack.user.avatar_url} alt="" className="size-5 rounded-full" />
+                        <span className="text-xs text-muted-foreground">{pack.user.username}</span>
+                        <span className="flex-1" />
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Eye className="size-3.5" />
+                          {pack.views.toLocaleString()}
+                        </span>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Music className="size-3.5" />
+                          {pack.beatmap_count}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
                 ))}
-              </Stack>
-            </Box>
+              </div>
+            </div>
           )}
 
-          {/* Recent Packs Feed */}
+          {/* Recent Packs */}
           {recentPacks && recentPacks.packs.length > 0 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ExploreIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Recent
-                  </Typography>
-                </Box>
-                <Button
-                  component={Link}
-                  to="/explore"
-                  size="small"
-                  sx={{ color: 'primary.main' }}
-                >
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Compass className="size-5 text-primary" />
+                  <h3 className="text-base font-bold">Recent</h3>
+                </div>
+                <Button variant="link" size="sm" render={<Link to="/explore" />}>
                   View All
                 </Button>
-              </Box>
-              <Grid container spacing={2}>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
                 {recentPacks.packs.map((pack) => (
-                  <Grid key={pack.id} size={{ xs: 12, sm: 6 }}>
-                    <PackCard pack={pack} compact />
-                  </Grid>
+                  <PackCard key={pack.id} pack={pack} compact />
                 ))}
-              </Grid>
-            </Box>
+              </div>
+            </div>
           )}
 
           {/* Empty state */}
           {(!recentPacks || recentPacks.packs.length === 0) && (!popularPacks || popularPacks.packs.length === 0) && (
-            <Paper sx={{ p: 6, textAlign: 'center' }}>
-              <ExploreIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No packs yet
-              </Typography>
-              <Typography color="text.secondary" sx={{ mb: 2 }}>
-                Be the first to create a pack!
-              </Typography>
-              <Button
-                component={Link}
-                to="/create"
-                variant="contained"
-                startIcon={<AddIcon />}
-                sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-              >
+            <Card className="p-12 text-center">
+              <Compass className="mx-auto mb-4 size-12 text-muted-foreground/50" />
+              <h3 className="mb-1 text-lg text-muted-foreground">No packs yet</h3>
+              <p className="mb-4 text-muted-foreground">Be the first to create a pack!</p>
+              <Button onClick={onOpenCreatePack}>
+                <Plus className="size-4" />
                 Create Pack
               </Button>
-            </Paper>
+            </Card>
           )}
         </>
       )}
-    </Box>
+    </div>
   );
 }

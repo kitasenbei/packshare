@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import { Box, Typography, Chip, Checkbox, Stack } from '@mui/material';
-import FolderIcon from '@mui/icons-material/Folder';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
+import { Folder } from 'lucide-react';
 import SlotBadge from './SlotBadge';
 
 export interface BeatmapRowProps {
@@ -48,8 +50,8 @@ export interface BeatmapRowProps {
 }
 
 const densityPresets = {
-  normal: { gap: 1.5, height: 56 },
-  compact: { gap: 1, height: 48 },
+  normal: { gap: 'gap-1.5', height: 'h-14' },
+  compact: { gap: 'gap-1', height: 'h-12' },
 };
 
 export default function BeatmapRow({
@@ -79,8 +81,8 @@ export default function BeatmapRow({
 }: BeatmapRowProps) {
   const preset = densityPresets[density];
   const isLight = variant === 'light';
-  const subtitleColor = isLight ? 'text.secondary' : 'rgba(255,255,255,0.5)';
-  const hoverBg = isLight ? 'action.hover' : 'rgba(255,255,255,0.06)';
+  const subtitleColor = isLight ? 'text-muted-foreground' : 'text-white/50';
+  const hoverBg = isLight ? 'hover:bg-muted' : 'hover:bg-white/[0.06]';
 
   // Build subtitle parts
   const subtitleParts: ReactNode[] = [];
@@ -109,190 +111,147 @@ export default function BeatmapRow({
   const hasBgThumb = beatmapsetId != null;
   const thumbUrl = hasBgThumb ? `https://assets.ppy.sh/beatmaps/${beatmapsetId}/covers/list.jpg` : '';
 
+  // Inline height values for the thumbnail (needs exact px for square)
+  const heightPx = density === 'compact' ? 48 : 56;
+
   return (
-    <>
-      <Box
-        onClick={onClick}
-        sx={{
-          display: 'flex',
-          alignItems: 'stretch',
-          height: preset.height,
-          gap: preset.gap,
-          mb: 1,
-          borderRadius: 1,
-          '&:hover': {
-            backgroundColor: stashHighlight ? 'rgba(132,169,140,0.15)' : hoverBg,
-          },
-          border: stashHighlight ? '1px solid rgba(132,169,140,0.3)' : undefined,
-          cursor: onClick ? 'pointer' : undefined,
-          ...sx,
-        }}
-      >
-        {/* Square thumbnail */}
-        {hasBgThumb && (
-          <Box
-            sx={{
-              width: preset.height,
-              height: preset.height,
-              borderRadius: 1,
-              overflow: 'hidden',
-              flexShrink: 0,
-              position: 'relative',
-            }}
-          >
-            <Box
-              component="img"
-              src={thumbUrl}
-              alt=""
-              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-            {starRating != null && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 0.25,
-                  py: 0.25,
-                  backgroundColor: 'rgba(0,0,0,0.7)',
-                  color: '#f5c842',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  lineHeight: 1,
-                }}
-              >
-                ★ {starRating.toFixed(2)}
-              </Box>
-            )}
-          </Box>
+    <div
+      onClick={onClick}
+      className={cn(
+        'flex items-stretch rounded mb-1',
+        preset.height,
+        preset.gap,
+        stashHighlight ? 'border border-primary/30 hover:bg-primary/15' : hoverBg,
+        onClick && 'cursor-pointer',
+      )}
+      style={sx as React.CSSProperties}
+    >
+      {/* Square thumbnail */}
+      {hasBgThumb && (
+        <div
+          className="relative shrink-0 overflow-hidden rounded"
+          style={{ width: heightPx, height: heightPx }}
+        >
+          <img
+            src={thumbUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+          {starRating != null && (
+            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-0.5 bg-black/70 py-0.5 text-[10px] font-bold leading-none text-[#f5c842]">
+              ★ {starRating.toFixed(2)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Content (centered vertically when thumbnail stretches the row) */}
+      <div className={cn('flex flex-1 items-center min-w-0', preset.gap)}>
+        {/* Checkbox */}
+        {checkbox && (
+          <Checkbox
+            checked={checkbox.checked}
+            disabled={checkbox.disabled}
+            onClick={(e) => e.stopPropagation()}
+            onCheckedChange={checkbox.onChange}
+          />
         )}
 
-        {/* Content (centered vertically when thumbnail stretches the row) */}
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: preset.gap, minWidth: 0 }}>
-          {/* Checkbox */}
-          {checkbox && (
-            <Checkbox
-              checked={checkbox.checked}
-              disabled={checkbox.disabled}
-              onClick={(e) => e.stopPropagation()}
-              onChange={checkbox.onChange}
-              sx={{ '&.Mui-checked': { color: 'primary.main' } }}
-            />
-          )}
+        {/* Slot badge (tournament) */}
+        {slotBadge && (
+          <SlotBadge label={slotBadge.label} color={slotBadge.color} onClick={slotBadge.onClick} />
+        )}
 
-          {/* Slot badge (tournament) */}
-          {slotBadge && (
-            <SlotBadge label={slotBadge.label} color={slotBadge.color} onClick={slotBadge.onClick} />
-          )}
+        {/* Mod chips (tournament) */}
+        {modChips && modChips.map((mc) => (
+          <span
+            key={mc.label}
+            className="inline-flex h-[30px] shrink-0 items-center gap-1 rounded-full px-2 text-xs font-bold text-white"
+            style={{ backgroundColor: mc.color }}
+          >
+            {mc.icon && <img src={mc.icon} alt="" className="size-7" />}
+            {mc.label}
+          </span>
+        ))}
 
-          {/* Mod chips (tournament) */}
-          {modChips && modChips.map((mc) => (
-            <Chip
-              key={mc.label}
-              label={mc.label}
-              size="small"
-              icon={mc.icon ? <Box component="img" src={mc.icon} alt="" sx={{ width: 28, height: 28 }} /> : undefined}
-              sx={{
-                backgroundColor: mc.color,
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: 12,
-                height: 30,
-              }}
-            />
-          ))}
-
-          {/* Map info */}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
-              <Typography
-                variant={density === 'compact' ? 'body2' : undefined}
-                sx={{ fontWeight: 500 }}
-                noWrap
-              >
-                {titleOnly ? title : `${artist} - ${title}`}
-              </Typography>
-              {keys != null && (
-                <Chip
-                  label={`${keys}K`}
-                  size="small"
-                  sx={{
-                    height: 20,
-                    fontSize: 11,
-                    fontWeight: 'bold',
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    flexShrink: 0,
-                  }}
-                />
+        {/* Map info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={cn(
+                'truncate font-medium',
+                density === 'compact' ? 'text-sm' : 'text-base',
               )}
-            </Stack>
+            >
+              {titleOnly ? title : `${artist} - ${title}`}
+            </span>
+            {keys != null && (
+              <Badge className="h-5 shrink-0 text-[11px] font-bold">
+                {keys}K
+              </Badge>
+            )}
+          </div>
 
-            {/* Subtitle */}
-            {(subtitleParts.length > 0 || sourceChip) && (
-              density === 'compact' && sourceChip ? (
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="caption" color={subtitleColor} noWrap>
-                    {subtitleParts}
-                  </Typography>
-                  <Chip
-                    label={sourceChip.label}
-                    size="small"
-                    sx={{
-                      height: 18,
-                      fontSize: 10,
-                      backgroundColor: sourceChip.color,
-                      color: 'white',
-                    }}
-                  />
-                  {sourceTooltip && (
-                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
-                      <FolderIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                      <Typography variant="caption" color="text.disabled" noWrap>
-                        {sourceTooltip}
-                      </Typography>
-                    </Stack>
-                  )}
-                </Stack>
-              ) : (
-                <Typography
-                  variant={density === 'compact' ? 'caption' : 'body2'}
-                  sx={{ color: subtitleColor }}
-                  noWrap
-                >
+          {/* Subtitle */}
+          {(subtitleParts.length > 0 || sourceChip) && (
+            density === 'compact' && sourceChip ? (
+              <div className="flex items-center gap-2">
+                <span className={cn('truncate text-xs', subtitleColor)}>
                   {subtitleParts}
-                </Typography>
-              )
-            )}
-
-            {/* Title-only subtitle (artist // creator) */}
-            {titleOnly && (
-              <Typography variant="caption" color={subtitleColor} noWrap>
-                {artist} // {creator}
-              </Typography>
-            )}
-          </Box>
-
-          {/* Separate star rating (tournament style) */}
-          {starRatingSeparate && starRating != null && (
-            <Typography sx={{ color: '#f5c842', fontWeight: 'bold', mr: 2 }}>
-              ★ {starRating.toFixed(2)}
-            </Typography>
+                </span>
+                <span
+                  className="inline-flex h-[18px] shrink-0 items-center rounded-full px-1.5 text-[10px] text-white"
+                  style={{ backgroundColor: sourceChip.color }}
+                >
+                  {sourceChip.label}
+                </span>
+                {sourceTooltip && (
+                  <span className="flex shrink-0 items-center gap-1">
+                    <Folder className="size-3.5 text-muted-foreground/50" />
+                    <span className="truncate text-xs text-muted-foreground/50">
+                      {sourceTooltip}
+                    </span>
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span
+                className={cn(
+                  'block truncate',
+                  density === 'compact' ? 'text-xs' : 'text-sm',
+                  subtitleColor,
+                )}
+              >
+                {subtitleParts}
+              </span>
+            )
           )}
 
-          {/* Status chip */}
-          {statusChip && (
-            <Chip label={statusChip.label} size="small" sx={{ fontSize: 10 }} />
+          {/* Title-only subtitle (artist // creator) */}
+          {titleOnly && (
+            <span className={cn('block truncate text-xs', subtitleColor)}>
+              {artist} // {creator}
+            </span>
           )}
+        </div>
 
-          {/* Actions slot */}
-          {actions}
-        </Box>
-      </Box>
-    </>
+        {/* Separate star rating (tournament style) */}
+        {starRatingSeparate && starRating != null && (
+          <span className="mr-2 font-bold text-[#f5c842]">
+            ★ {starRating.toFixed(2)}
+          </span>
+        )}
+
+        {/* Status chip */}
+        {statusChip && (
+          <Badge variant="secondary" className="text-[10px]">
+            {statusChip.label}
+          </Badge>
+        )}
+
+        {/* Actions slot */}
+        {actions}
+      </div>
+    </div>
   );
 }

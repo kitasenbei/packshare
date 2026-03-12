@@ -1,0 +1,30 @@
+# MUI → shadcn Migration Task List
+# [x] = done, [ ] = todo, [~] = in progress
+
+[x] src/App.tsx
+[x] src/pages/Sidebar.tsx
+[x] src/pages/Home.tsx
+[x] src/pages/Explore.tsx
+[x] src/features/dashboard/components/Dashboard.tsx
+[x] src/features/auth/components/KeyManager.tsx
+[x] src/shared/components/UserFilter.tsx
+[x] src/features/pack/components/PackCard.tsx
+[x] src/features/pack/components/PackBanner.tsx
+[x] src/features/pack/components/PackCreator.tsx
+[x] src/features/pack/components/PackViewer.tsx
+[x] src/features/pack/components/MyPacks.tsx
+[x] src/features/pack/components/SharedPack.tsx
+[x] src/features/tournament/components/Tournaments.tsx
+[x] src/features/tournament/components/TournamentCreateSection.tsx
+[x] src/features/tournament/components/TournamentPlayers.tsx
+[x] src/features/tournament/components/TournamentBracket.tsx
+[x] src/features/tournament/components/TournamentAnnouncements.tsx
+[x] src/features/tournament/components/TournamentMappool.tsx
+[x] src/features/tournament/components/SiteSettings.tsx
+[x] src/features/tournament/components/SiteBuilder.tsx
+[x] src/features/tournament/components/SiteRenderer.tsx
+[x] src/features/tournament/components/canvas/CanvasEditor.tsx
+[x] src/features/tournament/components/canvas/CanvasItem.tsx
+[x] src/features/tournament/components/builder/BuilderCanvas.tsx
+[x] src/features/tournament/components/builder/ElementTree.tsx
+[x] src/features/tournament/components/builder/StylePanel.tsx

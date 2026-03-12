@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
-import { Box, Typography, Button, CircularProgress } from '@mui/material';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
+import { CloudUpload, CheckCircle, CircleAlert } from 'lucide-react';
 import { uploadImage } from '../../features/tournament/api/tournaments';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -73,103 +73,69 @@ export default function ImageUpload({ label = 'Upload Image', value, onChange, a
   };
 
   return (
-    <Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+    <div>
+      <p className="mb-1 text-sm text-muted-foreground">
         {label}
-      </Typography>
+      </p>
 
-      <Box
+      <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => !value && inputRef.current?.click()}
-        sx={{
-          position: 'relative',
-          aspectRatio,
-          border: '2px dashed',
-          borderColor: error ? 'error.main' : dragOver ? 'primary.main' : 'divider',
-          borderRadius: 2,
-          backgroundColor: dragOver ? 'rgba(132,169,140,0.08)' : 'background.paper',
-          cursor: value ? 'default' : 'pointer',
-          overflow: 'hidden',
-          transition: 'all 0.2s',
-          '&:hover': !value ? { borderColor: 'primary.main' } : {},
-        }}
+        className={cn(
+          'relative overflow-hidden rounded-lg border-2 border-dashed transition-all',
+          error ? 'border-destructive' : dragOver ? 'border-primary' : 'border-border',
+          dragOver ? 'bg-primary/5' : 'bg-background',
+          value ? 'cursor-default' : 'cursor-pointer hover:border-primary',
+        )}
+        style={{ aspectRatio }}
       >
         {value ? (
           <>
-            <Box
-              component="img"
+            <img
               src={value}
-              sx={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
+              alt=""
+              className="h-full w-full object-cover"
             />
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0,
-                transition: 'opacity 0.2s',
-                '&:hover': { opacity: 1 },
-              }}
-            >
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
               <Button
-                variant="contained"
-                size="small"
+                size="sm"
                 onClick={handleRemove}
-                sx={{ backgroundColor: '#ff4444' }}
+                className="bg-red-500 text-white hover:bg-red-600"
               >
                 Remove
               </Button>
-            </Box>
-            <CheckCircleIcon
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                color: 'success.main',
-                backgroundColor: 'white',
-                borderRadius: '50%',
-              }}
-            />
+            </div>
+            <CheckCircle className="absolute right-2 top-2 size-5 rounded-full bg-white text-green-500" />
           </>
         ) : loading ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <CircularProgress size={32} sx={{ color: 'primary.main' }} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <div className="flex h-full flex-col items-center justify-center">
+            <Spinner className="size-8 text-primary" />
+            <p className="mt-1 text-sm text-muted-foreground">
               Uploading...
-            </Typography>
-          </Box>
+            </p>
+          </div>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', p: 2 }}>
-            <CloudUploadIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
-            <Typography variant="body2" color="text.secondary" textAlign="center">
+          <div className="flex h-full flex-col items-center justify-center p-2">
+            <CloudUpload className="mb-1 size-10 text-muted-foreground/50" />
+            <p className="text-center text-sm text-muted-foreground">
               Drag & drop or click to upload
-            </Typography>
-            <Typography variant="caption" color="text.disabled">
+            </p>
+            <p className="text-xs text-muted-foreground/50">
               JPG, PNG, WebP, GIF · Max {MAX_SIZE_MB}MB
-            </Typography>
-          </Box>
+            </p>
+          </div>
         )}
-      </Box>
+      </div>
 
       {error && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-          <ErrorIcon sx={{ fontSize: 16, color: 'error.main' }} />
-          <Typography variant="caption" color="error">
+        <div className="mt-1 flex items-center gap-1">
+          <CircleAlert className="size-4 text-destructive" />
+          <p className="text-xs text-destructive">
             {error}
-          </Typography>
-        </Box>
+          </p>
+        </div>
       )}
 
       <input
@@ -177,8 +143,8 @@ export default function ImageUpload({ label = 'Upload Image', value, onChange, a
         type="file"
         accept={ALLOWED_TYPES.join(',')}
         onChange={handleInputChange}
-        style={{ display: 'none' }}
+        className="hidden"
       />
-    </Box>
+    </div>
   );
 }

@@ -1,32 +1,25 @@
 import { useState, useRef, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import {
-  Box,
-  Typography,
-  Button,
-  Stack,
-  IconButton,
   Dialog,
   DialogContent,
-  DialogActions,
-  Card,
-  CardHeader,
-  CardContent,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Trash2,
+  Link,
+  X,
+  ExternalLink,
+  Trophy,
+  Users,
   List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import LinkIcon from '@mui/icons-material/Link';
-import CloseIcon from '@mui/icons-material/Close';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import GroupIcon from '@mui/icons-material/Group';
-import ViewListIcon from '@mui/icons-material/ViewList';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import ImageIcon from '@mui/icons-material/Image';
+  Info,
+  Image as ImageIcon,
+} from 'lucide-react';
 import {
   updateTournament,
   deleteTournament,
@@ -120,7 +113,7 @@ export default function SettingsTab({
       canvas.width = croppedArea.width;
       canvas.height = croppedArea.height;
       const ctx = canvas.getContext('2d')!;
-      const img = new Image();
+      const img = new window.Image();
       img.crossOrigin = 'anonymous';
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
@@ -152,9 +145,17 @@ export default function SettingsTab({
     setDeleting(false);
   };
 
+  const infoRows = [
+    { icon: <Link className="size-4" />, label: 'Abbreviation', value: tournament.abbreviation, mono: true },
+    { icon: <Users className="size-4" />, label: 'Format', value: tournament.format, mono: false },
+    { icon: <List className="size-4" />, label: 'Stages', value: stages.length.toString(), mono: false },
+    { icon: <Trophy className="size-4" />, label: 'Total Maps', value: totalMaps.toString(), mono: false },
+    { icon: <ExternalLink className="size-4" />, label: 'Public URL', value: `${window.location.origin}/t/${tournament.abbreviation}`, mono: true },
+  ];
+
   return (
     <>
-      <Stack spacing={2}>
+      <div className="flex flex-col gap-4">
         {/* Status */}
         {isOwner && (
           <TournamentStatus value={tournament.status as 'upcoming' | 'live' | 'completed'} onChange={handleStatusChange} />
@@ -162,217 +163,188 @@ export default function SettingsTab({
 
         {/* Branding */}
         {isOwner && (
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-            <Box>
-              <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => bannerInputRef.current?.click()}
-                startIcon={<ImageIcon />}
-                sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
-              >
-                {tournament.banner_url ? 'Change Banner' : 'Upload Banner'}
-              </Button>
-            </Box>
-            <Box>
-              <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => logoInputRef.current?.click()}
-                startIcon={<ImageIcon />}
-                sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
-              >
-                {tournament.logo_url ? 'Change Logo' : 'Upload Logo'}
-              </Button>
-            </Box>
-          </Box>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              className="justify-start"
+              onClick={() => bannerInputRef.current?.click()}
+            >
+              <ImageIcon className="size-4" />
+              {tournament.banner_url ? 'Change Banner' : 'Upload Banner'}
+            </Button>
+            <Button
+              variant="outline"
+              className="justify-start"
+              onClick={() => logoInputRef.current?.click()}
+            >
+              <ImageIcon className="size-4" />
+              {tournament.logo_url ? 'Change Logo' : 'Upload Logo'}
+            </Button>
+          </div>
         )}
 
         {/* Info */}
-        <Card variant="outlined">
-          <CardHeader
-            avatar={<InfoOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary' }} />}
-            title="Information"
-            slotProps={{ title: { variant: 'subtitle2', fontWeight: 'bold' } }}
-            sx={{ pb: 0 }}
-          />
-          <CardContent sx={{ pt: 1 }}>
-            <List dense disablePadding>
-              {[
-                { icon: <LinkIcon sx={{ fontSize: 18 }} />, label: 'Abbreviation', value: tournament.abbreviation, mono: true },
-                { icon: <GroupIcon sx={{ fontSize: 18 }} />, label: 'Format', value: tournament.format },
-                { icon: <ViewListIcon sx={{ fontSize: 18 }} />, label: 'Stages', value: stages.length.toString() },
-                { icon: <EmojiEventsIcon sx={{ fontSize: 18 }} />, label: 'Total Maps', value: totalMaps.toString() },
-                { icon: <OpenInNewIcon sx={{ fontSize: 18 }} />, label: 'Public URL', value: `${window.location.origin}/t/${tournament.abbreviation}`, mono: true },
-              ].map((row, i) => (
-                <ListItem
-                  key={row.label}
-                  divider={i < 4}
-                  sx={{ px: 0 }}
-                  secondaryAction={
-                    <Typography
-                      variant="body2"
-                      fontWeight={500}
-                      sx={{ fontFamily: row.mono ? 'monospace' : undefined, fontSize: row.mono ? 12 : undefined }}
-                    >
-                      {row.value}
-                    </Typography>
-                  }
-                >
-                  <ListItemIcon sx={{ minWidth: 36 }}>{row.icon}</ListItemIcon>
-                  <ListItemText primary={row.label} slotProps={{ primary: { variant: 'body2', color: 'text.secondary' } }} />
-                </ListItem>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Info className="size-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-bold">Information</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {infoRows.map((row) => (
+                <div key={row.label} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">{row.icon}</span>
+                    <span className="text-sm text-muted-foreground">{row.label}</span>
+                  </div>
+                  <span className={cn('text-sm font-medium', row.mono && 'font-mono text-xs')}>
+                    {row.value}
+                  </span>
+                </div>
               ))}
-            </List>
+            </div>
           </CardContent>
         </Card>
 
         {/* Danger zone */}
         {isOwner && (
-          <Card variant="outlined" sx={{ borderColor: 'error.main', borderStyle: 'dashed' }}>
-            <CardHeader
-              avatar={<DeleteIcon sx={{ fontSize: 18, color: 'error.main' }} />}
-              title="Danger Zone"
-              subheader="Permanently delete this tournament and all associated data"
-              slotProps={{
-                title: { variant: 'subtitle2', fontWeight: 'bold', color: 'error' },
-                subheader: { variant: 'caption' },
-              }}
-              sx={{ pb: 0 }}
-            />
+          <Card className="border-dashed border-destructive">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Trash2 className="size-4 text-destructive" />
+                <CardTitle className="text-sm font-bold text-destructive">Danger Zone</CardTitle>
+              </div>
+              <CardDescription>Permanently delete this tournament and all associated data</CardDescription>
+            </CardHeader>
             <CardContent>
               {!confirmDelete ? (
                 <Button
-                  size="small"
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon />}
+                  size="sm"
+                  variant="destructive"
                   onClick={() => setConfirmDelete(true)}
-                  sx={{ textTransform: 'none' }}
                 >
+                  <Trash2 className="size-4" />
                   Delete Tournament
                 </Button>
               ) : (
-                <Stack direction="row" spacing={1}>
+                <div className="flex gap-2">
                   <Button
-                    size="small"
-                    variant="contained"
+                    size="sm"
+                    variant="destructive"
                     onClick={handleDelete}
                     disabled={deleting}
-                    sx={{
-                      backgroundColor: 'error.main',
-                      '&:hover': { backgroundColor: 'error.dark' },
-                    }}
                   >
                     {deleting ? 'Deleting...' : 'Yes, delete permanently'}
                   </Button>
                   <Button
-                    size="small"
-                    variant="text"
+                    size="sm"
+                    variant="ghost"
                     onClick={() => setConfirmDelete(false)}
-                    sx={{ textTransform: 'none' }}
                   >
                     Cancel
                   </Button>
-                </Stack>
+                </div>
               )}
             </CardContent>
           </Card>
         )}
-      </Stack>
+      </div>
 
       {/* Hidden file inputs */}
-      <input ref={bannerInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) { startCrop(f); setImageModal('banner'); } e.target.value = ''; }} style={{ display: 'none' }} />
-      <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) { startCrop(f); setImageModal('logo'); } e.target.value = ''; }} style={{ display: 'none' }} />
+      <input ref={bannerInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) { startCrop(f); setImageModal('banner'); } e.target.value = ''; }} className="hidden" />
+      <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) { startCrop(f); setImageModal('logo'); } e.target.value = ''; }} className="hidden" />
 
       {/* Image crop modal */}
-      <Dialog open={!!imageModal} onClose={() => { setImageModal(null); setCropImage(null); }} maxWidth="sm" fullWidth>
-        <DialogContent sx={{ p: 0, position: 'relative' }}>
-          <IconButton
-            onClick={() => { setImageModal(null); setCropImage(null); }}
-            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}
-            size="small"
-          >
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-          {cropImage ? (
-            <Box sx={{ position: 'relative', width: '100%', height: imageModal === 'banner' ? 300 : 350 }}>
-              <Cropper
-                image={cropImage}
-                crop={crop}
-                zoom={zoom}
-                aspect={imageModal === 'banner' ? 4 : 1}
-                onCropChange={setCrop}
-                onZoomChange={setZoom}
-                onCropComplete={onCropComplete}
-              />
-            </Box>
-          ) : (
-            <>
-              {imageModal === 'banner' && (
-                <Box
-                  component="img"
-                  src={tournament.banner_url || placeholderBanner}
-                  sx={{ width: '100%', display: 'block' }}
-                />
-              )}
-              {imageModal === 'logo' && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                  <Box
-                    component="img"
-                    src={tournament.logo_url || placeholderLogo}
-                    sx={{ maxWidth: 256, maxHeight: 256 }}
-                  />
-                </Box>
-              )}
-            </>
-          )}
-        </DialogContent>
-        {isOwner && (
-          <DialogActions sx={{ px: 2, pb: 2 }}>
+      <Dialog open={!!imageModal} onOpenChange={(o) => { if (!o) { setImageModal(null); setCropImage(null); } }}>
+        <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => { setImageModal(null); setCropImage(null); }}
+              className="absolute right-2 top-2 z-10 bg-black/50 text-white hover:bg-black/70"
+            >
+              <X className="size-4" />
+            </Button>
             {cropImage ? (
-              <>
-                <Button variant="outlined" size="small" onClick={() => setCropImage(null)}>
-                  Cancel
-                </Button>
-                <Button variant="contained" size="small" onClick={applyCrop} disabled={cropUploading}>
-                  {cropUploading ? 'Uploading…' : 'Save'}
-                </Button>
-              </>
+              <div className="relative w-full" style={{ height: imageModal === 'banner' ? 300 : 350 }}>
+                <Cropper
+                  image={cropImage}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={imageModal === 'banner' ? 4 : 1}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
             ) : (
               <>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  onClick={async () => {
-                    try {
-                      const field = imageModal === 'banner' ? 'banner_url' : 'logo_url';
-                      const updated = await updateTournament(tournament.abbreviation, { [field]: '' });
-                      onTournamentChanged(updated);
-                      setImageModal(null);
-                    } catch (err) {
-                      onError(err instanceof Error ? err.message : 'Failed to clear image');
-                    }
-                  }}
-                >
-                  Clear
-                </Button>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<ImageIcon />}
-                  onClick={() => {
-                    if (imageModal === 'banner') bannerInputRef.current?.click();
-                    else logoInputRef.current?.click();
-                  }}
-                >
-                  {imageModal === 'banner' ? 'Upload Banner' : 'Upload Logo'}
-                </Button>
+                {imageModal === 'banner' && (
+                  <img
+                    src={tournament.banner_url || placeholderBanner}
+                    alt="Banner"
+                    className="block w-full"
+                  />
+                )}
+                {imageModal === 'logo' && (
+                  <div className="flex justify-center p-6">
+                    <img
+                      src={tournament.logo_url || placeholderLogo}
+                      alt="Logo"
+                      className="max-h-64 max-w-64"
+                    />
+                  </div>
+                )}
               </>
             )}
-          </DialogActions>
-        )}
+          </div>
+          {isOwner && (
+            <DialogFooter>
+              {cropImage ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setCropImage(null)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={applyCrop} disabled={cropUploading}>
+                    {cropUploading ? 'Uploading...' : 'Save'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const field = imageModal === 'banner' ? 'banner_url' : 'logo_url';
+                        const updated = await updateTournament(tournament.abbreviation, { [field]: '' });
+                        onTournamentChanged(updated);
+                        setImageModal(null);
+                      } catch (err) {
+                        onError(err instanceof Error ? err.message : 'Failed to clear image');
+                      }
+                    }}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (imageModal === 'banner') bannerInputRef.current?.click();
+                      else logoInputRef.current?.click();
+                    }}
+                  >
+                    <ImageIcon className="size-4" />
+                    {imageModal === 'banner' ? 'Upload Banner' : 'Upload Logo'}
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
+          )}
+        </DialogContent>
       </Dialog>
     </>
   );

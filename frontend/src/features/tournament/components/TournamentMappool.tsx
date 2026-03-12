@@ -1,37 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Stack,
-  Avatar,
-  Tabs,
-  Tab,
+  Download, Copy, Plus, Trash2, PackageOpen, Link, Pencil, Check, ImagePlus,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Chip,
-  Divider,
-  Snackbar,
-  Alert,
-  TextField,
-  InputAdornment,
-  CircularProgress,
-  FormControlLabel,
-  Checkbox,
-} from '@mui/material';
-import DownloadIcon from '@mui/icons-material/Download';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import CloseIcon from '@mui/icons-material/Close';
-import LinkIcon from '@mui/icons-material/Link';
-import EditIcon from '@mui/icons-material/Edit';
-import CheckIcon from '@mui/icons-material/Check';
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import type { StashBeatmap } from '../../../shared/types/beatmap';
 import type { User } from '../../auth/api/auth';
 import { getBeatmapset } from '../../auth/api/auth';
@@ -97,7 +82,6 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [stash, setStash] = useState<StashBeatmap[]>([]);
   const [customSlotColors, setCustomSlotColors] = useState<Record<string, string>>({});
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
@@ -187,7 +171,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
-    setSnackbar({ open: true, message: 'Link copied!' });
+    toast.success('Link copied!');
   };
 
   // Inline editing handlers
@@ -207,9 +191,9 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     try {
       const updated = await updateTournament(abbreviation, { name: trimmed });
       setTournament(updated);
-      setSnackbar({ open: true, message: 'Name updated' });
+      toast.success('Name updated');
     } catch (err) {
-      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update name' });
+      toast.error(err instanceof Error ? err.message : 'Failed to update name');
     }
     setEditingName(false);
   };
@@ -229,9 +213,9 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
       const updated = await updateTournament(abbreviation, { banner_url: url || undefined });
       setTournament(updated);
       setBannerUploadOpen(false);
-      setSnackbar({ open: true, message: url ? 'Banner updated' : 'Banner removed' });
+      toast.success(url ? 'Banner updated' : 'Banner removed');
     } catch (err) {
-      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update banner' });
+      toast.error(err instanceof Error ? err.message : 'Failed to update banner');
     }
   };
 
@@ -241,9 +225,9 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
       const updated = await updateTournament(abbreviation, { logo_url: url || undefined });
       setTournament(updated);
       setLogoUploadOpen(false);
-      setSnackbar({ open: true, message: url ? 'Logo updated' : 'Logo removed' });
+      toast.success(url ? 'Logo updated' : 'Logo removed');
     } catch (err) {
-      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to update logo' });
+      toast.error(err instanceof Error ? err.message : 'Failed to update logo');
     }
   };
 
@@ -373,12 +357,12 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
         setCustomSlotColors(prev => ({ ...prev, [resolvedSlotValue]: pm.customSlotColor! }));
       }
       const slotLabel = slotLabels[resolvedSlotValue] || resolvedSlotValue;
-      setSnackbar({ open: true, message: `Added to ${slotLabel} (${pm.mods.join('')})` });
+      toast.success(`Added to ${slotLabel} (${pm.mods.join('')})`);
       setPendingMaps(prev => prev.filter(m => m.id !== pendingId));
       loadTournament();
     } catch (err) {
       setPendingMaps(prev => prev.map(m => m.id === pendingId ? { ...m, adding: false } : m));
-      setSnackbar({ open: true, message: err instanceof Error ? err.message : 'Failed to add map' });
+      toast.error(err instanceof Error ? err.message : 'Failed to add map');
     }
   };
 
@@ -490,7 +474,7 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     }
 
     if (added > 0) {
-      setSnackbar({ open: true, message: `Added ${added} map${added !== 1 ? 's' : ''} to pool` });
+      toast.success(`Added ${added} map${added !== 1 ? 's' : ''} to pool`);
       loadTournament();
     }
   };
@@ -499,273 +483,199 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
     if (!abbreviation) return;
     try {
       await removeMap(abbreviation, mapId);
-      setSnackbar({ open: true, message: 'Map removed from mappool' });
+      toast.success('Map removed from mappool');
       loadTournament();
     } catch {
-      setSnackbar({ open: true, message: 'Failed to remove map' });
+      toast.error('Failed to remove map');
     }
   };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#0d0d1a' }}>
-        <CircularProgress sx={{ color: '#ff66ab' }} />
-      </Box>
+      <div className="flex justify-center items-center min-h-screen" style={{ backgroundColor: '#0d0d1a' }}>
+        <Spinner className="size-6" style={{ color: '#ff66ab' }} />
+      </div>
     );
   }
 
   if (error || !tournament) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white' }}>
-        <Typography>{error || 'Tournament not found'}</Typography>
-      </Box>
+      <div className="flex justify-center items-center min-h-screen text-white" style={{ backgroundColor: '#0d0d1a' }}>
+        <p>{error || 'Tournament not found'}</p>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#0d0d1a', color: 'white' }}>
+    <div className="min-h-screen text-white" style={{ backgroundColor: '#0d0d1a' }}>
       {/* Banner Header */}
-      <Box
-        sx={{
-          position: 'relative',
+      <div
+        className="relative px-8 pt-10 pb-4"
+        style={{
           background: tournament.banner_url
             ? `linear-gradient(to bottom, rgba(13,13,26,0.2) 0%, rgba(13,13,26,0.7) 40%, #0d0d1a 100%), url(${tournament.banner_url}) center / cover no-repeat`
             : 'linear-gradient(to bottom, rgba(255,102,171,0.2), #0d0d1a)',
-          px: 4,
-          pt: 5,
-          pb: 2,
         }}
       >
         {/* Owner banner edit overlay */}
         {isOwner && (
           <Button
-            size="small"
-            startIcon={tournament.banner_url ? <EditIcon /> : <AddPhotoAlternateIcon />}
+            size="sm"
             onClick={() => setBannerUploadOpen(true)}
-            sx={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              color: 'rgba(255,255,255,0.7)',
-              backgroundColor: 'rgba(0,0,0,0.4)',
-              backdropFilter: 'blur(4px)',
-              '&:hover': { backgroundColor: 'rgba(0,0,0,0.6)', color: 'white' },
-              textTransform: 'none',
-              fontSize: 12,
-            }}
+            className="absolute top-3 right-3 text-white/70 bg-black/40 backdrop-blur-sm hover:bg-black/60 hover:text-white"
           >
+            {tournament.banner_url ? <Pencil data-icon="inline-start" /> : <ImagePlus data-icon="inline-start" />}
             {tournament.banner_url ? 'Change Banner' : 'Add Banner'}
           </Button>
         )}
 
-        <Box sx={{ maxWidth: 1200, margin: '0 auto' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <Stack direction="row" spacing={3} alignItems="center">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-4">
               {/* Logo area */}
               {tournament.logo_url ? (
-                <Box
-                  sx={{ position: 'relative', cursor: isOwner ? 'pointer' : 'default' }}
+                <div
+                  className="relative"
+                  style={{ cursor: isOwner ? 'pointer' : 'default' }}
                   onClick={isOwner ? () => setLogoUploadOpen(true) : undefined}
                 >
-                  <Avatar
+                  <img
                     src={tournament.logo_url}
-                    sx={{
-                      width: 80,
-                      height: 80,
-                      border: '3px solid #ff66ab',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                    }}
+                    className="size-20 rounded-full object-cover"
+                    style={{ border: '3px solid #ff66ab', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
+                    alt=""
                   />
                   {isOwner && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        inset: 0,
-                        borderRadius: '50%',
-                        backgroundColor: 'rgba(0,0,0,0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: 0,
-                        transition: 'opacity 0.2s',
-                        '&:hover': { opacity: 1 },
-                      }}
-                    >
-                      <EditIcon sx={{ fontSize: 20 }} />
-                    </Box>
+                    <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      <Pencil className="size-5" />
+                    </div>
                   )}
-                </Box>
+                </div>
               ) : isOwner ? (
-                <Box
+                <div
+                  className="size-20 rounded-full border-2 border-dashed border-white/30 flex items-center justify-center cursor-pointer transition-all hover:border-[#ff66ab] hover:bg-[rgba(255,102,171,0.1)]"
                   onClick={() => setLogoUploadOpen(true)}
-                  sx={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: '50%',
-                    border: '2px dashed rgba(255,255,255,0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    '&:hover': { borderColor: '#ff66ab', backgroundColor: 'rgba(255,102,171,0.1)' },
-                  }}
                 >
-                  <AddPhotoAlternateIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 28 }} />
-                </Box>
+                  <ImagePlus className="size-7 text-white/40" />
+                </div>
               ) : null}
 
-              <Box>
+              <div>
                 {/* Editable tournament name */}
                 {editingName ? (
-                  <TextField
-                    inputRef={nameInputRef}
+                  <input
+                    ref={nameInputRef}
                     value={editNameValue}
                     onChange={(e) => setEditNameValue(e.target.value)}
                     onBlur={handleSaveName}
                     onKeyDown={handleNameKeyDown}
-                    variant="standard"
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        color: 'white',
-                        fontSize: '2.5rem',
-                        fontWeight: 'bold',
-                        lineHeight: 1.2,
-                        textShadow: '0 2px 10px rgba(0,0,0,0.5)',
-                        py: 0,
-                      },
-                      '& .MuiInput-underline:before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
-                      '& .MuiInput-underline:after': { borderBottomColor: '#ff66ab' },
-                      minWidth: 300,
-                    }}
+                    className="bg-transparent border-b border-white/30 focus:border-[#ff66ab] outline-none text-white text-[2.5rem] font-bold leading-tight min-w-[300px]"
+                    style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}
                   />
                 ) : (
-                  <Typography
-                    variant="h3"
+                  <h3
                     onClick={isOwner ? handleStartEditName : undefined}
-                    sx={{
-                      fontWeight: 'bold',
-                      textShadow: '0 2px 10px rgba(0,0,0,0.5)',
-                      cursor: isOwner ? 'pointer' : 'default',
-                      '&:hover': isOwner ? {
-                        outline: '1px dashed rgba(255,255,255,0.3)',
-                        outlineOffset: 4,
-                        borderRadius: 1,
-                      } : {},
-                    }}
+                    className={`text-4xl font-bold ${isOwner ? 'cursor-pointer hover:outline hover:outline-dashed hover:outline-white/30 hover:outline-offset-4 hover:rounded' : ''}`}
+                    style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}
                   >
                     {tournament.name}
-                  </Typography>
+                  </h3>
                 )}
-                <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5 }}>
+                <h6 className="text-xl text-white/70 mt-1">
                   {activeStage ? `${activeStage.name} Mappool` : 'Mappool'}
-                </Typography>
-              </Box>
-            </Stack>
-            <Stack spacing={1} alignItems="flex-end">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: 0.8, backgroundColor: 'rgba(0,0,0,0.3)', px: 2, py: 1, borderRadius: 2 }}>
-                <Typography variant="body2">hosted on</Typography>
-                <Typography sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                </h6>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2 opacity-80 bg-black/30 px-3 py-1.5 rounded-lg">
+                <span className="text-sm">hosted on</span>
+                <span className="font-bold flex items-center">
                   pack
-                  <Box
-                    component="span"
-                    sx={{
-                      backgroundColor: '#ff66ab',
-                      px: 0.5,
-                      py: 0.15,
-                      borderRadius: 0.5,
-                      ml: 0.5,
-                      fontSize: 12,
-                    }}
+                  <span
+                    className="ml-1 px-1 py-0.5 rounded text-xs"
+                    style={{ backgroundColor: '#ff66ab' }}
                   >
                     share
-                  </Box>
-                </Typography>
-              </Box>
+                  </span>
+                </span>
+              </div>
               <Button
-                size="small"
-                startIcon={<ContentCopyIcon />}
+                size="sm"
+                variant="ghost"
                 onClick={handleCopyLink}
-                sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: 'white' } }}
+                className="text-white/70 hover:text-white"
               >
+                <Copy data-icon="inline-start" />
                 Copy Link
               </Button>
-            </Stack>
-          </Box>
+            </div>
+          </div>
 
           {/* Stage Tabs */}
           {stages.length > 0 && (
-            <Tabs
-              value={currentStage}
-              onChange={(_, v) => setCurrentStage(v)}
-              sx={{
-                mt: 3,
-                '& .MuiTab-root': { color: 'rgba(255,255,255,0.6)', textTransform: 'none', fontWeight: 'bold', fontSize: 16 },
-                '& .Mui-selected': { color: 'white' },
-                '& .MuiTabs-indicator': { backgroundColor: '#ff66ab', height: 3 },
-              }}
-            >
+            <div className="flex gap-0 mt-6 border-b border-white/10">
               {stages.map((s) => (
-                <Tab key={s.id} label={s.name} value={s.id} />
+                <button
+                  key={s.id}
+                  onClick={() => setCurrentStage(s.id)}
+                  className={`px-4 py-2 text-base font-bold transition-colors border-b-[3px] ${
+                    currentStage === s.id
+                      ? 'text-white border-[#ff66ab]'
+                      : 'text-white/60 border-transparent hover:text-white/80'
+                  }`}
+                >
+                  {s.name}
+                </button>
               ))}
-            </Tabs>
+            </div>
           )}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Actions */}
-      <Box sx={{ maxWidth: 1200, margin: '0 auto', px: 4, py: 2, display: 'flex', gap: 2 }}>
+      <div className="max-w-[1200px] mx-auto px-8 py-4 flex gap-3">
         {maps.length > 0 && (
           <Button
-            variant="contained"
-            startIcon={<DownloadIcon />}
-            sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+            style={{ backgroundColor: '#ff66ab' }}
+            className="hover:opacity-90 text-white"
           >
+            <Download data-icon="inline-start" />
             Download All ({maps.length} maps)
           </Button>
         )}
         {isOwner && (
           <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
+            variant="outline"
             onClick={handleOpenAddDialog}
-            sx={{
-              borderColor: '#ff66ab',
-              color: '#ff66ab',
-              '&:hover': { borderColor: '#ff4499', backgroundColor: 'rgba(255,102,171,0.1)' },
-            }}
+            className="border-[#ff66ab] text-[#ff66ab] hover:bg-[rgba(255,102,171,0.1)] hover:border-[#ff4499]"
           >
+            <Plus data-icon="inline-start" />
             Add Maps
           </Button>
         )}
-      </Box>
+      </div>
 
       {/* Mappool */}
-      <Box sx={{ maxWidth: 1200, margin: '0 auto', px: 4, pb: 4 }}>
+      <div className="max-w-[1200px] mx-auto px-8 pb-8">
         {maps.length === 0 ? (
-          <Typography sx={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', py: 4 }}>
+          <p className="text-white/40 text-center py-8">
             No maps in this mappool yet
-          </Typography>
+          </p>
         ) : (
           Object.entries(groupedMaps).map(([slot, slotMaps]) => (
-            <Box key={slot} sx={{ mb: 4 }}>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                <Box
-                  sx={{
-                    backgroundColor: allSlotColors[slot] || '#666',
-                    px: 2,
-                    py: 0.5,
-                    borderRadius: 1,
-                    fontWeight: 'bold',
-                  }}
+            <div key={slot} className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <span
+                  className="px-3 py-1 rounded font-bold"
+                  style={{ backgroundColor: allSlotColors[slot] || '#666' }}
                 >
                   {slotLabels[slot] || slot}
-                </Box>
-                <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                </span>
+                <span className="text-white/50">
                   {slotMaps.length} map{slotMaps.length !== 1 ? 's' : ''}
-                </Typography>
-              </Stack>
-              <Stack spacing={1}>
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
                 {slotMaps.map((map) => (
                   <BeatmapRow
                     key={map.id}
@@ -803,470 +713,405 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                     }
                   />
                 ))}
-              </Stack>
-            </Box>
+              </div>
+            </div>
           ))
         )}
-      </Box>
+      </div>
 
       {/* Banner Upload Dialog */}
-      <Dialog open={bannerUploadOpen} onClose={() => setBannerUploadOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{tournament.banner_url ? 'Change Banner' : 'Add Banner'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            <ImageUpload
-              label="Banner Image"
-              value={tournament.banner_url || undefined}
-              onChange={handleBannerUpload}
-              aspectRatio="4/1"
-            />
-          </Box>
+      <Dialog open={bannerUploadOpen} onOpenChange={(open) => { if (!open) setBannerUploadOpen(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{tournament.banner_url ? 'Change Banner' : 'Add Banner'}</DialogTitle>
+            <DialogDescription className="sr-only">Upload or change the tournament banner image.</DialogDescription>
+          </DialogHeader>
+          <ImageUpload
+            label="Banner Image"
+            value={tournament.banner_url || undefined}
+            onChange={handleBannerUpload}
+            aspectRatio="4/1"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBannerUploadOpen(false)}>Close</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBannerUploadOpen(false)}>Close</Button>
-        </DialogActions>
       </Dialog>
 
       {/* Logo Upload Dialog */}
-      <Dialog open={logoUploadOpen} onClose={() => setLogoUploadOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>{tournament.logo_url ? 'Change Logo' : 'Add Logo'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            <ImageUpload
-              label="Tournament Logo"
-              value={tournament.logo_url || undefined}
-              onChange={handleLogoUpload}
-              aspectRatio="1/1"
-            />
-          </Box>
+      <Dialog open={logoUploadOpen} onOpenChange={(open) => { if (!open) setLogoUploadOpen(false); }}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>{tournament.logo_url ? 'Change Logo' : 'Add Logo'}</DialogTitle>
+            <DialogDescription className="sr-only">Upload or change the tournament logo.</DialogDescription>
+          </DialogHeader>
+          <ImageUpload
+            label="Tournament Logo"
+            value={tournament.logo_url || undefined}
+            onChange={handleLogoUpload}
+            aspectRatio="1/1"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLogoUploadOpen(false)}>Close</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLogoUploadOpen(false)}>Close</Button>
-        </DialogActions>
       </Dialog>
 
       {/* Add Maps Dialog */}
-      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <InventoryIcon sx={{ color: '#ff66ab' }} />
-            <span>Add Maps</span>
-          </Stack>
-          <IconButton size="small" onClick={() => setAddDialogOpen(false)}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
+      <Dialog open={addDialogOpen} onOpenChange={(open) => { if (!open) setAddDialogOpen(false); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PackageOpen className="size-5" style={{ color: '#ff66ab' }} />
+              Add Maps
+            </DialogTitle>
+            <DialogDescription className="sr-only">Add beatmaps to the tournament mappool.</DialogDescription>
+          </DialogHeader>
+
           {/* URL input */}
-          <Box sx={{ mb: 3 }}>
+          <div className="mb-4">
             {fetchedDiffs.length > 0 ? (
-              <Stack spacing={1}>
-                <Typography variant="body2" color="text.secondary">Select a difficulty:</Typography>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">Select a difficulty:</p>
                 {fetchedDiffs.map((diff, i) => (
-                  <Box
+                  <div
                     key={diff.beatmap_id}
                     onClick={() => setSelectedDiffIndex(i)}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.5,
-                      p: 1,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      border: '2px solid',
-                      borderColor: selectedDiffIndex === i ? '#ff66ab' : 'transparent',
-                      backgroundColor: selectedDiffIndex === i ? 'rgba(255,102,171,0.08)' : 'transparent',
-                      '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
-                    }}
+                    className={`flex items-center gap-3 p-2 rounded cursor-pointer border-2 transition-colors ${
+                      selectedDiffIndex === i
+                        ? 'border-[#ff66ab] bg-[rgba(255,102,171,0.08)]'
+                        : 'border-transparent hover:bg-black/5'
+                    }`}
                   >
                     {fetchedMeta && (
-                      <Box
-                        component="img"
+                      <img
                         src={`https://assets.ppy.sh/beatmaps/${fetchedMeta.beatmapset_id}/covers/list.jpg`}
                         alt=""
-                        sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', flexShrink: 0 }}
+                        className="size-12 rounded object-cover shrink-0"
                       />
                     )}
-                    <Box>
-                      <Typography variant="body2" fontWeight="bold">{diff.difficulty_name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
+                    <div>
+                      <p className="text-sm font-bold">{diff.difficulty_name}</p>
+                      <span className="text-xs text-muted-foreground">
                         {diff.keys}K · {diff.star_rating.toFixed(2)}*
-                      </Typography>
-                    </Box>
-                  </Box>
+                      </span>
+                    </div>
+                  </div>
                 ))}
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                  <Button size="small" onClick={() => { setFetchedDiffs([]); setFetchedMeta(null); setUrlInput(''); }}>Back</Button>
+                <div className="flex gap-2 mt-1">
+                  <Button size="sm" variant="outline" onClick={() => { setFetchedDiffs([]); setFetchedMeta(null); setUrlInput(''); }}>Back</Button>
                   <Button
-                    size="small"
-                    variant="contained"
+                    size="sm"
                     disabled={selectedDiffIndex === null}
                     onClick={handleAddSelectedDiff}
-                    sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                    style={{ backgroundColor: '#ff66ab' }}
+                    className="text-white hover:opacity-90"
                   >
                     Add to Pending
                   </Button>
-                </Stack>
-              </Stack>
+                </div>
+              </div>
             ) : (
-              <TextField
-                size="small"
-                fullWidth
-                placeholder="Paste a beatmapset URL or ID..."
-                value={urlInput}
-                onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
-                onPaste={(e) => {
-                  const pasted = e.clipboardData.getData('text');
-                  if (pasted && extractBeatmapsetId(pasted)) {
-                    e.preventDefault();
-                    setUrlInput(pasted);
-                    setUrlError('');
-                    handleFetchBeatmap(pasted);
-                  }
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && urlInput.trim() && !urlLoading && handleFetchBeatmap()}
-                error={!!urlError}
-                helperText={urlError}
-                disabled={urlLoading}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        {urlLoading ? <CircularProgress size={18} /> : <LinkIcon fontSize="small" />}
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
+              <div className="relative">
+                <div className="absolute left-2.5 top-1/2 -translate-y-1/2">
+                  {urlLoading ? <Spinner className="size-4" /> : <Link className="size-4 text-muted-foreground" />}
+                </div>
+                <Input
+                  className="pl-8"
+                  placeholder="Paste a beatmapset URL or ID..."
+                  value={urlInput}
+                  onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (pasted && extractBeatmapsetId(pasted)) {
+                      e.preventDefault();
+                      setUrlInput(pasted);
+                      setUrlError('');
+                      handleFetchBeatmap(pasted);
+                    }
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && urlInput.trim() && !urlLoading && handleFetchBeatmap()}
+                  aria-invalid={!!urlError}
+                  disabled={urlLoading}
+                />
+                {urlError && <p className="text-xs text-destructive mt-1">{urlError}</p>}
+              </div>
             )}
-          </Box>
+          </div>
 
           {/* Pending Maps */}
           {pendingMaps.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-                <Typography variant="subtitle2" fontWeight="bold">
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-sm font-bold">
                   Pending Maps ({pendingMaps.length})
-                </Typography>
+                </p>
                 {pendingMaps.length > 1 && (
                   <Button
-                    size="small"
-                    variant="contained"
+                    size="sm"
                     onClick={handleSubmitAllPending}
                     disabled={pendingMaps.some(m => m.adding)}
-                    sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' }, textTransform: 'none' }}
+                    style={{ backgroundColor: '#ff66ab' }}
+                    className="text-white hover:opacity-90"
                   >
                     Add All
                   </Button>
                 )}
-              </Stack>
-              <Stack spacing={0}>
+              </div>
+              <div className="flex flex-col">
                 {pendingMaps.map((pm) => {
                   const slotColor = pm.customSlotColor || allSlotColors[pm.slot] || '#666';
                   const isEditing = editingMapId === pm.id;
                   return (
-                    <Box key={pm.id}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          py: 1,
-                          px: 1.5,
-                          borderRadius: 1,
-                          backgroundColor: isEditing ? 'rgba(255,102,171,0.05)' : 'transparent',
-                          '&:hover': { backgroundColor: 'rgba(0,0,0,0.03)' },
-                        }}
+                    <div key={pm.id}>
+                      <div
+                        className={`flex items-center gap-2 py-2 px-2.5 rounded transition-colors ${
+                          isEditing ? 'bg-[rgba(255,102,171,0.05)]' : 'hover:bg-black/5'
+                        }`}
                       >
                         {/* Thumbnail */}
-                        <Box
-                          component="img"
+                        <img
                           src={`https://assets.ppy.sh/beatmaps/${pm.beatmapsetId}/covers/list.jpg`}
                           alt=""
-                          sx={{ width: 44, height: 44, borderRadius: 1, objectFit: 'cover', flexShrink: 0 }}
+                          className="size-11 rounded object-cover shrink-0"
                         />
                         {/* Slot chip */}
-                        <Chip
-                          label={pm.slot}
-                          size="small"
+                        <button
                           onClick={() => handleOpenPicker(pm.id, 'slot')}
-                          sx={{
-                            backgroundColor: slotColor,
-                            color: 'white',
-                            fontWeight: 'bold',
-                            minWidth: 40,
-                            cursor: 'pointer',
-                            '&:hover': { opacity: 0.85 },
-                          }}
-                        />
+                          className="px-2 py-0.5 rounded text-xs font-bold text-white cursor-pointer hover:opacity-85 min-w-[40px] text-center"
+                          style={{ backgroundColor: slotColor }}
+                        >
+                          {pm.slot}
+                        </button>
                         {/* Mod chips */}
                         {pm.mods.map(mod => (
-                          <Chip
+                          <button
                             key={mod}
-                            label={mod}
-                            size="small"
-                            icon={modIcons[mod] ? <Box component="img" src={modIcons[mod]} alt="" sx={{ width: 28, height: 28 }} /> : undefined}
                             onClick={() => handleOpenPicker(pm.id, 'mod')}
-                            sx={{
-                              backgroundColor: modColors[mod] || '#666',
-                              color: 'white',
-                              fontWeight: 'bold',
-                              minWidth: 32,
-                              cursor: 'pointer',
-                              '&:hover': { opacity: 0.85 },
-                            }}
-                          />
+                            className="flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold text-white cursor-pointer hover:opacity-85 min-w-[32px] text-center"
+                            style={{ backgroundColor: modColors[mod] || '#666' }}
+                          >
+                            {modIcons[mod] && <img src={modIcons[mod]} alt="" className="size-5" />}
+                            {mod}
+                          </button>
                         ))}
                         {/* Map info */}
-                        <Box sx={{ flex: 1, minWidth: 0, ml: 0.5 }}>
-                          <Typography variant="body2" noWrap fontWeight={500}>
+                        <div className="flex-1 min-w-0 ml-1">
+                          <p className="text-sm font-medium truncate">
                             {pm.artist} - {pm.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" noWrap>
+                          </p>
+                          <span className="text-xs text-muted-foreground truncate block">
                             {pm.difficultyName && `[${pm.difficultyName}] `}
                             {pm.keys > 0 && `${pm.keys}K`}
                             {pm.starRating > 0 && ` · ${pm.starRating.toFixed(2)}*`}
-                          </Typography>
-                        </Box>
+                          </span>
+                        </div>
                         {/* Delete button */}
-                        <IconButton
-                          size="small"
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={() => handleRemovePending(pm.id)}
-                          sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                          className="text-muted-foreground hover:text-destructive"
                         >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
+                          <Trash2 className="size-4" />
+                        </Button>
                         {/* Add button */}
-                        <IconButton
-                          size="small"
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => handleSubmitPending(pm.id)}
                           disabled={pm.adding}
-                          sx={{
-                            color: '#ff66ab',
-                            backgroundColor: 'rgba(255,102,171,0.1)',
-                            '&:hover': { backgroundColor: 'rgba(255,102,171,0.2)' },
-                          }}
+                          className="text-[#ff66ab] bg-[rgba(255,102,171,0.1)] hover:bg-[rgba(255,102,171,0.2)]"
                         >
-                          {pm.adding ? <CircularProgress size={18} color="inherit" /> : <AddIcon fontSize="small" />}
-                        </IconButton>
-                      </Box>
+                          {pm.adding ? <Spinner className="size-4" /> : <Plus className="size-4" />}
+                        </Button>
+                      </div>
 
                       {/* Inline picker panel */}
                       {isEditing && editingField === 'slot' && (
-                        <Box sx={{ mx: 1.5, mb: 1, p: 2, backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 1 }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                        <div className="mx-2.5 mb-2 p-3 bg-black/5 rounded">
+                          <span className="text-xs text-muted-foreground block mb-2">
                             Select slot
-                          </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+                          </span>
+                          <div className="flex flex-wrap gap-1.5 mb-2">
                             {slots.map(slot => (
-                              <Chip
+                              <button
                                 key={slot}
-                                label={slot}
-                                size="small"
                                 onClick={() => setPickerSlot(slot)}
-                                sx={{
+                                className="px-2 py-0.5 rounded text-xs font-bold cursor-pointer hover:opacity-85 border transition-colors"
+                                style={{
                                   backgroundColor: pickerSlot === slot ? (allSlotColors[slot] || '#666') : 'transparent',
-                                  color: pickerSlot === slot ? 'white' : 'text.primary',
-                                  border: '1px solid',
-                                  borderColor: pickerSlot === slot ? 'transparent' : 'divider',
-                                  fontWeight: 'bold',
-                                  cursor: 'pointer',
-                                  '&:hover': { opacity: 0.85 },
+                                  color: pickerSlot === slot ? 'white' : 'inherit',
+                                  borderColor: pickerSlot === slot ? 'transparent' : 'var(--color-border)',
                                 }}
-                              />
+                              >
+                                {slot}
+                              </button>
                             ))}
-                            <Chip
-                              label="Custom..."
-                              size="small"
+                            <button
                               onClick={() => setPickerSlot('__custom__')}
-                              icon={<EditIcon sx={{ fontSize: 14 }} />}
-                              sx={{
-                                backgroundColor: pickerSlot === '__custom__' ? 'action.selected' : 'transparent',
-                                border: '1px solid',
-                                borderColor: pickerSlot === '__custom__' ? 'transparent' : 'divider',
-                                cursor: 'pointer',
-                              }}
-                            />
-                          </Box>
+                              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer border transition-colors ${
+                                pickerSlot === '__custom__' ? 'bg-muted border-transparent' : 'border-border'
+                              }`}
+                            >
+                              <Pencil className="size-3" />
+                              Custom...
+                            </button>
+                          </div>
                           {pickerSlot === '__custom__' && (
-                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
-                              <TextField
-                                size="small"
-                                label="Slot Name"
-                                value={pickerCustomSlot}
-                                onChange={(e) => setPickerCustomSlot(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                                placeholder="e.g. ACC"
-                                sx={{ width: 120 }}
-                              />
-                              {pickerCustomSlot && (
-                                <Chip
-                                  label={pickerCustomSlot}
-                                  size="small"
-                                  sx={{ backgroundColor: pickerCustomSlotColor, color: 'white', fontWeight: 'bold', minWidth: 40 }}
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <div className="flex flex-col gap-1">
+                                <Label className="text-xs">Slot Name</Label>
+                                <Input
+                                  className="w-[120px] h-7 text-xs"
+                                  value={pickerCustomSlot}
+                                  onChange={(e) => setPickerCustomSlot(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                                  placeholder="e.g. ACC"
                                 />
+                              </div>
+                              {pickerCustomSlot && (
+                                <span
+                                  className="px-2 py-0.5 rounded text-xs font-bold text-white min-w-[40px] text-center"
+                                  style={{ backgroundColor: pickerCustomSlotColor }}
+                                >
+                                  {pickerCustomSlot}
+                                </span>
                               )}
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                              <div className="flex items-center gap-1 flex-wrap">
                                 {colorPalette.map(color => (
-                                  <Box
+                                  <button
                                     key={color}
                                     onClick={() => setPickerCustomSlotColor(color)}
-                                    sx={{
-                                      width: 20,
-                                      height: 20,
-                                      borderRadius: '50%',
+                                    className="size-5 rounded-full cursor-pointer transition-transform hover:scale-110"
+                                    style={{
                                       backgroundColor: color,
-                                      cursor: 'pointer',
-                                      border: '2px solid',
-                                      borderColor: pickerCustomSlotColor === color ? 'white' : 'transparent',
+                                      border: `2px solid ${pickerCustomSlotColor === color ? 'white' : 'transparent'}`,
                                       outline: pickerCustomSlotColor === color ? `2px solid ${color}` : 'none',
-                                      transition: 'all 0.15s',
-                                      '&:hover': { transform: 'scale(1.15)' },
                                     }}
                                   />
                                 ))}
-                                <TextField
-                                  size="small"
-                                  value={pickerCustomSlotColor}
-                                  onChange={(e) => {
-                                    let v = e.target.value;
-                                    if (!v.startsWith('#')) v = '#' + v;
-                                    setPickerCustomSlotColor(v.slice(0, 7));
-                                  }}
-                                  sx={{
-                                    width: 85,
-                                    ml: 0.5,
-                                    '& .MuiInputBase-input': { fontSize: 11, py: 0.5, px: 1, fontFamily: 'monospace' },
-                                  }}
-                                  slotProps={{
-                                    input: {
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: pickerCustomSlotColor, border: '1px solid rgba(0,0,0,0.2)' }} />
-                                        </InputAdornment>
-                                      ),
-                                    },
-                                  }}
-                                />
-                              </Box>
-                            </Stack>
+                                <div className="relative ml-1">
+                                  <div
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 size-3 rounded-full border border-black/20"
+                                    style={{ backgroundColor: pickerCustomSlotColor }}
+                                  />
+                                  <Input
+                                    className="w-[85px] h-6 text-[11px] pl-6 font-mono"
+                                    value={pickerCustomSlotColor}
+                                    onChange={(e) => {
+                                      let v = e.target.value;
+                                      if (!v.startsWith('#')) v = '#' + v;
+                                      setPickerCustomSlotColor(v.slice(0, 7));
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
                           )}
-                          <Stack direction="row" spacing={1} justifyContent="flex-end">
-                            <Button size="small" onClick={handleCancelPicker}>Cancel</Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="outline" onClick={handleCancelPicker}>Cancel</Button>
                             <Button
-                              size="small"
-                              variant="contained"
-                              startIcon={<CheckIcon />}
+                              size="sm"
                               onClick={handleConfirmPicker}
                               disabled={pickerSlot === '__custom__' && !pickerCustomSlot.trim()}
-                              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                              style={{ backgroundColor: '#ff66ab' }}
+                              className="text-white hover:opacity-90"
                             >
+                              <Check data-icon="inline-start" />
                               OK
                             </Button>
-                          </Stack>
-                        </Box>
+                          </div>
+                        </div>
                       )}
 
                       {isEditing && editingField === 'mod' && (
-                        <Box sx={{ mx: 1.5, mb: 1, p: 2, backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 1 }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                        <div className="mx-2.5 mb-2 p-3 bg-black/5 rounded">
+                          <span className="text-xs text-muted-foreground block mb-2">
                             Select mods
-                          </Typography>
+                          </span>
                           {(() => {
                             const isNM = pickerMods.includes('NM');
                             const isFM = pickerMods.includes('FM');
                             const pillsDisabled = isNM || isFM;
                             return (
                               <>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1, alignItems: 'center' }}>
+                                <div className="flex flex-wrap gap-1.5 mb-2 items-center">
                                   {['HD', 'HR', 'DT', 'FL'].map(mod => {
                                     const isActive = !pillsDisabled && pickerMods.includes(mod);
                                     return (
-                                      <Chip
+                                      <button
                                         key={mod}
-                                        label={mod}
-                                        size="small"
-                                        icon={modIcons[mod] ? <Box component="img" src={modIcons[mod]} alt="" sx={{ width: 28, height: 28, opacity: pillsDisabled ? 0.4 : 1 }} /> : undefined}
                                         onClick={() => handleTogglePickerMod(mod)}
-                                        sx={{
+                                        className="flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold text-white border-2 transition-all"
+                                        style={{
                                           backgroundColor: isActive ? (modColors[mod] || '#666') : '#555',
-                                          color: 'white',
-                                          border: '2px solid',
                                           borderColor: isActive ? 'white' : 'transparent',
-                                          fontWeight: 'bold',
                                           cursor: pillsDisabled ? 'not-allowed' : 'pointer',
                                           opacity: pillsDisabled ? 0.4 : 1,
-                                          '&:hover': { opacity: pillsDisabled ? 0.4 : 0.85 },
                                         }}
-                                      />
+                                      >
+                                        {modIcons[mod] && <img src={modIcons[mod]} alt="" className="size-5" style={{ opacity: pillsDisabled ? 0.4 : 1 }} />}
+                                        {mod}
+                                      </button>
                                     );
                                   })}
-                                </Box>
-                                <Stack sx={{ mb: 1 }}>
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox
-                                        checked={isNM}
-                                        onChange={() => handleTogglePickerMod('NM')}
-                                        size="small"
-                                        sx={{ color: 'text.secondary', '&.Mui-checked': { color: modColors.NM } }}
-                                      />
-                                    }
-                                    label="No Mod"
-                                    sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'text.secondary' } }}
-                                  />
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox
-                                        checked={isFM}
-                                        onChange={() => handleTogglePickerMod('FM')}
-                                        size="small"
-                                        sx={{ color: 'text.secondary', '&.Mui-checked': { color: modColors.FM } }}
-                                      />
-                                    }
-                                    label="Free Mod — players choose their own mods"
-                                    sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'text.secondary' } }}
-                                  />
-                                </Stack>
+                                </div>
+                                <div className="flex flex-col gap-2 mb-2">
+                                  <label className="flex items-center gap-2 text-[13px] text-muted-foreground cursor-pointer">
+                                    <Checkbox
+                                      checked={isNM}
+                                      onCheckedChange={() => handleTogglePickerMod('NM')}
+                                    />
+                                    No Mod
+                                  </label>
+                                  <label className="flex items-center gap-2 text-[13px] text-muted-foreground cursor-pointer">
+                                    <Checkbox
+                                      checked={isFM}
+                                      onCheckedChange={() => handleTogglePickerMod('FM')}
+                                    />
+                                    Free Mod — players choose their own mods
+                                  </label>
+                                </div>
                               </>
                             );
                           })()}
-                          <Stack direction="row" spacing={1} justifyContent="flex-end">
-                            <Button size="small" onClick={handleCancelPicker}>Cancel</Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="outline" onClick={handleCancelPicker}>Cancel</Button>
                             <Button
-                              size="small"
-                              variant="contained"
-                              startIcon={<CheckIcon />}
+                              size="sm"
                               onClick={handleConfirmPicker}
-                              sx={{ backgroundColor: '#ff66ab', '&:hover': { backgroundColor: '#ff4499' } }}
+                              style={{ backgroundColor: '#ff66ab' }}
+                              className="text-white hover:opacity-90"
                             >
+                              <Check data-icon="inline-start" />
                               OK
                             </Button>
-                          </Stack>
-                        </Box>
+                          </div>
+                        </div>
                       )}
-                    </Box>
+                    </div>
                   );
                 })}
-              </Stack>
-            </Box>
+              </div>
+            </div>
           )}
 
-          <Divider sx={{ mb: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              or select from stash
-            </Typography>
-          </Divider>
+          <div className="relative flex items-center gap-3 mb-4">
+            <Separator className="flex-1" />
+            <span className="text-xs text-muted-foreground">or select from stash</span>
+            <Separator className="flex-1" />
+          </div>
 
           {stash.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <InventoryIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-              <Typography color="text.secondary">Your stash is empty</Typography>
-              <Typography variant="body2" color="text.secondary">
+            <div className="text-center py-8">
+              <PackageOpen className="size-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">Your stash is empty</p>
+              <p className="text-sm text-muted-foreground">
                 Save maps from shared packs or the Explore page first
-              </Typography>
-            </Box>
+              </p>
+            </div>
           ) : (
-            <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+            <div className="max-h-[300px] overflow-auto">
               {stash.map((beatmap) => {
                 const alreadyInPool = maps.some(m => m.beatmapset_id === beatmap.id);
                 const alreadyPending = pendingMaps.some(m => m.beatmapsetId === beatmap.id);
@@ -1292,29 +1137,14 @@ export default function TournamentMappool({ abbreviation, user }: TournamentMapp
                   />
                 );
               })}
-            </Box>
+            </div>
           )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setAddDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={2000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity="success"
-          sx={{ backgroundColor: '#1a1a2e', color: 'white', border: 1, borderColor: '#ff66ab' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

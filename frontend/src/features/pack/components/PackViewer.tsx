@@ -1,23 +1,20 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Pagination,
-  Stack,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  Divider,
-} from '@mui/material';
 import { useNavigate, Link } from 'react-router-dom';
-import DownloadIcon from '@mui/icons-material/Download';
-import ShareIcon from '@mui/icons-material/Share';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { Download, Share2, ExternalLink, Eye, Music, Calendar } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 import BackButton from '../../../shared/components/BackButton';
 import { getPack, trackDownload, type Pack } from '../api/packs';
 import BeatmapRow from '../../../shared/components/BeatmapRow';
@@ -31,13 +28,28 @@ interface PackViewerProps {
   packId?: string;
 }
 
+function buildPageNumbers(currentPage: number, pageCount: number): (number | 'ellipsis')[] {
+  const pages: (number | 'ellipsis')[] = [];
+  if (pageCount <= 7) {
+    for (let i = 1; i <= pageCount; i++) pages.push(i);
+    return pages;
+  }
+  pages.push(1);
+  if (currentPage > 3) pages.push('ellipsis');
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(pageCount - 1, currentPage + 1);
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (currentPage < pageCount - 2) pages.push('ellipsis');
+  pages.push(pageCount);
+  return pages;
+}
+
 export default function PackViewer({ packId }: PackViewerProps) {
   const navigate = useNavigate();
   const [pack, setPack] = useState<Pack | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -62,21 +74,21 @@ export default function PackViewer({ packId }: PackViewerProps) {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-        <CircularProgress sx={{ color: 'primary.main' }} />
-      </Box>
+      <div className="flex justify-center py-8">
+        <Spinner className="size-6 text-primary" />
+      </div>
     );
   }
 
   if (error || !pack) {
     return (
-      <Box sx={{}}>
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h5" sx={{ mb: 2 }}>Pack not found</Typography>
-          <Typography color="text.secondary">{error || 'This pack may have been deleted or the link is invalid.'}</Typography>
-        </Paper>
+      <div>
+        <Card className="p-4 text-center">
+          <h5 className="mb-2 text-xl font-semibold">Pack not found</h5>
+          <p className="text-muted-foreground">{error || 'This pack may have been deleted or the link is invalid.'}</p>
+        </Card>
         <BackButton onClick={() => navigate(-1)} />
-      </Box>
+      </div>
     );
   }
 
@@ -135,81 +147,68 @@ export default function PackViewer({ packId }: PackViewerProps) {
       }
     }
     navigator.clipboard.writeText(shareUrl);
-    setSnackbar({ open: true, message: 'Link copied to clipboard!' });
+    toast.success('Link copied to clipboard!');
   };
 
   return (
-    <Box>
+    <div>
       {/* Banner collage */}
-      <Paper sx={{ overflow: 'hidden', mb: 3, borderRadius: 2 }}>
+      <Card className="mb-3 overflow-hidden rounded-lg p-0">
         <PackBanner beatmaps={pack.beatmaps} />
-      </Paper>
+      </Card>
 
       {/* Header row: pack name + action buttons */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1.5 }}>
-        <Typography variant="h4" fontWeight="bold">
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-1.5">
+        <h4 className="text-2xl font-bold">
           {pack.name}
-        </Typography>
-        <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+        </h4>
+        <div className="flex shrink-0 flex-row gap-1">
           <Button
-            variant="contained"
-            size="small"
-            startIcon={<DownloadIcon />}
+            size="sm"
             onClick={handleDownload}
-            sx={{
-              px: 2,
-            }}
+            className="px-2"
           >
+            <Download data-icon="inline-start" />
             {hasSelection ? `Download (${selectedIds.size})` : 'Download All'}
           </Button>
           <Button
-            variant="text"
-            size="small"
-            startIcon={<ShareIcon />}
+            variant="ghost"
+            size="sm"
             onClick={handleShare}
           >
+            <Share2 data-icon="inline-start" />
             Share
           </Button>
           <Button
-            variant="outlined"
-            size="small"
-            component={Link}
-            to={`/s/${pack.share_code}`}
-            startIcon={<OpenInNewIcon />}
+            variant="outline"
+            size="sm"
+            render={<Link to={`/s/${pack.share_code}`} />}
           >
+            <ExternalLink data-icon="inline-start" />
             Shared Page
           </Button>
-        </Stack>
-      </Box>
+        </div>
+      </div>
 
       {/* Two-column layout: beatmap list (left) + sidebar (right) */}
-      <Box sx={{ display: 'flex', gap: 3, alignItems: { xs: 'stretch', md: 'flex-start' }, flexDirection: { xs: 'column', md: 'row' } }}>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start">
         {/* Left column — Beatmap list */}
-        <Paper sx={{ overflow: 'hidden', flex: 1, minWidth: 0, borderRadius: 2 }}>
+        <Card className="min-w-0 flex-1 overflow-hidden rounded-lg p-0">
           {/* Info bar */}
           {hasSelection && (
-            <Box sx={{
-              p: 1.5,
-              px: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              backgroundColor: 'action.hover',
-            }}>
+            <div className="flex items-center justify-end border-b border-border bg-muted/50 px-2 py-1.5">
               <Button
-                size="small"
+                variant="ghost"
+                size="sm"
                 onClick={() => setSelectedIds(new Set())}
-                sx={{ fontSize: 13, minWidth: 0, p: 0 }}
               >
                 Deselect {selectedIds.size}
               </Button>
-            </Box>
+            </div>
           )}
 
           {/* Beatmap rows */}
-          <Box sx={{ p: 1 }}>
+          <div className="p-1">
             {displayMaps.map((beatmap) => {
               const isSelected = selectedIds.has(beatmap.id);
               return (
@@ -227,10 +226,9 @@ export default function PackViewer({ packId }: PackViewerProps) {
                   sx={isSelected ? {
                     backgroundColor: 'rgba(100,181,246,0.15)',
                     border: '1px solid rgba(100,181,246,0.4)',
-                    '&:hover': { backgroundColor: 'rgba(100,181,246,0.22)' },
                   } : undefined}
                   actions={
-                    <Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-row gap-0.5" onClick={(e) => e.stopPropagation()}>
                       <OsuButton onClick={() => handleOpenOsu(beatmap)} />
                       <DownloadButton
                         downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
@@ -248,116 +246,121 @@ export default function PackViewer({ packId }: PackViewerProps) {
                         }}
                         onDownloaded={() => trackDownload(pack.share_code, beatmap.beatmapset_id)}
                       />
-                    </Stack>
+                    </div>
                   }
                 />
               );
             })}
-          </Box>
+          </div>
 
           {/* Pagination */}
           {pageCount > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-              <Pagination
-                count={pageCount}
-                page={currentPage}
-                onChange={(_, page) => setCurrentPage(page)}
-                color="primary"
-              />
-            </Box>
+            <div className="flex justify-center border-t border-border py-2">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }}
+                      href="#"
+                      aria-disabled={currentPage === 1}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                  {buildPageNumbers(currentPage, pageCount).map((page, i) =>
+                    page === 'ellipsis' ? (
+                      <PaginationItem key={`ellipsis-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          isActive={page === currentPage}
+                          onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(pageCount, p + 1)); }}
+                      href="#"
+                      aria-disabled={currentPage === pageCount}
+                      className={currentPage === pageCount ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
-        </Paper>
+        </Card>
 
         {/* Right column — Sidebar */}
-        <Box sx={{ width: { xs: '100%', md: 280 }, flexShrink: 0 }}>
+        <div className="w-full shrink-0 md:w-[280px]">
           {/* About */}
-          <Paper sx={{ borderRadius: 2, p: 2.5, mb: 2 }}>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1.5 }}>
+          <Card className="mb-2 rounded-lg p-2.5">
+            <p className="mb-1.5 text-sm font-bold">
               About
-            </Typography>
+            </p>
             {pack.description ? (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <p className="mb-2 text-sm text-muted-foreground">
                 {pack.description}
-              </Typography>
+              </p>
             ) : (
-              <Typography variant="body2" color="text.disabled" sx={{ mb: 2, fontStyle: 'italic' }}>
+              <p className="mb-2 text-sm italic text-muted-foreground/50">
                 No description provided.
-              </Typography>
+              </p>
             )}
-            <Divider sx={{ mb: 2 }} />
-            <Stack spacing={1.5}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <MusicNoteIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-                <Typography variant="body2" color="text.secondary">
+            <Separator className="mb-2" />
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <Music className="size-[18px] text-muted-foreground/50" />
+                <span className="text-sm text-muted-foreground">
                   {pack.beatmaps.length} beatmaps
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <VisibilityIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-                <Typography variant="body2" color="text.secondary">
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Eye className="size-[18px] text-muted-foreground/50" />
+                <span className="text-sm text-muted-foreground">
                   {pack.views.toLocaleString()} views
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-                <Typography variant="body2" color="text.secondary">
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="size-[18px] text-muted-foreground/50" />
+                <span className="text-sm text-muted-foreground">
                   Created {new Date(pack.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                </Typography>
-              </Box>
-            </Stack>
-          </Paper>
+                </span>
+              </div>
+            </div>
+          </Card>
 
           {/* Creator */}
-          <Paper sx={{ borderRadius: 2, p: 2.5 }}>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1.5 }}>
+          <Card className="rounded-lg p-2.5">
+            <p className="mb-1.5 text-sm font-bold">
               Creator
-            </Typography>
-            <Box
-              component={Link}
+            </p>
+            <Link
               to={pack.user ? `/explore?user_id=${pack.user.id}&username=${encodeURIComponent(pack.user.username)}` : '#'}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                textDecoration: 'none',
-                color: 'inherit',
-                borderRadius: 1,
-                p: 0.5,
-                m: -0.5,
-                '&:hover': { backgroundColor: 'action.hover' },
-              }}
+              className="-m-0.5 flex items-center gap-1.5 rounded p-0.5 no-underline hover:bg-muted"
             >
               {pack.user?.avatar_url && (
-                <Box
-                  component="img"
+                <img
                   src={pack.user.avatar_url}
-                  sx={{ width: 32, height: 32, borderRadius: '50%' }}
+                  className="size-8 rounded-full"
+                  alt=""
                 />
               )}
-              <Typography variant="body2" fontWeight={500}>
+              <span className="text-sm font-medium">
                 {pack.user?.username || 'Unknown'}
-              </Typography>
-            </Box>
-          </Paper>
-        </Box>
-      </Box>
+              </span>
+            </Link>
+          </Card>
+        </div>
+      </div>
 
       <BackButton onClick={() => navigate(-1)} />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={2000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity="success"
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+    </div>
   );
 }

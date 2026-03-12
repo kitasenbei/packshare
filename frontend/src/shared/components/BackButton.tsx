@@ -1,5 +1,5 @@
-import { Button } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 interface BackButtonProps {
   onClick: () => void;
@@ -8,26 +8,11 @@ interface BackButtonProps {
 export default function BackButton({ onClick }: BackButtonProps) {
   return (
     <Button
+      variant="outline"
       onClick={onClick}
-      startIcon={<ArrowBackIcon />}
-      sx={{
-        position: 'fixed',
-        bottom: 24,
-        left: 24,
-        backgroundColor: 'background.paper',
-        border: '1px solid',
-        borderColor: 'divider',
-        color: 'text.secondary',
-        px: 2,
-        py: 1,
-        zIndex: 1000,
-        '&:hover': {
-          backgroundColor: 'action.hover',
-          borderColor: 'primary.main',
-          color: 'primary.main',
-        },
-      }}
+      className="fixed bottom-6 left-6 z-[1000] gap-2 text-muted-foreground hover:border-primary hover:text-primary"
     >
+      <ArrowLeft className="size-4" />
       Go Back
     </Button>
   );

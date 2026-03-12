@@ -1,26 +1,29 @@
 import { useState, useCallback } from 'react';
-import { Box, Typography, IconButton, Tooltip } from '@mui/material';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import ViewColumnIcon from '@mui/icons-material/ViewColumn';
-import TextFieldsIcon from '@mui/icons-material/TextFields';
-import ImageIcon from '@mui/icons-material/Image';
-import SmartButtonIcon from '@mui/icons-material/SmartButton';
-import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
-import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import AddIcon from '@mui/icons-material/Add';
+import {
+  Trash2,
+  Copy,
+  Columns2,
+  Type,
+  ImageIcon,
+  MousePointerClick,
+  Minus,
+  UnfoldVertical,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import type { BuilderElement, BuilderElementType } from '../../types/siteConfig';
 import { ELEMENT_REGISTRY } from '../../types/siteConfig';
 
 const ELEMENT_ICONS: Record<BuilderElementType, React.ReactElement> = {
-  container: <ViewColumnIcon sx={{ fontSize: 13 }} />,
-  text: <TextFieldsIcon sx={{ fontSize: 13 }} />,
-  image: <ImageIcon sx={{ fontSize: 13 }} />,
-  button: <SmartButtonIcon sx={{ fontSize: 13 }} />,
-  divider: <HorizontalRuleIcon sx={{ fontSize: 13 }} />,
-  spacer: <UnfoldMoreIcon sx={{ fontSize: 13 }} />,
+  container: <Columns2 className="size-[13px]" />,
+  text: <Type className="size-[13px]" />,
+  image: <ImageIcon className="size-[13px]" />,
+  button: <MousePointerClick className="size-[13px]" />,
+  divider: <Minus className="size-[13px]" />,
+  spacer: <UnfoldVertical className="size-[13px]" />,
 };
 
 const TYPE_COLORS: Record<BuilderElementType, string> = {
@@ -56,66 +59,67 @@ export default function ElementTree({
   onAddElement,
 }: ElementTreeProps) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="flex flex-col h-full">
       {/* Element palette */}
-      <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Typography sx={{
-          fontSize: 9, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase',
-          letterSpacing: 1, mb: 1, display: 'block',
-        }}>
+      <div className="p-1.5 border-b border-border">
+        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
           Elements
-        </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 3 }}>
+        </span>
+        <div className="grid grid-cols-3" style={{ gap: 3 }}>
           {(Object.keys(ELEMENT_REGISTRY) as BuilderElementType[]).map((type) => {
             const reg = ELEMENT_REGISTRY[type];
             return (
-              <Tooltip key={type} title={`Add ${reg.label}`} placement="top" arrow>
-                <Box
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('builder/element-type', type);
-                    e.dataTransfer.effectAllowed = 'copy';
-                  }}
-                  onClick={() => onAddElement(type, null)}
-                  sx={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5,
-                    py: 1, borderRadius: 1, cursor: 'grab',
-                    bgcolor: 'rgba(255,255,255,0.02)',
-                    border: '1px solid transparent',
-                    transition: 'all 0.15s',
-                    '&:hover': {
-                      borderColor: TYPE_COLORS[type],
-                      bgcolor: `${TYPE_COLORS[type]}10`,
-                      transform: 'translateY(-1px)',
-                    },
-                    '&:active': { cursor: 'grabbing', transform: 'scale(0.95)' },
-                  }}
+              <Tooltip key={type}>
+                <TooltipTrigger
+                  render={
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('builder/element-type', type);
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      onClick={() => onAddElement(type, null)}
+                      className="flex flex-col items-center gap-0.5 py-1 rounded cursor-grab transition-all active:cursor-grabbing active:scale-95"
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.02)',
+                        border: '1px solid transparent',
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.borderColor = TYPE_COLORS[type];
+                        (e.currentTarget as HTMLElement).style.backgroundColor = `${TYPE_COLORS[type]}10`;
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
+                        (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.02)';
+                        (e.currentTarget as HTMLElement).style.transform = 'none';
+                      }}
+                    />
+                  }
                 >
-                  <Box sx={{ color: TYPE_COLORS[type], display: 'flex', opacity: 0.8 }}>{ELEMENT_ICONS[type]}</Box>
-                  <Typography sx={{ fontSize: 8, color: 'text.disabled', lineHeight: 1, fontWeight: 500 }}>
+                  <span className="flex opacity-80" style={{ color: TYPE_COLORS[type] }}>{ELEMENT_ICONS[type]}</span>
+                  <span className="text-[8px] text-muted-foreground font-medium leading-none">
                     {reg.label}
-                  </Typography>
-                </Box>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Add {reg.label}</TooltipContent>
               </Tooltip>
             );
           })}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Layer tree */}
-      <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
-        <Typography sx={{
-          fontSize: 9, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase',
-          letterSpacing: 1, mb: 0.5, px: 1.5, display: 'block',
-        }}>
+      <div className="flex-1 overflow-auto py-1">
+        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5 px-1.5 block">
           Layers
-        </Typography>
+        </span>
         {rootIds.length === 0 ? (
-          <Box sx={{ px: 1.5, py: 2, textAlign: 'center' }}>
-            <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>
+          <div className="px-1.5 py-2 text-center">
+            <span className="text-[10px] text-muted-foreground">
               No elements yet
-            </Typography>
-          </Box>
+            </span>
+          </div>
         ) : (
           rootIds.map((id) => (
             <TreeNode
@@ -133,8 +137,8 @@ export default function ElementTree({
             />
           ))
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 
@@ -185,78 +189,88 @@ function TreeNode({
 
   return (
     <>
-      <Box
+      <div
         onClick={handleClick}
         onMouseEnter={() => onHover(elementId)}
         onMouseLeave={() => onHover(null)}
-        sx={{
-          display: 'flex', alignItems: 'center',
-          pl: depth * 1.25 + (hasChildren ? 0 : 1.75) + 0.5,
-          pr: 0.5, py: 0.3,
-          mx: 0.5, borderRadius: 0.75,
-          cursor: 'pointer',
-          bgcolor: isSelected ? `${color}20` : isHovered ? 'rgba(255,255,255,0.04)' : 'transparent',
+        className="group flex items-center cursor-pointer rounded-[3px] mx-0.5 transition-all"
+        style={{
+          paddingLeft: depth * 10 + (hasChildren ? 0 : 14) + 2,
+          paddingRight: 2,
+          paddingTop: 1,
+          paddingBottom: 1,
+          backgroundColor: isSelected ? `${color}20` : isHovered ? 'rgba(255,255,255,0.04)' : 'transparent',
           borderLeft: isSelected ? `2px solid ${color}` : '2px solid transparent',
-          transition: 'all 0.1s',
-          '&:hover': { bgcolor: isSelected ? `${color}20` : 'rgba(255,255,255,0.04)' },
-          '&:hover .tree-actions': { opacity: 1 },
         }}
       >
         {/* Collapse toggle */}
         {hasChildren && (
-          <IconButton size="small" onClick={toggleCollapse} sx={{ p: 0, mr: 0.25, width: 16, height: 16 }}>
+          <button onClick={toggleCollapse} className="p-0 mr-0.5 w-4 h-4 flex items-center justify-center shrink-0">
             {collapsed
-              ? <ChevronRightIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-              : <ExpandMoreIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+              ? <ChevronRight className="size-3.5 text-muted-foreground" />
+              : <ChevronDown className="size-3.5 text-muted-foreground" />
             }
-          </IconButton>
+          </button>
         )}
 
         {/* Icon */}
-        <Box sx={{ color, display: 'flex', flexShrink: 0, mr: 0.5, opacity: isSelected ? 1 : 0.6 }}>
+        <span className="flex shrink-0 mr-0.5" style={{ color, opacity: isSelected ? 1 : 0.6 }}>
           {ELEMENT_ICONS[el.type]}
-        </Box>
+        </span>
 
         {/* Name */}
-        <Typography noWrap sx={{
-          flex: 1, fontSize: 11,
-          fontWeight: isSelected ? 600 : 400,
-          color: isSelected ? 'text.primary' : 'text.secondary',
-        }}>
+        <span className={`flex-1 text-[11px] truncate ${
+          isSelected ? 'font-semibold text-foreground' : 'text-muted-foreground'
+        }`}>
           {el.name || el.type}
-        </Typography>
+        </span>
 
         {/* Child count badge */}
         {isContainer && el.children.length > 0 && !isSelected && (
-          <Typography sx={{ fontSize: 8, color: 'text.disabled', fontFamily: 'monospace', mr: 0.5 }}>
+          <span className="text-[8px] text-muted-foreground font-mono mr-0.5">
             {el.children.length}
-          </Typography>
+          </span>
         )}
 
         {/* Actions */}
-        <Box className="tree-actions" sx={{ display: 'flex', opacity: isSelected ? 1 : 0, transition: 'opacity 0.15s', flexShrink: 0 }}>
+        <div className={`flex shrink-0 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
           {isContainer && (
-            <Tooltip title="Add child" placement="top">
-              <IconButton size="small" onClick={(e) => { e.stopPropagation(); onAddElement('container', elementId); }}
-                sx={{ p: 0.15, width: 18, height: 18 }}>
-                <AddIcon sx={{ fontSize: 11 }} />
-              </IconButton>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button variant="ghost" size="icon-xs" className="p-0 w-[18px] h-[18px]"
+                    onClick={(e) => { e.stopPropagation(); onAddElement('container', elementId); }} />
+                }
+              >
+                <Plus className="size-[11px]" />
+              </TooltipTrigger>
+              <TooltipContent>Add child</TooltipContent>
             </Tooltip>
           )}
-          <Tooltip title="Duplicate" placement="top">
-            <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDuplicate(elementId); }}
-              sx={{ p: 0.15, width: 18, height: 18 }}>
-              <ContentCopyIcon sx={{ fontSize: 10 }} />
-            </IconButton>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button variant="ghost" size="icon-xs" className="p-0 w-[18px] h-[18px]"
+                  onClick={(e) => { e.stopPropagation(); onDuplicate(elementId); }} />
+              }
+            >
+              <Copy className="size-[10px]" />
+            </TooltipTrigger>
+            <TooltipContent>Duplicate</TooltipContent>
           </Tooltip>
-          <Tooltip title="Delete" placement="top">
-            <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDelete(elementId); }}
-              sx={{ p: 0.15, width: 18, height: 18, '&:hover': { color: '#ef4444' } }}>
-              <DeleteOutlineIcon sx={{ fontSize: 11 }} />
-            </IconButton>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button variant="ghost" size="icon-xs" className="p-0 w-[18px] h-[18px] hover:text-destructive"
+                  onClick={(e) => { e.stopPropagation(); onDelete(elementId); }} />
+              }
+            >
+              <Trash2 className="size-[11px]" />
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
           </Tooltip>
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       {/* Children */}
       {hasChildren && !collapsed && el.children.map((childId) => (

@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
-import {
-  Avatar,
-  Box,
-  Grid,
-  Card,
-  Typography,
-  CircularProgress,
-  Alert,
-  Pagination,
-  Stack,
-} from '@mui/material';
-import ExploreIcon from '@mui/icons-material/Explore';
 import { useSearchParams } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
+import { Compass } from 'lucide-react';
 import { browsePacks, getUsers, type BrowsePacksResult, type UserInfo } from '../features/pack/api/packs';
 import PackCard from '../features/pack/components/PackCard';
 import SearchField from '../shared/components/SearchField';
@@ -77,97 +79,138 @@ export default function Explore() {
 
   const pageCount = data ? Math.ceil(data.total / PACKS_PER_PAGE) : 0;
 
+  // Build page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (pageCount <= 7) {
+      for (let i = 1; i <= pageCount; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('ellipsis');
+      for (let i = Math.max(2, page - 1); i <= Math.min(pageCount - 1, page + 1); i++) {
+        pages.push(i);
+      }
+      if (page < pageCount - 2) pages.push('ellipsis');
+      pages.push(pageCount);
+    }
+    return pages;
+  };
+
   return (
-    <Box>
+    <div>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-        <ExploreIcon sx={{ color: 'primary.main' }} />
+      <div className="mb-4 flex items-center gap-2">
+        <Compass className="size-6 text-primary" />
         {selectedUser && (
-          <Avatar
-            src={selectedUser.avatar_url}
-            alt={selectedUser.username}
-            sx={{ width: 32, height: 32 }}
-          />
+          <Avatar size="sm">
+            <AvatarImage src={selectedUser.avatar_url} alt={selectedUser.username} />
+            <AvatarFallback>{selectedUser.username[0]}</AvatarFallback>
+          </Avatar>
         )}
-        <Typography variant="h5" fontWeight="bold">
+        <h2 className="text-xl font-bold">
           {selectedUser ? `Packs by ${selectedUser.username}` : 'Explore'}
-        </Typography>
-      </Box>
+        </h2>
+      </div>
 
       {/* Search & Filters */}
-      <Card sx={{ p: 2, mb: 3, backgroundColor: 'action.hover' }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-          <SearchField
-            value={searchInput}
-            onChange={setSearchInput}
-            placeholder="Search packs..."
-          />
-          <UserFilter
-            users={users}
-            value={selectedUser}
-            onChange={(user) => {
-              if (user) {
-                setSearchParams({ user_id: user.id.toString() });
-              } else {
-                setSearchParams({});
-              }
-              setPage(1);
-            }}
-          />
-          <SortButtons
-            value={sort}
-            onChange={(v) => { setSort(v as typeof sort); setPage(1); }}
-            options={SORT_OPTIONS}
-          />
-        </Stack>
-      </Card>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <SearchField
+          value={searchInput}
+          onChange={setSearchInput}
+          placeholder="Search packs..."
+        />
+        <UserFilter
+          users={users}
+          value={selectedUser}
+          onChange={(user) => {
+            if (user) {
+              setSearchParams({ user_id: user.id.toString() });
+            } else {
+              setSearchParams({});
+            }
+            setPage(1);
+          }}
+        />
+        <SortButtons
+          value={sort}
+          onChange={(v) => { setSort(v as typeof sort); setPage(1); }}
+          options={SORT_OPTIONS}
+        />
+      </div>
 
       {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress color="primary" />
-        </Box>
+        <div className="flex justify-center py-16">
+          <Spinner className="size-6 text-primary" />
+        </div>
       )}
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {!loading && !error && data && data.packs.length === 0 && (
-        <Card variant="outlined" sx={{ p: 6, textAlign: 'center' }}>
-          <ExploreIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            {search ? 'No packs found' : 'No packs yet'}
-          </Typography>
-          <Typography color="text.secondary">
-            {search ? 'Try a different search term' : 'Be the first to create a pack!'}
-          </Typography>
-        </Card>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia>
+              <Compass className="size-16 text-muted-foreground/30" />
+            </EmptyMedia>
+            <EmptyTitle>
+              {search ? 'No packs found' : 'No packs yet'}
+            </EmptyTitle>
+            <EmptyDescription>
+              {search ? 'Try a different search term' : 'Be the first to create a pack!'}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
 
       {!loading && !error && data && data.packs.length > 0 && (
         <>
-          <Grid container spacing={2.5}>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.packs.map((pack) => (
-              <Grid key={pack.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                <PackCard pack={pack} variant="grid" />
-              </Grid>
+              <PackCard key={pack.id} pack={pack} variant="grid" />
             ))}
-          </Grid>
+          </div>
 
           {pageCount > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Pagination
-                count={pageCount}
-                page={page}
-                onChange={(_, p) => setPage(p)}
-                color="primary"
-              />
-            </Box>
+            <Pagination className="mt-6">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    className={page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                {getPageNumbers().map((p, i) =>
+                  p === 'ellipsis' ? (
+                    <PaginationItem key={`e-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        isActive={p === page}
+                        onClick={() => setPage(p)}
+                        className="cursor-pointer"
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setPage(Math.min(pageCount, page + 1))}
+                    className={page >= pageCount ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           )}
         </>
       )}
-    </Box>
+    </div>
   );
 }

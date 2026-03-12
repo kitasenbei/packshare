@@ -1,4 +1,5 @@
-import { Button } from '@mui/material';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import osuLogo from '../../assets/osu-logo.svg';
 
 interface OsuButtonProps {
@@ -10,22 +11,17 @@ export default function OsuButton({ onClick, variant = 'light' }: OsuButtonProps
   const isDark = variant === 'dark';
   return (
     <Button
-      size="small"
-      startIcon={<img src={osuLogo} alt="" style={{ width: 16, height: 16 }} />}
+      size="sm"
+      variant="ghost"
       onClick={onClick}
-      sx={{
-        fontSize: 12,
-        fontWeight: 600,
-        color: isDark ? 'primary.light' : 'primary.main',
-        backgroundColor: isDark ? 'rgba(132,169,140,0.15)' : 'rgba(82,121,111,0.08)',
-        minWidth: 'auto',
-        px: 1,
-        py: 0.25,
-        '&:hover': {
-          backgroundColor: isDark ? 'rgba(132,169,140,0.25)' : 'rgba(82,121,111,0.15)',
-        },
-      }}
+      className={cn(
+        'gap-1 font-semibold',
+        isDark
+          ? 'text-primary/80 bg-primary/15 hover:bg-primary/25'
+          : 'text-primary bg-primary/8 hover:bg-primary/15',
+      )}
     >
+      <img src={osuLogo} alt="" className="size-4" />
       Open on osu!
     </Button>
   );

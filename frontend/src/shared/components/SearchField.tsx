@@ -1,5 +1,9 @@
-import { TextField, InputAdornment } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+import { Search } from 'lucide-react';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 
 interface SearchFieldProps {
   value: string;
@@ -9,21 +13,15 @@ interface SearchFieldProps {
 
 export default function SearchField({ value, onChange, placeholder = 'Search...' }: SearchFieldProps) {
   return (
-    <TextField
-      placeholder={placeholder}
-      size="small"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      sx={{ flex: 1, minWidth: 200, '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper' } }}
-      slotProps={{
-        input: {
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon sx={{ color: 'text.secondary' }} />
-            </InputAdornment>
-          ),
-        },
-      }}
-    />
+    <InputGroup className="min-w-[200px] flex-1">
+      <InputGroupAddon>
+        <Search />
+      </InputGroupAddon>
+      <InputGroupInput
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </InputGroup>
   );
 }

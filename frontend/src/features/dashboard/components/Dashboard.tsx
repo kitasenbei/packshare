@@ -1,48 +1,65 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Avatar,
-  CircularProgress,
-  Alert,
-  Stack,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  Snackbar,
-  Pagination,
-  IconButton,
-  TextField,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
-import AddIcon from '@mui/icons-material/Add';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import FolderIcon from '@mui/icons-material/Folder';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import DownloadIcon from '@mui/icons-material/Download';
-import HomeIcon from '@mui/icons-material/Home';
-import SettingsIcon from '@mui/icons-material/Settings';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ShareIcon from '@mui/icons-material/Share';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import LinkIcon from '@mui/icons-material/Link';
-import SearchIcon from '@mui/icons-material/Search';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuBadge,
+  SidebarSeparator,
+} from '@/components/ui/sidebar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
+import {
+  Plus,
+  Trophy,
+  Folder,
+  Music,
+  Eye,
+  Download,
+  Home,
+  Settings,
+  ArrowLeft,
+  Share2,
+  ExternalLink,
+  Calendar,
+  Pencil,
+  Trash2,
+  Link as LinkIcon,
+  Search,
+  ArrowUp,
+  ArrowDown,
+  FileDown,
+} from 'lucide-react';
 import type { User, BeatmapsetInfo } from '../../auth/api/auth';
 import { getBeatmapset } from '../../auth/api/auth';
 import { getMyPacks, trackDownload, deletePack, updatePack, type Pack, type PackBeatmap } from '../../pack/api/packs';
@@ -53,7 +70,6 @@ import BeatmapRow from '../../../shared/components/BeatmapRow';
 import DownloadButton from '../../../shared/components/DownloadButton';
 import OsuButton from '../../../shared/components/OsuButton';
 import RemoveButton from '../../../shared/components/RemoveButton';
-import { palette } from '../../../shared/theme/palette';
 import { TournamentsSection, type TournamentView } from '../../tournament/components/DashboardTournaments';
 import type { Tournament } from '../../tournament/api/tournaments';
 
@@ -63,14 +79,14 @@ interface DashboardProps {
   user: User | null;
   permissions?: string[];
   isKeySession?: boolean;
+  onOpenCreatePack: () => void;
 }
 
 type PackCardPropsFactory = (pack: Pack) => React.ComponentProps<typeof PackCard>;
 
-const SIDEBAR_WIDTH = 240;
 const MAPS_PER_PAGE = 10;
 
-export default function Dashboard({ user, permissions = [], isKeySession = false }: DashboardProps) {
+export default function Dashboard({ user, permissions = [], isKeySession = false, onOpenCreatePack }: DashboardProps) {
   const navigate = useNavigate();
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +104,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
     }
     getMyPacks()
       .then(setPacks)
-      .catch((err) => setError(err.message || 'Failed to load packs'))
+      .catch((err: Error) => setError(err.message || 'Failed to load packs'))
       .finally(() => setLoading(false));
   }, [user, navigate]);
 
@@ -130,10 +146,10 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
   };
 
   const navItems: { key: Section; label: string; icon: React.ReactNode; disabled?: boolean; badge?: string }[] = [
-    { key: 'overview', label: 'Overview', icon: <HomeIcon /> },
-    { key: 'packs', label: 'Packs', icon: <FolderIcon /> },
-    ...(user.username === 'Kaiinu' ? [{ key: 'tournaments' as Section, label: 'Tournaments', icon: <EmojiEventsIcon /> }] : []),
-    { key: 'settings', label: 'Settings', icon: <SettingsIcon /> },
+    { key: 'overview', label: 'Overview', icon: <Home /> },
+    { key: 'packs', label: 'Packs', icon: <Folder /> },
+    ...(user.username === 'Kaiinu' ? [{ key: 'tournaments' as Section, label: 'Tournaments', icon: <Trophy /> }] : []),
+    { key: 'settings', label: 'Settings', icon: <Settings /> },
   ];
 
   const packCardProps = (pack: Pack): React.ComponentProps<typeof PackCard> => ({
@@ -146,176 +162,111 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
   });
 
   return (
-    <Box sx={{ display: 'flex', gap: 0, minHeight: 'calc(100vh - 120px)', width: '100%' }}>
+    <SidebarProvider defaultOpen={true} style={{ minHeight: 'calc(100vh - 120px)' }}>
       {/* Sidebar */}
-      <Paper
-        sx={{
-          width: SIDEBAR_WIDTH,
-          flexShrink: 0,
-          border: '1px solid',
-          borderColor: 'divider',
-          borderLeft: 'none',
-          borderTop: 'none',
-          borderBottom: 'none',
-          borderRadius: 0,
-          display: { xs: 'none', md: 'flex' },
-          flexDirection: 'column',
-          position: 'fixed',
-          top: 56,
-          bottom: 0,
-          left: 0,
-          overflowY: 'auto',
-        }}
-      >
-        {/* Profile header */}
-        <Box sx={{ p: 2, pb: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar
-              src={user.avatar_url}
-              sx={{ width: 40, height: 40, border: 2, borderColor: 'primary.main' }}
-            />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle2" fontWeight="bold" noWrap>
-                {user.username}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-
-        <Divider />
-
-        {/* Navigation */}
-        <List disablePadding sx={{ py: 0.5 }}>
-          {navItems.map((item) => (
-            <ListItemButton
-              key={item.key}
-              selected={!selectedPack && section === item.key}
-              disabled={item.disabled}
-              onClick={() => { setSection(item.key); setSelectedPack(null); setEditing(false); if (item.key !== 'tournaments') { setTournamentView('list'); setSelectedTournament(null); } }}
-              sx={{
-                py: 1,
-                px: 2,
-                '&.Mui-selected': {
-                  backgroundColor: `rgba(132,169,140,0.12)`,
-                  borderRight: `3px solid ${palette.light}`,
-                  '&:hover': { backgroundColor: `rgba(132,169,140,0.18)` },
-                },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 36, color: !selectedPack && section === item.key ? 'primary.main' : 'text.secondary' }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                slotProps={{
-                  primary: {
-                    variant: 'body2',
-                    fontWeight: !selectedPack && section === item.key ? 600 : 400,
-                  },
-                }}
-              />
-              {item.badge && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    px: 0.75,
-                    py: 0.15,
-                    borderRadius: 0.5,
-                    fontSize: 9,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {item.badge}
-                </Typography>
+      <Sidebar collapsible="none">
+        <SidebarHeader>
+          <div className="flex items-center gap-2">
+            <Avatar>
+              <AvatarImage src={user.avatar_url} alt="" />
+              <AvatarFallback>{user.username.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <span className="truncate font-semibold">{user.username}</span>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.key}>
+                  <SidebarMenuButton
+                    isActive={!selectedPack && section === item.key}
+                    disabled={item.disabled}
+                    onClick={() => { setSection(item.key); setSelectedPack(null); setEditing(false); if (item.key !== 'tournaments') { setTournamentView('list'); setSelectedTournament(null); } }}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                  {item.badge && (
+                    <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                  )}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+          <SidebarSeparator />
+          <SidebarGroup>
+            <SidebarGroupLabel>Actions</SidebarGroupLabel>
+            <SidebarMenu>
+              {canCreate && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={onOpenCreatePack}>
+                    <Plus />
+                    <span>New Pack</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               )}
-            </ListItemButton>
-          ))}
-        </List>
-
-        <Divider />
-
-        {/* Quick actions */}
-        <Box sx={{ p: 1.5 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, textTransform: 'uppercase', letterSpacing: 1, fontSize: 10 }}>
-            Actions
-          </Typography>
-          <Stack spacing={0.5} sx={{ mt: 1 }}>
-            {canCreate && (
-              <Button
-                component={Link}
-                to="/create"
-                size="small"
-                startIcon={<AddIcon />}
-                variant="contained"
-                fullWidth
-                sx={{ justifyContent: 'flex-start', px: 1.5 }}
-              >
-                New Pack
-              </Button>
-            )}
-            {user.username === 'Kaiinu' && (
-              <Button
-                size="small"
-                variant="contained"
-                startIcon={<EmojiEventsIcon />}
-                fullWidth
-                onClick={() => { setSection('tournaments'); setSelectedPack(null); setEditing(false); setTournamentView('create'); setSelectedTournament(null); }}
-                sx={{ justifyContent: 'flex-start', px: 1.5 }}
-              >
-                New Tournament
-              </Button>
-            )}
-          </Stack>
-        </Box>
-      </Paper>
+              {user.username === 'Kaiinu' && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => { setSection('tournaments'); setSelectedPack(null); setEditing(false); setTournamentView('create'); setSelectedTournament(null); }}
+                  >
+                    <Trophy />
+                    <span>New Tournament</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
 
       {/* Content Panel */}
-      <Box sx={{ flex: 1, minWidth: 0, ml: { xs: 0, md: `${SIDEBAR_WIDTH + 1}px` }, px: { xs: 0, lg: '300px' } }}>
-        {/* Mobile profile header (hidden on desktop) */}
+      <div className="min-w-0 flex-1 px-0 lg:px-[300px]">
+        {/* Mobile profile header */}
         {!selectedPack && tournamentView === 'list' && (
-          <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: 3 }}>
-            <Avatar
+          <div className="mb-6 flex items-center gap-3 md:hidden">
+            <img
               src={user.avatar_url}
-              sx={{ width: 48, height: 48, border: 2, borderColor: 'primary.main' }}
+              alt=""
+              className="size-12 rounded-full border-2 border-primary"
             />
-            <Box>
-              <Typography variant="h6" fontWeight="bold">{user.username}</Typography>
-              <Typography variant="caption" color="text.secondary">
+            <div>
+              <h2 className="text-lg font-bold">{user.username}</h2>
+              <span className="text-xs text-muted-foreground">
                 {packs.length} pack{packs.length !== 1 ? 's' : ''} · {totalMaps} maps
-              </Typography>
-            </Box>
-          </Box>
+              </span>
+            </div>
+          </div>
         )}
 
         {/* Mobile nav tabs */}
         {!selectedPack && tournamentView === 'list' && (
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ display: { xs: 'flex', md: 'none' }, mb: 3, overflowX: 'auto' }}
-          >
+          <div className="mb-6 flex gap-2 overflow-x-auto md:hidden">
             {navItems.filter((i) => !i.disabled).map((item) => (
               <Button
                 key={item.key}
-                size="small"
-                variant={section === item.key ? 'contained' : 'outlined'}
+                size="sm"
+                variant={section === item.key ? 'default' : 'outline'}
                 onClick={() => setSection(item.key)}
-                sx={{ flexShrink: 0 }}
+                className="shrink-0"
               >
                 {item.label}
               </Button>
             ))}
-          </Stack>
+          </div>
         )}
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-            <CircularProgress sx={{ color: 'primary.main' }} />
-          </Box>
+          <div className="flex justify-center py-16">
+            <Spinner className="size-6 text-primary" />
+          </div>
         ) : selectedPack ? (
           editing ? (
             <PackEditSection
@@ -342,6 +293,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
                 canCreate={canCreate}
                 packCardProps={packCardProps}
                 onSelectPack={handleSelectPack}
+                onOpenCreatePack={onOpenCreatePack}
               />
             )}
             {section === 'packs' && (
@@ -350,6 +302,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
                 canCreate={canCreate}
                 packCardProps={packCardProps}
                 onSelectPack={handleSelectPack}
+                onOpenCreatePack={onOpenCreatePack}
               />
             )}
             {section === 'tournaments' && (
@@ -366,8 +319,8 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
             )}
           </>
         )}
-      </Box>
-    </Box>
+      </div>
+    </SidebarProvider>
   );
 }
 
@@ -381,6 +334,7 @@ function OverviewSection({
   canCreate,
   packCardProps,
   onSelectPack,
+  onOpenCreatePack,
 }: {
   packs: Pack[];
   totalMaps: number;
@@ -389,78 +343,58 @@ function OverviewSection({
   canCreate: boolean;
   packCardProps: PackCardPropsFactory;
   onSelectPack: (pack: Pack) => void;
+  onOpenCreatePack: () => void;
 }) {
   return (
     <>
-      <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-        Overview
-      </Typography>
+      <h2 className="mb-4 text-lg font-bold">Overview</h2>
 
       {/* Stats row */}
       {packs.length > 0 && (
-        <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+        <div className="mb-6 grid grid-cols-4 gap-3">
           {[
-            { icon: <FolderIcon />, label: 'Packs', value: packs.length },
-            { icon: <MusicNoteIcon />, label: 'Maps', value: totalMaps },
-            { icon: <VisibilityIcon />, label: 'Views', value: totalViews },
-            { icon: <DownloadIcon />, label: 'Downloads', value: totalDownloads },
+            { icon: <Folder className="size-5" />, label: 'Packs', value: packs.length },
+            { icon: <Music className="size-5" />, label: 'Maps', value: totalMaps },
+            { icon: <Eye className="size-5" />, label: 'Views', value: totalViews },
+            { icon: <Download className="size-5" />, label: 'Downloads', value: totalDownloads },
           ].map((stat) => (
-            <Paper
-              key={stat.label}
-              sx={{
-                flex: 1,
-                p: 2,
-                textAlign: 'center',
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Box sx={{ color: 'primary.main', mb: 0.5 }}>{stat.icon}</Box>
-              <Typography variant="h6" fontWeight="bold">
-                {stat.value.toLocaleString()}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {stat.label}
-              </Typography>
-            </Paper>
+            <Card key={stat.label} className="p-4 text-center">
+              <div className="mb-1 text-primary">{stat.icon}</div>
+              <div className="text-lg font-bold">{stat.value.toLocaleString()}</div>
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
+            </Card>
           ))}
-        </Stack>
+        </div>
       )}
 
       {/* Recent Packs */}
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 1 }}>
+      <span className="mb-3 block text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
         Recent Packs
-      </Typography>
+      </span>
 
       {packs.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-          <FolderIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            You haven't created any packs yet
-          </Typography>
+        <Card className="p-8 text-center">
+          <Folder className="mx-auto mb-2 size-10 text-muted-foreground/30" />
+          <p className="mb-4 text-muted-foreground">You haven't created any packs yet</p>
           {canCreate && (
-            <Button
-              component={Link}
-              to="/create"
-              variant="contained"
-              startIcon={<AddIcon />}
-            >
+            <Button onClick={onOpenCreatePack}>
+              <Plus className="size-4" />
               Create your first pack
             </Button>
           )}
-        </Paper>
+        </Card>
       ) : (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-3">
           {packs.slice(0, 3).map((pack) => (
-            <Box
+            <div
               key={pack.id}
               onClick={(e) => { e.preventDefault(); onSelectPack(pack); }}
-              sx={{ cursor: 'pointer', '& a': { pointerEvents: 'none' } }}
+              className="cursor-pointer [&_a]:pointer-events-none"
             >
               <PackCard {...packCardProps(pack)} />
-            </Box>
+            </div>
           ))}
-        </Stack>
+        </div>
       )}
     </>
   );
@@ -471,11 +405,13 @@ function PacksSection({
   canCreate,
   packCardProps,
   onSelectPack,
+  onOpenCreatePack,
 }: {
   packs: Pack[];
   canCreate: boolean;
   packCardProps: PackCardPropsFactory;
   onSelectPack: (pack: Pack) => void;
+  onOpenCreatePack: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'views' | 'maps'>('newest');
@@ -494,33 +430,27 @@ function PacksSection({
 
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" fontWeight="bold">
-          All Packs
-        </Typography>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-bold">All Packs</h2>
         {canCreate && (
-          <Button
-            component={Link}
-            to="/create"
-            variant="contained"
-            size="small"
-            startIcon={<AddIcon />}
-          >
+          <Button size="sm" onClick={onOpenCreatePack}>
+            <Plus className="size-4" />
             New Pack
           </Button>
         )}
-      </Box>
+      </div>
 
       {packs.length > 0 && (
-        <Box sx={{ display: 'flex', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
-          <TextField
-            size="small"
-            placeholder="Search packs..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18 }} /></InputAdornment> } }}
-            sx={{ flex: 1, minWidth: 200 }}
-          />
+        <div className="mb-4 flex flex-wrap gap-2">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search packs..."
+              value={search}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+              className="pl-8"
+            />
+          </div>
           <SortButtons
             value={sortBy}
             onChange={(v) => setSortBy(v as typeof sortBy)}
@@ -532,45 +462,37 @@ function PacksSection({
               { key: 'maps', label: 'Maps' },
             ]}
           />
-        </Box>
+        </div>
       )}
 
       {packs.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-          <FolderIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            No packs yet
-          </Typography>
+        <Card className="p-8 text-center">
+          <Folder className="mx-auto mb-2 size-10 text-muted-foreground/30" />
+          <p className="mb-4 text-muted-foreground">No packs yet</p>
           {canCreate && (
-            <Button
-              component={Link}
-              to="/create"
-              variant="contained"
-              startIcon={<AddIcon />}
-            >
+            <Button onClick={onOpenCreatePack}>
+              <Plus className="size-4" />
               Create your first pack
             </Button>
           )}
-        </Paper>
+        </Card>
       ) : filtered.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-          <SearchIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
-          <Typography color="text.secondary">
-            No packs match "{search}"
-          </Typography>
-        </Paper>
+        <Card className="p-8 text-center">
+          <Search className="mx-auto mb-2 size-10 text-muted-foreground/30" />
+          <p className="text-muted-foreground">No packs match "{search}"</p>
+        </Card>
       ) : (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-3">
           {filtered.map((pack) => (
-            <Box
+            <div
               key={pack.id}
               onClick={(e) => { e.preventDefault(); onSelectPack(pack); }}
-              sx={{ cursor: 'pointer', '& a': { pointerEvents: 'none' } }}
+              className="cursor-pointer [&_a]:pointer-events-none"
             >
               <PackCard {...packCardProps(pack)} />
-            </Box>
+            </div>
           ))}
-        </Stack>
+        </div>
       )}
     </>
   );
@@ -591,7 +513,6 @@ function PackDetailSection({
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const pageCount = Math.ceil(pack.beatmaps.length / MAPS_PER_PAGE);
@@ -637,117 +558,87 @@ function PackDetailSection({
       } catch { /* cancelled */ }
     }
     navigator.clipboard.writeText(shareUrl);
-    setSnackbar({ open: true, message: 'Link copied to clipboard!' });
+    toast.success('Link copied to clipboard!');
   };
 
   const totalDownloads = pack.beatmaps.reduce((s, b) => s + (b.downloads ?? 0), 0);
 
+  // Build page numbers
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (pageCount <= 7) {
+      for (let i = 1; i <= pageCount; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('ellipsis');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(pageCount - 1, currentPage + 1); i++) pages.push(i);
+      if (currentPage < pageCount - 2) pages.push('ellipsis');
+      pages.push(pageCount);
+    }
+    return pages;
+  };
+
   return (
     <>
       {/* Back + title */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <IconButton onClick={onBack} size="small">
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h6" fontWeight="bold" noWrap sx={{ flex: 1 }}>
-          {pack.name}
-        </Typography>
-      </Box>
+      <div className="mb-4 flex items-center gap-2">
+        <Button variant="ghost" size="icon-xs" onClick={onBack}>
+          <ArrowLeft className="size-5" />
+        </Button>
+        <h2 className="flex-1 truncate text-lg font-bold">{pack.name}</h2>
+      </div>
 
       {/* Banner */}
-      <Paper sx={{ overflow: 'hidden', mb: 3, borderRadius: 2 }}>
+      <Card className="mb-6 overflow-hidden">
         <PackBanner beatmaps={pack.beatmaps} />
-      </Paper>
+      </Card>
 
       {/* Action buttons */}
-      <Stack direction="row" spacing={1} sx={{ mb: 3, flexWrap: 'wrap' }}>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<DownloadIcon />}
-          onClick={handleDownload}
-          sx={{ px: 2 }}
-        >
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Button size="sm" onClick={handleDownload}>
+          <Download className="size-4" />
           {hasSelection ? `Download (${selectedIds.size})` : 'Download All'}
         </Button>
-        <Button
-          variant="text"
-          size="small"
-          startIcon={<ShareIcon />}
-          onClick={handleShare}
-        >
+        <Button variant="ghost" size="sm" onClick={handleShare}>
+          <Share2 className="size-4" />
           Share
         </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          component={Link}
-          to={`/s/${pack.share_code}`}
-          target="_blank"
-          startIcon={<OpenInNewIcon />}
-        >
+        <Button variant="outline" size="sm" render={<Link to={`/s/${pack.share_code}`} target="_blank" />}>
+          <ExternalLink className="size-4" />
           Public Page
         </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<EditIcon />}
-          onClick={onEdit}
-        >
+        <Button variant="outline" size="sm" onClick={onEdit}>
+          <Pencil className="size-4" />
           Edit
         </Button>
         {!confirmDelete ? (
-          <Button
-            variant="text"
-            color="error"
-            size="small"
-            startIcon={<DeleteIcon />}
-            onClick={() => setConfirmDelete(true)}
-          >
+          <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
+            <Trash2 className="size-4" />
             Delete
           </Button>
         ) : (
-          <Button
-            variant="contained"
-            size="small"
-            onClick={onDelete}
-            sx={{
-              px: 2,
-              backgroundColor: 'error.main',
-              '&:hover': { backgroundColor: 'error.dark' },
-            }}
-          >
+          <Button variant="destructive" size="sm" onClick={onDelete}>
             Confirm Delete
           </Button>
         )}
-      </Stack>
+      </div>
 
       {/* Two-column: beatmap list + info sidebar */}
-      <Box sx={{ display: 'flex', gap: 3, alignItems: { xs: 'stretch', md: 'flex-start' }, flexDirection: { xs: 'column', md: 'row' } }}>
+      <div className="flex flex-col gap-6 md:flex-row md:items-start">
         {/* Beatmap list */}
-        <Paper sx={{ overflow: 'hidden', flex: 1, minWidth: 0, borderRadius: 2 }}>
+        <Card className="min-w-0 flex-1 overflow-hidden">
           {hasSelection && (
-            <Box sx={{
-              p: 1.5,
-              px: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              backgroundColor: 'action.hover',
-            }}>
-              <Button
-                size="small"
+            <div className="flex items-center justify-end border-b bg-muted/50 px-3 py-2">
+              <button
                 onClick={() => setSelectedIds(new Set())}
-                sx={{ fontSize: 13, minWidth: 0, p: 0 }}
+                className="text-[13px] text-primary hover:underline"
               >
                 Deselect {selectedIds.size}
-              </Button>
-            </Box>
+              </button>
+            </div>
           )}
 
-          <Box sx={{ p: 1 }}>
+          <div className="p-2">
             {displayMaps.map((beatmap) => {
               const isSelected = selectedIds.has(beatmap.id);
               return (
@@ -768,82 +659,82 @@ function PackDetailSection({
                     '&:hover': { backgroundColor: 'rgba(132,169,140,0.22)' },
                   } : undefined}
                   actions={
-                    <Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}`, '_blank')} />
                       <DownloadButton
                         downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
                         downloadName={`${beatmap.artist} - ${beatmap.title}`}
                         onDownloaded={() => trackDownload(pack.share_code, beatmap.beatmapset_id)}
                       />
-                    </Stack>
+                    </div>
                   }
                 />
               );
             })}
-          </Box>
+          </div>
 
           {pageCount > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-              <Pagination
-                count={pageCount}
-                page={currentPage}
-                onChange={(_, page) => setCurrentPage(page)}
-                color="primary"
-              />
-            </Box>
+            <div className="flex justify-center border-t py-3">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  {getPageNumbers().map((p, i) =>
+                    p === 'ellipsis' ? (
+                      <PaginationItem key={`e-${i}`}><PaginationEllipsis /></PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink isActive={p === currentPage} onClick={() => setCurrentPage(p)} className="cursor-pointer">
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage(Math.min(pageCount, currentPage + 1))}
+                      className={currentPage >= pageCount ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
-        </Paper>
+        </Card>
 
         {/* Info sidebar */}
-        <Box sx={{ width: { xs: '100%', md: 260 }, flexShrink: 0 }}>
-          <Paper sx={{ borderRadius: 2, p: 2.5, mb: 2 }}>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1.5 }}>
-              About
-            </Typography>
+        <div className="w-full shrink-0 md:w-[260px]">
+          <Card className="mb-4 p-4">
+            <h3 className="mb-3 text-sm font-bold">About</h3>
             {pack.description ? (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {pack.description}
-              </Typography>
+              <p className="mb-4 text-sm text-muted-foreground">{pack.description}</p>
             ) : (
-              <Typography variant="body2" color="text.disabled" sx={{ mb: 2, fontStyle: 'italic' }}>
-                No description provided.
-              </Typography>
+              <p className="mb-4 text-sm italic text-muted-foreground/50">No description provided.</p>
             )}
-            <Divider sx={{ mb: 2 }} />
-            <Stack spacing={1.5}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <VisibilityIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-                <Typography variant="body2" color="text.secondary">
-                  {pack.views.toLocaleString()} views
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <DownloadIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-                <Typography variant="body2" color="text.secondary">
-                  {totalDownloads.toLocaleString()} downloads
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-                <Typography variant="body2" color="text.secondary">
+            <Separator className="mb-4" />
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Eye className="size-4 text-muted-foreground/50" />
+                <span className="text-sm text-muted-foreground">{pack.views.toLocaleString()} views</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Download className="size-4 text-muted-foreground/50" />
+                <span className="text-sm text-muted-foreground">{totalDownloads.toLocaleString()} downloads</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="size-4 text-muted-foreground/50" />
+                <span className="text-sm text-muted-foreground">
                   Created {new Date(pack.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                </Typography>
-              </Box>
-            </Stack>
-          </Paper>
-        </Box>
-      </Box>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={2000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity="success" sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+                </span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
     </>
   );
 }
@@ -983,70 +874,54 @@ function PackEditSection({
   return (
     <>
       {/* Back + title */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-        <IconButton onClick={onBack} size="small">
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h6" fontWeight="bold" noWrap sx={{ flex: 1 }}>
-          Edit Pack
-        </Typography>
-      </Box>
+      <div className="mb-6 flex items-center gap-2">
+        <Button variant="ghost" size="icon-xs" onClick={onBack}>
+          <ArrowLeft className="size-5" />
+        </Button>
+        <h2 className="flex-1 truncate text-lg font-bold">Edit Pack</h2>
+      </div>
 
       {/* Name & Description */}
-      <Stack spacing={2.5} sx={{ mb: 3 }}>
-        <TextField
-          label="Pack Name"
-          fullWidth
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <TextField
-          label="Description (optional)"
-          fullWidth
-          multiline
-          rows={2}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </Stack>
+      <div className="mb-6 flex flex-col gap-4">
+        <div>
+          <label className="mb-1 block text-sm font-medium">Pack Name</label>
+          <Input value={name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Description (optional)</label>
+          <Textarea value={description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} rows={2} />
+        </div>
+      </div>
 
       {/* Add beatmap */}
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 1 }}>
+      <span className="mb-3 block text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
         Beatmaps
-      </Typography>
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        <TextField
-          placeholder="Add beatmap (ID or osu! URL)"
-          fullWidth
-          size="small"
-          value={beatmapInput}
-          onChange={(e) => setBeatmapInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && beatmapInput.trim() && handleAddBeatmap()}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <LinkIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-        <Button
-          variant="contained"
-          onClick={handleAddBeatmap}
-          disabled={!beatmapInput.trim() || addingBeatmap}
-          sx={{ minWidth: 50 }}
-        >
-          {addingBeatmap ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <AddIcon />}
+      </span>
+      <div className="mb-4 flex gap-2">
+        <div className="relative flex-1">
+          <LinkIcon className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Add beatmap (ID or osu! URL)"
+            value={beatmapInput}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBeatmapInput(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && beatmapInput.trim() && handleAddBeatmap()}
+            className="pl-8"
+          />
+        </div>
+        <Button onClick={handleAddBeatmap} disabled={!beatmapInput.trim() || addingBeatmap} className="min-w-[50px]">
+          {addingBeatmap ? <Spinner className="size-4" /> : <Plus className="size-4" />}
         </Button>
-      </Stack>
+      </div>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Beatmap list */}
-      <Paper sx={{ overflow: 'hidden', borderRadius: 2, mb: 3 }}>
-        <Box sx={{ p: 1 }}>
+      <Card className="mb-6 overflow-hidden">
+        <div className="p-2">
           {beatmaps.map((beatmap, index) => (
             <BeatmapRow
               key={beatmap.id}
@@ -1060,125 +935,100 @@ function PackEditSection({
               titleOnly
               density="compact"
               actions={
-                <Stack direction="row" spacing={0} alignItems="center">
-                  <IconButton
-                    size="small"
+                <div className="flex items-center">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
                     disabled={index === 0}
                     onClick={() => setBeatmaps((prev) => {
                       const next = [...prev];
                       [next[index - 1], next[index]] = [next[index], next[index - 1]];
                       return next;
                     })}
-                    sx={{ p: 0.25 }}
                   >
-                    <ArrowUpwardIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
+                    <ArrowUp className="size-3.5 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
                     disabled={index === beatmaps.length - 1}
                     onClick={() => setBeatmaps((prev) => {
                       const next = [...prev];
                       [next[index], next[index + 1]] = [next[index + 1], next[index]];
                       return next;
                     })}
-                    sx={{ p: 0.25 }}
                   >
-                    <ArrowDownwardIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                  </IconButton>
+                    <ArrowDown className="size-3.5 text-muted-foreground" />
+                  </Button>
                   <RemoveButton onClick={() => setBeatmaps((prev) => prev.filter((b) => b.id !== beatmap.id))} />
-                </Stack>
+                </div>
               }
             />
           ))}
           {beatmaps.length === 0 && (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.disabled">
-                No beatmaps — add some above
-              </Typography>
-            </Box>
+            <div className="p-6 text-center">
+              <p className="text-sm text-muted-foreground/50">No beatmaps — add some above</p>
+            </div>
           )}
-        </Box>
-      </Paper>
+        </div>
+      </Card>
 
       {/* Save / Cancel */}
-      <Stack direction="row" spacing={1.5}>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={saving}
-          startIcon={saving ? <CircularProgress size={16} sx={{ color: 'white' }} /> : undefined}
-        >
+      <div className="flex gap-3">
+        <Button onClick={handleSave} disabled={saving}>
+          {saving && <Spinner className="size-4" />}
           {saving ? 'Saving...' : 'Save Changes'}
         </Button>
-        <Button variant="outlined" onClick={onBack} disabled={saving}>
+        <Button variant="outline" onClick={onBack} disabled={saving}>
           Cancel
         </Button>
-      </Stack>
+      </div>
 
       {/* Difficulty Selection Dialog */}
-      <Dialog
-        open={diffSelectOpen}
-        onClose={() => { setDiffSelectOpen(false); setPendingBeatmapset(null); }}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Select Difficulty</DialogTitle>
-        <DialogContent dividers>
-          {pendingBeatmapset && (
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+      <Dialog open={diffSelectOpen} onOpenChange={(o) => { if (!o) { setDiffSelectOpen(false); setPendingBeatmapset(null); } }}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Select Difficulty</DialogTitle>
+            {pendingBeatmapset && (
+              <DialogDescription>
                 {pendingBeatmapset.artist} - {pendingBeatmapset.title}
-              </Typography>
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={() => handleSelectDifficulty('all')}
-                sx={{ justifyContent: 'flex-start' }}
-              >
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {pendingBeatmapset && (
+            <div className="flex flex-col gap-2">
+              <Button className="w-full justify-start" onClick={() => handleSelectDifficulty('all')}>
                 Add all {pendingBeatmapset.beatmaps.length} difficulties
               </Button>
-              <Divider sx={{ my: 1 }}>or select one</Divider>
+              <div className="flex items-center gap-2 py-1">
+                <Separator className="flex-1" />
+                <span className="text-xs text-muted-foreground">or select one</span>
+                <Separator className="flex-1" />
+              </div>
               {pendingBeatmapset.beatmaps.map((diff, index) => (
                 <Button
                   key={diff.beatmap_id}
-                  variant="outlined"
-                  fullWidth
+                  variant="outline"
+                  className="w-full justify-start"
                   onClick={() => handleSelectDifficulty(index)}
-                  sx={{ justifyContent: 'flex-start' }}
                 >
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 22,
-                      backgroundColor: 'primary.main',
-                      borderRadius: 0.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: 10,
-                      fontWeight: 'bold',
-                      mr: 1.5,
-                    }}
-                  >
+                  <span className="mr-2 flex size-6 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">
                     {diff.keys}K
-                  </Box>
-                  <Box sx={{ flex: 1, textAlign: 'left' }}>
-                    <Typography variant="body2">{diff.difficulty_name}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      ★ {diff.star_rating.toFixed(2)}
-                    </Typography>
-                  </Box>
+                  </span>
+                  <span className="flex-1 text-left">
+                    <span className="block text-sm">{diff.difficulty_name}</span>
+                    <span className="text-xs text-muted-foreground">★ {diff.star_rating.toFixed(2)}</span>
+                  </span>
                 </Button>
               ))}
-            </Stack>
+            </div>
           )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDiffSelectOpen(false); setPendingBeatmapset(null); }}>
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => { setDiffSelectOpen(false); setPendingBeatmapset(null); }}>
-            Cancel
-          </Button>
-        </DialogActions>
       </Dialog>
     </>
   );
@@ -1187,7 +1037,10 @@ function PackEditSection({
 /* ── Settings Section ── */
 
 function SettingsSection({ user, packs }: { user: User; packs: Pack[] }) {
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const totalMaps = packs.reduce((sum, p) => sum + p.beatmaps.length, 0);
+  const totalViews = packs.reduce((sum, p) => sum + p.views, 0);
+  const totalDownloads = packs.reduce((sum, p) => sum + p.beatmaps.reduce((s, b) => s + (b.downloads ?? 0), 0), 0);
+  const uniqueBeatmapsets = new Set(packs.flatMap((p) => p.beatmaps.map((b) => b.beatmapset_id)));
 
   const handleExportPacks = () => {
     const exportData = packs.map((p) => ({
@@ -1213,7 +1066,7 @@ function SettingsSection({ user, packs }: { user: User; packs: Pack[] }) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setSnackbar({ open: true, message: 'Packs exported!' });
+    toast.success('Packs exported!');
   };
 
   const handleExportCsv = () => {
@@ -1233,50 +1086,37 @@ function SettingsSection({ user, packs }: { user: User; packs: Pack[] }) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setSnackbar({ open: true, message: 'CSV exported!' });
+    toast.success('CSV exported!');
   };
-
-  const totalMaps = packs.reduce((sum, p) => sum + p.beatmaps.length, 0);
-  const totalViews = packs.reduce((sum, p) => sum + p.views, 0);
-  const totalDownloads = packs.reduce((sum, p) => sum + p.beatmaps.reduce((s, b) => s + (b.downloads ?? 0), 0), 0);
-
-  // Unique beatmapset IDs across all packs
-  const uniqueBeatmapsets = new Set(packs.flatMap((p) => p.beatmaps.map((b) => b.beatmapset_id)));
 
   return (
     <>
-      <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>
-        Settings
-      </Typography>
+      <h2 className="mb-6 text-lg font-bold">Settings</h2>
 
       {/* Account Info */}
-      <Paper sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2 }}>
-          Account
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Avatar src={user.avatar_url} sx={{ width: 56, height: 56, border: 2, borderColor: 'primary.main' }} />
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">{user.username}</Typography>
-            <Typography variant="body2" color="text.secondary">osu! ID: {user.osu_id}</Typography>
-          </Box>
-        </Box>
+      <Card className="mb-6 p-6">
+        <h3 className="mb-4 text-sm font-bold">Account</h3>
+        <div className="mb-4 flex items-center gap-3">
+          <img src={user.avatar_url} alt="" className="size-14 rounded-full border-2 border-primary" />
+          <div>
+            <p className="font-bold">{user.username}</p>
+            <p className="text-sm text-muted-foreground">osu! ID: {user.osu_id}</p>
+          </div>
+        </div>
         <Button
-          size="small"
-          variant="outlined"
+          variant="outline"
+          size="sm"
           onClick={() => window.open(`https://osu.ppy.sh/users/${user.osu_id}`, '_blank')}
-          startIcon={<OpenInNewIcon />}
         >
+          <ExternalLink className="size-4" />
           View osu! Profile
         </Button>
-      </Paper>
+      </Card>
 
       {/* Stats Overview */}
-      <Paper sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2 }}>
-          Statistics
-        </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 2 }}>
+      <Card className="mb-6 p-6">
+        <h3 className="mb-4 text-sm font-bold">Statistics</h3>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
           {[
             { label: 'Packs', value: packs.length },
             { label: 'Total Maps', value: totalMaps },
@@ -1285,56 +1125,31 @@ function SettingsSection({ user, packs }: { user: User; packs: Pack[] }) {
             { label: 'Total Downloads', value: totalDownloads },
             { label: 'Avg Maps/Pack', value: packs.length > 0 ? (totalMaps / packs.length).toFixed(1) : '0' },
           ].map((stat) => (
-            <Box key={stat.label} sx={{ textAlign: 'center', p: 1.5, borderRadius: 1, backgroundColor: 'action.hover' }}>
-              <Typography variant="h6" fontWeight="bold">{typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}</Typography>
-              <Typography variant="caption" color="text.secondary">{stat.label}</Typography>
-            </Box>
+            <div key={stat.label} className="rounded-lg bg-muted/50 p-3 text-center">
+              <div className="text-lg font-bold">{typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}</div>
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
+            </div>
           ))}
-        </Box>
-      </Paper>
+        </div>
+      </Card>
 
       {/* Export */}
-      <Paper sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
-          Export Data
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Card className="mb-6 p-6">
+        <h3 className="mb-1 text-sm font-bold">Export Data</h3>
+        <p className="mb-4 text-sm text-muted-foreground">
           Download all your pack data for backup or analysis
-        </Typography>
-        <Stack direction="row" spacing={1.5}>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExportPacks}
-            disabled={packs.length === 0}
-            sx={{ textTransform: 'none' }}
-          >
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" onClick={handleExportPacks} disabled={packs.length === 0}>
+            <FileDown className="size-4" />
             Export JSON
           </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExportCsv}
-            disabled={packs.length === 0}
-            sx={{ textTransform: 'none' }}
-          >
+          <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={packs.length === 0}>
+            <FileDown className="size-4" />
             Export CSV
           </Button>
-        </Stack>
-      </Paper>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={2000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity="success" sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        </div>
+      </Card>
     </>
   );
 }

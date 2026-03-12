@@ -1,20 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
-import {
-  CssBaseline,
-  ThemeProvider,
-  createTheme,
-  Box,
-  Container,
-  Typography,
-  Button,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  useMediaQuery,
-} from '@mui/material';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
-import PackCreator from './features/pack/components/PackCreator';
+import { Toaster, toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import PackViewer from './features/pack/components/PackViewer';
+import PackCreator from './features/pack/components/PackCreator';
 import SharedPack from './features/pack/components/SharedPack';
 import MyPacks from './features/pack/components/MyPacks';
 import Home from './pages/Home';
@@ -35,49 +25,7 @@ import {
   type AuthMode,
 } from './features/auth/api/auth';
 
-import {
-  ACCENT, ACCENT_HOVER, KEY_ACCENT, KEY_ACCENT_HOVER,
-  backgrounds, text as themeText, divider as themeDivider,
-} from './shared/theme/palette';
-
 const DARK_MODE_KEY = 'packshare_dark_mode';
-
-function makeTheme(accent: string, accentHover: string, darkMode: boolean) {
-  const mode = darkMode ? 'dark' : 'light';
-  return createTheme({
-    palette: {
-      mode,
-      primary: {
-        main: accent,
-        dark: accentHover,
-      },
-      background: backgrounds[mode],
-      text: themeText[mode],
-      divider: themeDivider[mode],
-    },
-    components: {
-      MuiButton: {
-        styleOverrides: {
-          root: {
-            textTransform: 'none',
-            borderRadius: 8,
-          },
-        },
-      },
-      MuiPaper: {
-        defaultProps: {
-          elevation: 0,
-        },
-        styleOverrides: {
-          root: {
-            borderRadius: 8,
-            backgroundImage: 'none',
-          },
-        },
-      },
-    },
-  });
-}
 
 function PackPage() {
   const { packId } = useParams();
@@ -109,54 +57,31 @@ function SiteEditorPage() {
 function NotFound() {
   const navigate = useNavigate();
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '60vh',
-        textAlign: 'center',
-      }}
-    >
-      <Typography variant="h1" sx={{ fontSize: 120, fontWeight: 'bold', color: 'primary.main', mb: 2 }}>
-        404
-      </Typography>
-      <Typography variant="h5" sx={{ mb: 1, fontWeight: 'bold' }}>
-        Page not found
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+      <h1 className="mb-2 text-[120px] font-bold leading-none text-primary">404</h1>
+      <h2 className="mb-1 text-xl font-bold">Page not found</h2>
+      <p className="mb-8 text-muted-foreground">
         The page you're looking for doesn't exist or has been moved.
-      </Typography>
-      <Button
-        variant="contained"
-        onClick={() => navigate('/')}
-        sx={{ px: 4, py: 1.5 }}
-      >
+      </p>
+      <Button onClick={() => navigate('/')} className="px-8 py-3">
         Go Home
       </Button>
-    </Box>
+    </div>
   );
 }
 
 function App() {
-  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem(DARK_MODE_KEY);
     if (saved !== null) return saved === 'true';
-    return prefersDark;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>('oauth');
   const [keyName, setKeyName] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const accent = authMode === 'key' ? KEY_ACCENT : ACCENT;
-
-  const accentHover = authMode === 'key' ? KEY_ACCENT_HOVER : ACCENT_HOVER;
-  const theme = useMemo(() => makeTheme(accent, accentHover, darkMode), [accent, accentHover, darkMode]);
+  const [createPackOpen, setCreatePackOpen] = useState(false);
 
   const toggleDarkMode = () => {
     setDarkMode((prev) => {
@@ -166,10 +91,15 @@ function App() {
     });
   };
 
+  // Apply dark class to html element
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
+
   useEffect(() => {
     const authError = getAuthError();
     if (authError) {
-      setError(authError);
+      toast.error(authError);
     }
 
     initAuth().then((authState) => {
@@ -199,94 +129,73 @@ function App() {
 
   if (loading) {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            backgroundColor: 'background.default',
-          }}
-        >
-          <CircularProgress sx={{ color: accent }} />
-        </Box>
-      </ThemeProvider>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Spinner className="size-6 text-primary" />
+      </div>
     );
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <BrowserRouter>
-        <Routes>
-          {/* Clean pages without sidebar */}
-          <Route path="/s/:packId" element={<SharedPackPage />} />
-          <Route path="/t/:abbreviation" element={<TournamentMappoolPage user={user} />} />
-          <Route path="/site/:subdomain" element={<SitePage />} />
-          <Route path="/tournaments/:abbreviation/editor" element={<SiteEditorPage />} />
+    <BrowserRouter>
+      <Routes>
+        {/* Clean pages without sidebar */}
+        <Route path="/s/:packId" element={<SharedPackPage />} />
+        <Route path="/t/:abbreviation" element={<TournamentMappoolPage user={user} />} />
+        <Route path="/site/:subdomain" element={<SitePage />} />
+        <Route path="/tournaments/:abbreviation/editor" element={<SiteEditorPage />} />
 
-          {/* Main app with top navbar */}
-          <Route path="*" element={
-            <>
-              <Sidebar
-                user={user}
-                authMode={authMode}
-                keyName={keyName}
-                permissions={permissions}
-                onLogout={handleLogout}
-                onKeyLogin={handleKeyLogin}
-                darkMode={darkMode}
-                onToggleDarkMode={toggleDarkMode}
-              />
-              <Box
-                component="main"
-                sx={{
-                  pt: `${TOPNAV_HEIGHT}px`,
-                  minHeight: '100vh',
-                  backgroundColor: 'background.default',
-                }}
-              >
-                <Routes>
-                  <Route path="/dashboard" element={
-                    <Box sx={{ pt: 4, pb: 4, px: { xs: 2, md: 4 }, display: 'flex', flex: 1 }}>
-                      <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} />
-                    </Box>
-                  } />
-                  <Route path="*" element={
-                    <Container maxWidth="lg" sx={{ py: 4 }}>
-                      <Routes>
-                        <Route path="/" element={<Home user={user} />} />
-                        <Route path="/create" element={<PackCreator user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
-                        <Route path="/my-packs" element={<MyPacks user={user} permissions={permissions} isKeySession={authMode === 'key'} />} />
-                        <Route path="/explore" element={<Explore />} />
-                        <Route path="/tournaments" element={user?.username === 'Kaiinu' ? <Tournaments user={user} /> : <NotFound />} />
-                        <Route path="/keys" element={<KeyManager user={user} authMode={authMode} />} />
-                        <Route path="/pack/:packId" element={<PackPage />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </Container>
-                  } />
-                </Routes>
-              </Box>
-            </>
-          } />
-        </Routes>
-      </BrowserRouter>
+        {/* Main app with top navbar */}
+        <Route path="*" element={
+          <>
+            <Sidebar
+              user={user}
+              authMode={authMode}
+              keyName={keyName}
+              permissions={permissions}
+              onLogout={handleLogout}
+              onKeyLogin={handleKeyLogin}
+              darkMode={darkMode}
+              onToggleDarkMode={toggleDarkMode}
+              onOpenCreatePack={() => setCreatePackOpen(true)}
+            />
+            <main
+              className="min-h-screen bg-background"
+              style={{ paddingTop: `${TOPNAV_HEIGHT}px` }}
+            >
+              <Routes>
+                <Route path="/dashboard" element={
+                  <div className="flex flex-1 px-2 py-4 md:px-4">
+                    <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} onOpenCreatePack={() => setCreatePackOpen(true)} />
+                  </div>
+                } />
+                <Route path="*" element={
+                  <div className="mx-auto max-w-5xl px-4 py-4">
+                    <Routes>
+                      <Route path="/" element={<Home user={user} onOpenCreatePack={() => setCreatePackOpen(true)} />} />
+                      <Route path="/my-packs" element={<MyPacks user={user} permissions={permissions} isKeySession={authMode === 'key'} onOpenCreatePack={() => setCreatePackOpen(true)} />} />
+                      <Route path="/explore" element={<Explore />} />
+                      <Route path="/tournaments" element={user?.username === 'Kaiinu' ? <Tournaments user={user} /> : <NotFound />} />
+                      <Route path="/keys" element={<KeyManager user={user} authMode={authMode} />} />
+                      <Route path="/pack/:packId" element={<PackPage />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </div>
+                } />
+              </Routes>
+            </main>
+          </>
+        } />
+      </Routes>
 
-      {/* Error Snackbar */}
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setError(null)} severity="error" sx={{ width: '100%' }}>
-          {error}
-        </Alert>
-      </Snackbar>
-    </ThemeProvider>
+      <PackCreator
+        open={createPackOpen}
+        onOpenChange={setCreatePackOpen}
+        user={user}
+        permissions={permissions}
+        isKeySession={authMode === 'key'}
+      />
+      <Toaster richColors position="top-center" />
+    </BrowserRouter>
   );
 }
 
