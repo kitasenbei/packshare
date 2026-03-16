@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Folder } from 'lucide-react';
+import { getStarRatingColor } from '../utils/starRating';
 import SlotBadge from './SlotBadge';
 
 export interface BeatmapRowProps {
@@ -137,11 +138,14 @@ export default function BeatmapRow({
             alt=""
             className="h-full w-full object-cover"
           />
-          {starRating != null && (
-            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-0.5 bg-black/70 py-0.5 text-[10px] font-bold leading-none text-[#f5c842]">
-              ★ {starRating.toFixed(2)}
-            </div>
-          )}
+          {starRating != null && (() => {
+            const srColor = getStarRatingColor(starRating);
+            return (
+              <div className={cn('absolute bottom-0 left-0 right-0 flex items-center justify-center gap-0.5 py-0.5 text-[10px] font-bold leading-none', srColor.bg, srColor.text)}>
+                ★ {starRating.toFixed(2)}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -236,11 +240,14 @@ export default function BeatmapRow({
         </div>
 
         {/* Separate star rating (tournament style) */}
-        {starRatingSeparate && starRating != null && (
-          <span className="mr-2 font-bold text-[#f5c842]">
-            ★ {starRating.toFixed(2)}
-          </span>
-        )}
+        {starRatingSeparate && starRating != null && (() => {
+          const srColor = getStarRatingColor(starRating);
+          return (
+            <Badge className={cn('mr-2 font-bold', srColor.bg, srColor.text)}>
+              ★ {starRating.toFixed(2)}
+            </Badge>
+          );
+        })()}
 
         {/* Status chip */}
         {statusChip && (

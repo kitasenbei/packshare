@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Star, Download, AlertTriangle } from 'lucide-react';
+import { getStarRatingColor } from '../../../shared/utils/starRating';
 
 interface BeatmapPanelProps {
   title: string;
@@ -103,12 +104,15 @@ export default function BeatmapPanel({
 
             {/* info-row--stats */}
             <div className="mt-1.5 flex items-center gap-2">
-              {starRating != null && (
-                <Badge variant="secondary" className="bg-foreground text-[10px] font-bold text-background">
-                  <Star className="size-3 fill-current" />
-                  {starRating.toFixed(2)}
-                </Badge>
-              )}
+              {starRating != null && (() => {
+                const srColor = getStarRatingColor(starRating);
+                return (
+                  <Badge variant="secondary" className={cn('text-[10px] font-bold', srColor.bg, srColor.text)}>
+                    <Star className="size-3 fill-current" />
+                    {starRating.toFixed(2)}
+                  </Badge>
+                );
+              })()}
               {difficultyName && (
                 <Badge className="bg-primary text-[10px] font-bold text-primary-foreground">
                   {difficultyName}
