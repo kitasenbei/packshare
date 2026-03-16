@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -121,6 +122,10 @@ func buildDatabaseURL(creds DBCredentials) string {
 }
 
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	// Fix IPv6 addresses — the Fiber adapter chokes on raw IPv6 (colons parsed as port separator)
+	if ip := req.RequestContext.HTTP.SourceIP; ip != "" && strings.Contains(ip, ":") && !strings.HasPrefix(ip, "[") {
+		req.RequestContext.HTTP.SourceIP = "[" + ip + "]"
+	}
 	return fiberLambda.ProxyWithContextV2(ctx, req)
 }
 

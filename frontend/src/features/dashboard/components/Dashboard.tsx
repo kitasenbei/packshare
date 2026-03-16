@@ -43,10 +43,9 @@ import {
   Plus,
   Trophy,
   Folder,
-  Music,
   Eye,
   Download,
-  Home,
+  Palette,
   Settings,
   ArrowLeft,
   Share2,
@@ -64,6 +63,7 @@ import type { User, BeatmapsetInfo } from '../../auth/api/auth';
 import { getBeatmapset } from '../../auth/api/auth';
 import { getMyPacks, trackDownload, deletePack, updatePack, type Pack, type PackBeatmap } from '../../pack/api/packs';
 import PackCard from '../../pack/components/PackCard';
+import PaletteEditor from './PaletteEditor';
 import SortButtons from '../../../shared/components/SortButtons';
 import PackBanner from '../../pack/components/PackBanner';
 import BeatmapRow from '../../../shared/components/BeatmapRow';
@@ -73,7 +73,7 @@ import RemoveButton from '../../../shared/components/RemoveButton';
 import { TournamentsSection, type TournamentView } from '../../tournament/components/DashboardTournaments';
 import type { Tournament } from '../../tournament/api/tournaments';
 
-type Section = 'overview' | 'packs' | 'tournaments' | 'settings';
+type Section = 'packs' | 'tournaments' | 'settings';
 
 interface DashboardProps {
   user: User | null;
@@ -91,11 +91,12 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [section, setSection] = useState<Section>('overview');
+  const [section, setSection] = useState<Section>('packs');
   const [selectedPack, setSelectedPack] = useState<Pack | null>(null);
   const [editing, setEditing] = useState(false);
   const [tournamentView, setTournamentView] = useState<TournamentView>('list');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -112,11 +113,6 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
 
   const canCreate = !isKeySession || permissions.includes('create');
   const totalMaps = packs.reduce((sum, p) => sum + p.beatmaps.length, 0);
-  const totalViews = packs.reduce((sum, p) => sum + p.views, 0);
-  const totalDownloads = packs.reduce(
-    (sum, p) => sum + p.beatmaps.reduce((s, b) => s + (b.downloads ?? 0), 0),
-    0,
-  );
 
   const handleSelectPack = (pack: Pack) => {
     setSelectedPack(pack);
@@ -146,7 +142,6 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
   };
 
   const navItems: { key: Section; label: string; icon: React.ReactNode; disabled?: boolean; badge?: string }[] = [
-    { key: 'overview', label: 'Overview', icon: <Home /> },
     { key: 'packs', label: 'Packs', icon: <Folder /> },
     ...(user.username === 'Kaiinu' ? [{ key: 'tournaments' as Section, label: 'Tournaments', icon: <Trophy /> }] : []),
     { key: 'settings', label: 'Settings', icon: <Settings /> },
@@ -162,6 +157,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
   });
 
   return (
+    <>
     <SidebarProvider defaultOpen={true} style={{ minHeight: 'calc(100vh - 120px)' }}>
       {/* Sidebar */}
       <Sidebar collapsible="none">
@@ -216,6 +212,12 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => setPaletteOpen(true)}>
+                  <Palette />
+                  <span>Theme</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
@@ -284,19 +286,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
           )
         ) : (
           <>
-            {section === 'overview' && (
-              <OverviewSection
-                packs={packs}
-                totalMaps={totalMaps}
-                totalViews={totalViews}
-                totalDownloads={totalDownloads}
-                canCreate={canCreate}
-                packCardProps={packCardProps}
-                onSelectPack={handleSelectPack}
-                onOpenCreatePack={onOpenCreatePack}
-              />
-            )}
-            {section === 'packs' && (
+{section === 'packs' && (
               <PacksSection
                 packs={packs}
                 canCreate={canCreate}
@@ -321,84 +311,13 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
         )}
       </div>
     </SidebarProvider>
+    <PaletteEditor open={paletteOpen} onOpenChange={setPaletteOpen} />
+    </>
   );
 }
 
 /* ── Section Components ── */
 
-function OverviewSection({
-  packs,
-  totalMaps,
-  totalViews,
-  totalDownloads,
-  canCreate,
-  packCardProps,
-  onSelectPack,
-  onOpenCreatePack,
-}: {
-  packs: Pack[];
-  totalMaps: number;
-  totalViews: number;
-  totalDownloads: number;
-  canCreate: boolean;
-  packCardProps: PackCardPropsFactory;
-  onSelectPack: (pack: Pack) => void;
-  onOpenCreatePack: () => void;
-}) {
-  return (
-    <>
-      <h2 className="mb-4 text-lg font-bold">Overview</h2>
-
-      {/* Stats row */}
-      {packs.length > 0 && (
-        <div className="mb-6 grid grid-cols-4 gap-3">
-          {[
-            { icon: <Folder className="size-5" />, label: 'Packs', value: packs.length },
-            { icon: <Music className="size-5" />, label: 'Maps', value: totalMaps },
-            { icon: <Eye className="size-5" />, label: 'Views', value: totalViews },
-            { icon: <Download className="size-5" />, label: 'Downloads', value: totalDownloads },
-          ].map((stat) => (
-            <Card key={stat.label} className="p-4 text-center">
-              <div className="mb-1 text-primary">{stat.icon}</div>
-              <div className="text-lg font-bold">{stat.value.toLocaleString()}</div>
-              <div className="text-xs text-muted-foreground">{stat.label}</div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Recent Packs */}
-      <span className="mb-3 block text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-        Recent Packs
-      </span>
-
-      {packs.length === 0 ? (
-        <Card className="p-8 text-center">
-          <Folder className="mx-auto mb-2 size-10 text-muted-foreground/30" />
-          <p className="mb-4 text-muted-foreground">You haven't created any packs yet</p>
-          {canCreate && (
-            <Button onClick={onOpenCreatePack}>
-              <Plus className="size-4" />
-              Create your first pack
-            </Button>
-          )}
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {packs.slice(0, 3).map((pack) => (
-            <div
-              key={pack.id}
-              onClick={(e) => { e.preventDefault(); onSelectPack(pack); }}
-              className="cursor-pointer [&_a]:pointer-events-none"
-            >
-              <PackCard {...packCardProps(pack)} />
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
 
 function PacksSection({
   packs,

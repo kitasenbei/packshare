@@ -16,6 +16,10 @@ import SiteBuilder from './features/tournament/components/SiteBuilder';
 import KeyManager from './features/auth/components/KeyManager';
 import Dashboard from './features/dashboard/components/Dashboard';
 import Sidebar, { TOPNAV_HEIGHT } from './pages/Sidebar';
+import { loadSavedTheme } from './features/dashboard/components/PaletteEditor';
+
+// Apply saved theme before first paint
+loadSavedTheme();
 import {
   initAuth,
   logout as authLogout,
@@ -164,9 +168,18 @@ function App() {
             >
               <Routes>
                 <Route path="/dashboard" element={
-                  <div className="flex flex-1 px-2 py-4 md:px-4">
-                    <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} onOpenCreatePack={() => setCreatePackOpen(true)} />
-                  </div>
+                  <>
+                    <div className="overflow-hidden bg-[repeating-linear-gradient(-45deg,#000,#000_10px,#f5c842_10px,#f5c842_20px)] text-center">
+                      <div className="bg-black/70 px-4 py-1.5">
+                        <span className="text-xs font-bold text-[#f5c842]">
+                          This part of the website is in beta — features may be incomplete or change without notice
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-1 px-2 py-4 md:px-4">
+                      <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} onOpenCreatePack={() => setCreatePackOpen(true)} />
+                    </div>
+                  </>
                 } />
                 <Route path="*" element={
                   <div className="mx-auto max-w-5xl px-4 py-4">
