@@ -13,8 +13,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { type User, getBeatmapset, type BeatmapsetInfo } from '../../auth/api/auth';
 import { createPack } from '../api/packs';
 import BeatmapRow from '../../../shared/components/BeatmapRow';
-import DownloadButton from '../../../shared/components/DownloadButton';
-import OsuButton from '../../../shared/components/OsuButton';
 import RemoveButton from '../../../shared/components/RemoveButton';
 
 interface PackCreatorProps {
@@ -290,7 +288,7 @@ export default function PackCreator({ open, onOpenChange, user, permissions, isK
   );
 
   const renderStepBeatmaps = () => (
-    <ScrollArea className="max-h-[60vh]">
+    <div className="overflow-hidden">
       {/* Add Beatmap Section */}
       <Card className="mb-3">
         <CardHeader>
@@ -410,43 +408,30 @@ export default function PackCreator({ open, onOpenChange, user, permissions, isK
             </p>
           </div>
         ) : (
-          <CardContent>
-            {beatmaps.map((beatmap, index) => (
-              <BeatmapRow
-                key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}
-                beatmapsetId={beatmap.beatmapset_id}
-                title={beatmap.title}
-                artist={beatmap.artist}
-                keys={beatmap.keys}
-                creator={beatmap.creator}
-                creatorPrefix="mapped by"
-                difficultyName={beatmap.difficulty_name}
-                starRating={beatmap.star_rating}
-                actions={
-                  <div className="flex flex-row gap-0.5">
-                    <OsuButton onClick={() => window.open(`https://osu.ppy.sh/beatmapsets/${beatmap.beatmapset_id}`, '_blank')} />
-                    <DownloadButton
-                      downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
-                      downloadName={`${beatmap.artist} - ${beatmap.title}`}
-                      stashData={{
-                        id: beatmap.beatmapset_id,
-                        beatmapsetId: beatmap.beatmapset_id,
-                        title: beatmap.title,
-                        artist: beatmap.artist,
-                        creator: beatmap.creator,
-                        keys: beatmap.keys,
-                        source: 'download',
-                      }}
-                    />
+          <ScrollArea className="max-h-[40vh]">
+            <CardContent>
+              {beatmaps.map((beatmap, index) => (
+                <BeatmapRow
+                  key={`${beatmap.beatmapset_id}-${beatmap.beatmap_id || index}`}
+                  beatmapsetId={beatmap.beatmapset_id}
+                  title={beatmap.title}
+                  artist={beatmap.artist}
+                  keys={beatmap.keys}
+                  creator={beatmap.creator}
+                  creatorPrefix="mapped by"
+                  difficultyName={beatmap.difficulty_name}
+                  starRating={beatmap.star_rating}
+                  density="compact"
+                  actions={
                     <RemoveButton onClick={() => handleRemoveBeatmap(index)} />
-                  </div>
-                }
-              />
-            ))}
-          </CardContent>
+                  }
+                />
+              ))}
+            </CardContent>
+          </ScrollArea>
         )}
       </Card>
-    </ScrollArea>
+    </div>
   );
 
   const renderStepReview = () => {
@@ -553,7 +538,7 @@ export default function PackCreator({ open, onOpenChange, user, permissions, isK
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl overflow-hidden">
           <DialogHeader>
             <DialogTitle>Create New Pack</DialogTitle>
             <DialogDescription>{stepDescription}</DialogDescription>

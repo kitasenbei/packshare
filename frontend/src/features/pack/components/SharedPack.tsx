@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Download, FolderArchive, Share2, Bookmark, BookmarkX, LibraryBig, CheckCircle2 } from 'lucide-react';
+import { Download, FolderArchive, Share2, LibraryBig } from 'lucide-react';
 import JSZip from 'jszip';
 import type { StashBeatmap } from '../../../shared/types/beatmap';
 import { getPack, trackDownload, type Pack } from '../api/packs';
 import { getStoredToken } from '../../auth/api/auth';
-import BeatmapRow from '../../../shared/components/BeatmapRow';
+import BeatmapPanel from './BeatmapPanel';
 import DownloadButton from '../../../shared/components/DownloadButton';
 import OsuButton from '../../../shared/components/OsuButton';
 import { STASH_STORAGE_KEY } from '../../../shared/utils/stash';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 
 interface SharedPackProps {
@@ -38,8 +38,8 @@ export default function SharedPack({ packId }: SharedPackProps) {
   });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [zipping, setZipping] = useState(false);
-  const [zipProgress, setZipProgress] = useState({ done: 0, total: 0 });
-  const [downloadProgress, setDownloadProgress] = useState<Map<number, number>>(new Map());
+  const [_downloadProgress, setDownloadProgress] = useState<Map<number, number>>(new Map());
+  const [failedIds, setFailedIds] = useState<Map<number, string>>(new Map());
 
   const loadPack = useCallback(() => {
     if (!packId) {
@@ -83,30 +83,6 @@ export default function SharedPack({ packId }: SharedPackProps) {
     setStashedIds(new Set(stash.map(b => b.id)));
   };
 
-  const handleSaveToStash = (beatmap: Pack['beatmaps'][0]) => {
-    if (!pack) return;
-    const stash = getStash();
-    if (stash.some(b => b.id === beatmap.id)) {
-      const newStash = stash.filter(b => b.id !== beatmap.id);
-      saveStash(newStash);
-      toast('Removed from stash');
-    } else {
-      const newItem: StashBeatmap = {
-        id: beatmap.id,
-        beatmapsetId: beatmap.beatmapset_id,
-        title: beatmap.title,
-        artist: beatmap.artist,
-        creator: beatmap.creator,
-        keys: beatmap.keys,
-        addedAt: new Date(),
-        source: 'browse',
-        sourcePackId: pack.share_code,
-        sourcePackName: pack.name,
-      };
-      saveStash([...stash, newItem]);
-      toast('Added to stash!');
-    }
-  };
 
   const handleSaveAllToStash = () => {
     if (!pack) return;
@@ -151,34 +127,85 @@ export default function SharedPack({ packId }: SharedPackProps) {
     const toDownload = selectedIds.size > 0
       ? pack.beatmaps.filter(b => selectedIds.has(b.id))
       : pack.beatmaps;
-    toast(`Downloading ${toDownload.length} maps...`);
-    let failed = 0;
+
+    const toastId = toast.loading(`Downloading ${toDownload.length} maps...`, {
+      description: (
+        <div className="mt-1">
+          <p className="text-xs text-muted-foreground mb-1">0 / {toDownload.length}</p>
+          <Progress value={0} className="h-1.5" />
+        </div>
+      ),
+    });
+
+    const dlFailed: { beatmapsetId: number; name: string; error: string }[] = [];
+    let done = 0;
+
     for (const beatmap of toDownload) {
+      const mapName = `${beatmap.artist} - ${beatmap.title}`;
+      const pct = Math.round((done / toDownload.length) * 100);
+      toast.loading(`Downloading ${toDownload.length} maps...`, {
+        id: toastId,
+        description: (
+          <div className="mt-1">
+            <p className="text-xs text-muted-foreground mb-1 truncate">{mapName}</p>
+            <p className="text-xs text-muted-foreground mb-1">{done} / {toDownload.length}</p>
+            <Progress value={pct} className="h-1.5" />
+          </div>
+        ),
+      });
       try {
-        const res = await fetch(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`);
-        if (!res.ok) throw new Error();
-        const blob = await res.blob();
+        const blob = await fetchWithProgress(beatmap);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${beatmap.artist} - ${beatmap.title}.osz`;
+        a.download = `${mapName}.osz`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         trackDownload(pack.share_code, beatmap.beatmapset_id);
-      } catch {
-        failed++;
+      } catch (err) {
+        dlFailed.push({ beatmapsetId: beatmap.beatmapset_id, name: mapName, error: err instanceof Error ? err.message : 'Unknown error' });
       }
+      done++;
     }
-    if (failed > 0) {
-      toast(`Done! ${failed} map${failed > 1 ? 's' : ''} failed.`);
+
+    // Mark failed maps on the list
+    if (dlFailed.length > 0) {
+      setFailedIds(prev => {
+        const next = new Map(prev);
+        for (const f of dlFailed) next.set(f.beatmapsetId, f.error);
+        return next;
+      });
+      toast.success(`Downloaded ${done - dlFailed.length} / ${toDownload.length} maps`, {
+        id: toastId,
+        description: (
+          <div className="mt-1">
+            <p className="text-xs text-muted-foreground mb-1">{dlFailed.length} failed:</p>
+            <ul className="text-xs text-muted-foreground list-disc pl-4">
+              {dlFailed.map((f, i) => <li key={i}>{f.name}: {f.error}</li>)}
+            </ul>
+          </div>
+        ),
+      });
+    } else {
+      toast.success(`All ${toDownload.length} maps downloaded!`, { id: toastId });
     }
   };
 
   const fetchWithProgress = async (beatmap: Pack['beatmaps'][0]): Promise<Blob> => {
     const res = await fetch(`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`;
+      try {
+        const text = await res.text();
+        const body = JSON.parse(text);
+        if (body.message) message = body.message;
+      } catch {
+        // Non-JSON response, use HTTP status
+      }
+      throw new Error(message);
+    }
     const contentLength = res.headers.get('content-length');
     if (!contentLength || !res.body) {
       // Fallback: no streaming progress
@@ -210,38 +237,74 @@ export default function SharedPack({ packId }: SharedPackProps) {
       : pack.beatmaps;
 
     setZipping(true);
-    setZipProgress({ done: 0, total: toDownload.length });
-    setDownloadProgress(new Map());
+
+    const toastId = toast.loading(`Zipping ${pack.name}...`, {
+      description: (
+        <div className="mt-1">
+          <p className="text-xs text-muted-foreground mb-1">0 / {toDownload.length} maps</p>
+          <Progress value={0} className="h-1.5" />
+        </div>
+      ),
+    });
 
     const zip = new JSZip();
-    let failed = 0;
+    const failedMaps: { beatmapsetId: number; name: string; error: string }[] = [];
+    let done = 0;
+
+    const updateToast = (currentMap?: string) => {
+      const pct = Math.round((done / toDownload.length) * 100);
+      toast.loading(`Zipping ${pack.name}...`, {
+        id: toastId,
+        description: (
+          <div className="mt-1">
+            {currentMap && <p className="text-xs text-muted-foreground mb-1 truncate">{currentMap}</p>}
+            <p className="text-xs text-muted-foreground mb-1">{done} / {toDownload.length} maps</p>
+            <Progress value={pct} className="h-1.5" />
+          </div>
+        ),
+      });
+    };
 
     // Fetch with concurrency limit of 3
     const queue = [...toDownload];
     const workers = Array.from({ length: 3 }, async () => {
       while (queue.length > 0) {
         const beatmap = queue.shift()!;
+        const mapName = `${beatmap.artist} - ${beatmap.title}`;
+        updateToast(mapName);
         try {
           const blob = await fetchWithProgress(beatmap);
-          zip.file(`${beatmap.artist} - ${beatmap.title}.osz`, blob);
+          zip.file(`${mapName}.osz`, blob);
           trackDownload(pack.share_code, beatmap.beatmapset_id);
-        } catch {
-          failed++;
-          setDownloadProgress(prev => { const m = new Map(prev); m.delete(beatmap.id); return m; });
+        } catch (err) {
+          failedMaps.push({ beatmapsetId: beatmap.beatmapset_id, name: mapName, error: err instanceof Error ? err.message : 'Unknown error' });
         }
-        setZipProgress(prev => ({ ...prev, done: prev.done + 1 }));
+        done++;
+        updateToast();
       }
     });
 
     await Promise.all(workers);
 
+    // Mark failed maps on the list
+    if (failedMaps.length > 0) {
+      setFailedIds(new Map(failedMaps.map(f => [f.beatmapsetId, f.error])));
+    }
+
     if (zip.length === 0) {
       setZipping(false);
-      setDownloadProgress(new Map());
-      toast('All downloads failed — could not create ZIP');
+      toast.error('All downloads failed — could not create ZIP', {
+        id: toastId,
+        description: (
+          <ul className="mt-1 text-xs text-muted-foreground list-disc pl-4">
+            {failedMaps.map((f, i) => <li key={i}>{f.name}: {f.error}</li>)}
+          </ul>
+        ),
+      });
       return;
     }
 
+    toast.loading('Generating ZIP file...', { id: toastId });
     const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -253,11 +316,21 @@ export default function SharedPack({ packId }: SharedPackProps) {
     URL.revokeObjectURL(url);
 
     setZipping(false);
-    setDownloadProgress(new Map());
-    const msg = failed > 0
-      ? `ZIP ready! ${failed} map${failed > 1 ? 's' : ''} failed to download.`
-      : 'ZIP downloaded!';
-    toast(msg);
+    if (failedMaps.length > 0) {
+      toast.success(`${pack.name}.zip downloaded!`, {
+        id: toastId,
+        description: (
+          <div className="mt-1">
+            <p className="text-xs text-muted-foreground mb-1">{failedMaps.length} map{failedMaps.length > 1 ? 's' : ''} failed:</p>
+            <ul className="text-xs text-muted-foreground list-disc pl-4">
+              {failedMaps.map((f, i) => <li key={i}>{f.name}: {f.error}</li>)}
+            </ul>
+          </div>
+        ),
+      });
+    } else {
+      toast.success(`${pack.name}.zip downloaded!`, { id: toastId });
+    }
   }, [pack, selectedIds]);
 
   const handleShare = async () => {
@@ -389,9 +462,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                 className="px-3"
               >
                 <FolderArchive data-icon="inline-start" />
-                {zipping
-                  ? `Zipping ${zipProgress.done}/${zipProgress.total}...`
-                  : 'ZIP'}
+                {zipping ? 'Zipping...' : 'ZIP'}
               </Button>
               {isLoggedIn && (
                 <Button
@@ -436,77 +507,29 @@ export default function SharedPack({ packId }: SharedPackProps) {
               {selectedIds.size === pack.beatmaps.length ? 'Deselect all' : 'Select all'}
             </Button>
           </div>
-          <div className="p-1">
+          <div className="flex flex-col gap-2 p-2">
             {pack.beatmaps.map((beatmap) => {
-              const isInStash = isLoggedIn && stashedIds.has(beatmap.id);
-              const dlProgress = downloadProgress.get(beatmap.id);
-              const isDownloading = dlProgress !== undefined;
-              let rowSx: Record<string, unknown> | undefined;
-              let statusChip: { label: string } | undefined;
-              if (isDownloading) {
-                if (dlProgress < 0) {
-                  rowSx = { background: 'rgba(100,180,255,0.10)' };
-                  statusChip = { label: 'Fetching...' };
-                } else if (dlProgress >= 1) {
-                  rowSx = { background: 'rgba(100,200,100,0.12)' };
-                  statusChip = { label: '100%' };
-                } else {
-                  const pct = Math.round(dlProgress * 100);
-                  rowSx = { background: `linear-gradient(to right, rgba(100,180,255,0.15) ${pct}%, transparent ${pct}%)` };
-                  statusChip = { label: `${pct}%` };
-                }
-              } else if (!zipping && selectedIds.has(beatmap.id)) {
-                rowSx = { backgroundColor: 'rgba(100,180,255,0.08)' };
-              }
+              const mapError = failedIds.get(beatmap.beatmapset_id);
               return (
-                <BeatmapRow
+                <BeatmapPanel
                   key={beatmap.id}
                   title={beatmap.title}
                   artist={beatmap.artist}
+                  creator={beatmap.creator}
                   keys={beatmap.keys}
-                  creator={beatmap.downloads ? `${beatmap.creator} · ${beatmap.downloads} download${beatmap.downloads !== 1 ? 's' : ''}` : beatmap.creator}
-                  creatorPrefix="mapped by"
                   difficultyName={beatmap.difficulty_name}
                   starRating={beatmap.star_rating}
                   beatmapsetId={beatmap.beatmapset_id}
-                  density="compact"
-                  stashHighlight={isInStash}
+                  downloads={beatmap.downloads}
+                  selected={selectedIds.has(beatmap.id)}
+                  error={mapError}
                   onClick={() => handleToggleSelect(beatmap.id)}
-                  statusChip={statusChip}
-                  sx={rowSx}
                   actions={
-                    <>
-                      {isLoggedIn && (
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                onClick={() => handleSaveToStash(beatmap)}
-                                className={isInStash ? 'text-primary' : 'text-muted-foreground hover:text-primary'}
-                              />
-                            }
-                          >
-                            {isInStash ? <BookmarkX className="size-4" /> : <Bookmark className="size-4" />}
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isInStash ? 'Remove from stash' : 'Save to stash'}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      <OsuButton onClick={() => handleOpenOsu(beatmap)} />
-                      {selectedIds.has(beatmap.id) ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); handleToggleSelect(beatmap.id); }}
-                          className="min-w-0 text-primary"
-                        >
-                          <CheckCircle2 className="size-4" data-icon="inline-start" />
-                          Selected
-                        </Button>
-                      ) : (
+                    mapError ? (
+                      <OsuButton onClick={() => handleOpenOsu(beatmap)} iconOnly />
+                    ) : (
+                      <>
+                        <OsuButton onClick={() => handleOpenOsu(beatmap)} iconOnly />
                         <DownloadButton
                           downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
                           downloadName={`${beatmap.artist} - ${beatmap.title}`}
@@ -522,9 +545,10 @@ export default function SharedPack({ packId }: SharedPackProps) {
                             sourcePackName: pack!.name,
                           }}
                           onDownloaded={() => trackDownload(pack!.share_code, beatmap.beatmapset_id)}
+                          iconOnly
                         />
-                      )}
-                    </>
+                      </>
+                    )
                   }
                 />
               );

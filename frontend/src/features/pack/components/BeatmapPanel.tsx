@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Star, Download } from 'lucide-react';
+import { Star, Download, AlertTriangle } from 'lucide-react';
 
 interface BeatmapPanelProps {
   title: string;
@@ -13,6 +13,7 @@ interface BeatmapPanelProps {
   beatmapsetId: number;
   downloads?: number;
   selected?: boolean;
+  error?: string;
   onClick?: () => void;
   actions?: ReactNode;
 }
@@ -27,6 +28,7 @@ export default function BeatmapPanel({
   beatmapsetId,
   downloads,
   selected,
+  error,
   onClick,
   actions,
 }: BeatmapPanelProps) {
@@ -41,6 +43,7 @@ export default function BeatmapPanel({
         'hover:ring-1 hover:ring-border',
         onClick && 'cursor-pointer',
         selected && 'ring-1 ring-primary',
+        error && 'ring-1 ring-destructive/50 bg-destructive/5',
       )}
     >
       {/* Cover — list.jpg thumbnail */}
@@ -86,10 +89,17 @@ export default function BeatmapPanel({
               by {artist}
             </div>
 
-            {/* info-row--mapper */}
-            <div className="truncate text-xs font-bold text-primary">
-              mapped by {creator}
-            </div>
+            {/* info-row--mapper or error */}
+            {error ? (
+              <div className="flex items-center gap-1 text-xs text-destructive">
+                <AlertTriangle className="size-3 shrink-0" />
+                <span className="truncate">{error}</span>
+              </div>
+            ) : (
+              <div className="truncate text-xs font-bold text-primary">
+                mapped by {creator}
+              </div>
+            )}
 
             {/* info-row--stats */}
             <div className="mt-1.5 flex items-center gap-2">
@@ -117,7 +127,12 @@ export default function BeatmapPanel({
         {/* Actions — in the right gap, vertical, visible on hover */}
         {actions && (
           <div
-            className="flex w-0 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden opacity-0 transition-all group-hover/panel:w-10 group-hover/panel:opacity-100"
+            className={cn(
+              'flex shrink-0 flex-col items-center justify-center gap-1 overflow-hidden transition-all',
+              error
+                ? 'w-10 opacity-100'
+                : 'w-0 opacity-0 group-hover/panel:w-10 group-hover/panel:opacity-100',
+            )}
             onClick={(e) => e.stopPropagation()}
           >
             {actions}
