@@ -545,6 +545,7 @@ export default function SharedPack({ packId }: SharedPackProps) {
                             sourcePackName: pack!.name,
                           }}
                           onDownloaded={() => trackDownload(pack!.share_code, beatmap.beatmapset_id)}
+                          onError={(msg) => setFailedIds(prev => new Map(prev).set(beatmap.beatmapset_id, msg))}
                           iconOnly
                         />
                       </>

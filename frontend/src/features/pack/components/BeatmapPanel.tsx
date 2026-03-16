@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Star, Download, AlertTriangle } from 'lucide-react';
+import { Star, Download, AlertTriangle, Play, Pause } from 'lucide-react';
 import { getStarRatingColor } from '../../../shared/utils/starRating';
+import { useAudioPreview } from '../../../shared/hooks/useAudioPreview';
 
 interface BeatmapPanelProps {
   title: string;
@@ -35,6 +36,7 @@ export default function BeatmapPanel({
 }: BeatmapPanelProps) {
   const listUrl = `https://assets.ppy.sh/beatmaps/${beatmapsetId}/covers/list.jpg`;
   const cardUrl = `https://assets.ppy.sh/beatmaps/${beatmapsetId}/covers/card.jpg`;
+  const { isPlaying, toggle: togglePreview } = useAudioPreview(beatmapsetId);
 
   return (
     <div
@@ -47,14 +49,28 @@ export default function BeatmapPanel({
         error && 'ring-1 ring-destructive/50 bg-destructive/5',
       )}
     >
-      {/* Cover — list.jpg thumbnail */}
-      <div className="h-full w-[80px] shrink-0 overflow-hidden bg-muted">
+      {/* Cover — list.jpg thumbnail + play button */}
+      <div
+        className="group/cover relative h-full w-[80px] shrink-0 overflow-hidden bg-muted"
+        onClick={(e) => { e.stopPropagation(); togglePreview(); }}
+      >
         <img
           src={listUrl}
           alt=""
           className="h-full w-full object-cover"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
+        {/* Play/Pause overlay */}
+        <div className={cn(
+          'absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity cursor-pointer',
+          isPlaying ? 'opacity-100' : 'opacity-0 group-hover/cover:opacity-100',
+        )}>
+          {isPlaying ? (
+            <Pause className="size-6 fill-white text-white" />
+          ) : (
+            <Play className="size-6 fill-white text-white" />
+          )}
+        </div>
       </div>
 
       {/* Content card — pr expands on hover to reveal actions */}

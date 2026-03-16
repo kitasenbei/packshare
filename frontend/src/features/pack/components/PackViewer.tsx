@@ -52,6 +52,7 @@ export default function PackViewer({ packId }: PackViewerProps) {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [failedIds, setFailedIds] = useState<Map<number, string>>(new Map());
 
   useEffect(() => {
     if (!packId) {
@@ -210,43 +211,52 @@ export default function PackViewer({ packId }: PackViewerProps) {
 
           {/* Beatmap rows */}
           <div className="flex flex-col gap-2 p-2">
-            {displayMaps.map((beatmap) => (
-              <BeatmapPanel
-                key={beatmap.id}
-                title={beatmap.title}
-                artist={beatmap.artist}
-                creator={beatmap.creator}
-                keys={beatmap.keys}
-                difficultyName={beatmap.difficulty_name}
-                starRating={beatmap.star_rating}
-                beatmapsetId={beatmap.beatmapset_id}
-                downloads={beatmap.downloads}
-                selected={selectedIds.has(beatmap.id)}
-                onClick={() => toggleSelect(beatmap.id)}
-                actions={
-                  <>
-                    <OsuButton onClick={() => handleOpenOsu(beatmap)} iconOnly />
-                    <DownloadButton
-                      downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
-                      downloadName={`${beatmap.artist} - ${beatmap.title}`}
-                      iconOnly
-                      stashData={{
-                        id: beatmap.id,
-                        beatmapsetId: beatmap.beatmapset_id,
-                        title: beatmap.title,
-                        artist: beatmap.artist,
-                        creator: beatmap.creator,
-                        keys: beatmap.keys,
-                        source: 'download',
-                        sourcePackId: pack.share_code,
-                        sourcePackName: pack.name,
-                      }}
-                      onDownloaded={() => trackDownload(pack.share_code, beatmap.beatmapset_id)}
-                    />
-                  </>
-                }
-              />
-            ))}
+            {displayMaps.map((beatmap) => {
+              const mapError = failedIds.get(beatmap.beatmapset_id);
+              return (
+                <BeatmapPanel
+                  key={beatmap.id}
+                  title={beatmap.title}
+                  artist={beatmap.artist}
+                  creator={beatmap.creator}
+                  keys={beatmap.keys}
+                  difficultyName={beatmap.difficulty_name}
+                  starRating={beatmap.star_rating}
+                  beatmapsetId={beatmap.beatmapset_id}
+                  downloads={beatmap.downloads}
+                  selected={selectedIds.has(beatmap.id)}
+                  error={mapError}
+                  onClick={() => toggleSelect(beatmap.id)}
+                  actions={
+                    mapError ? (
+                      <OsuButton onClick={() => handleOpenOsu(beatmap)} iconOnly />
+                    ) : (
+                      <>
+                        <OsuButton onClick={() => handleOpenOsu(beatmap)} iconOnly />
+                        <DownloadButton
+                          downloadUrl={`https://api.nerinyan.moe/d/${beatmap.beatmapset_id}`}
+                          downloadName={`${beatmap.artist} - ${beatmap.title}`}
+                          iconOnly
+                          stashData={{
+                            id: beatmap.id,
+                            beatmapsetId: beatmap.beatmapset_id,
+                            title: beatmap.title,
+                            artist: beatmap.artist,
+                            creator: beatmap.creator,
+                            keys: beatmap.keys,
+                            source: 'download',
+                            sourcePackId: pack.share_code,
+                            sourcePackName: pack.name,
+                          }}
+                          onDownloaded={() => trackDownload(pack.share_code, beatmap.beatmapset_id)}
+                          onError={(msg) => setFailedIds(prev => new Map(prev).set(beatmap.beatmapset_id, msg))}
+                        />
+                      </>
+                    )
+                  }
+                />
+              );
+            })}
           </div>
 
           {/* Pagination */}

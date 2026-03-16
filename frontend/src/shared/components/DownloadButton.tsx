@@ -12,10 +12,11 @@ interface DownloadButtonProps {
   downloadName?: string;
   stashData?: Omit<StashBeatmap, 'addedAt'>;
   onDownloaded?: () => void;
+  onError?: (message: string) => void;
   iconOnly?: boolean;
 }
 
-export default function DownloadButton({ downloadUrl, downloadName, stashData, onDownloaded, iconOnly }: DownloadButtonProps) {
+export default function DownloadButton({ downloadUrl, downloadName, stashData, onDownloaded, onError, iconOnly }: DownloadButtonProps) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
 
@@ -34,7 +35,17 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
 
     try {
       const response = await fetch(downloadUrl);
-      if (!response.ok) throw new Error('Download failed');
+      if (!response.ok) {
+        let message = `Download failed (HTTP ${response.status})`;
+        try {
+          const text = await response.text();
+          const body = JSON.parse(text);
+          if (body.message) message = body.message;
+        } catch {
+          // Non-JSON response
+        }
+        throw new Error(message);
+      }
 
       const contentLength = response.headers.get('Content-Length');
       const total = contentLength ? parseInt(contentLength, 10) : null;
@@ -74,8 +85,10 @@ export default function DownloadButton({ downloadUrl, downloadName, stashData, o
 
       onDownloaded?.();
       toast.success(`Downloaded ${name}`, { id: toastId });
-    } catch {
-      toast.error(`Failed to download ${name}`, { id: toastId });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Download failed';
+      toast.error(msg, { id: toastId });
+      onError?.(msg);
     } finally {
       setLoading(false);
       setProgress(null);
