@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, ChevronDown } from 'lucide-react';
 
 const STORAGE_KEY = 'packshare_theme';
 
@@ -155,15 +153,18 @@ function ColorWheel({
   lightness: lightnessVal,
   harmony,
   onHueChange,
+  onHarmonyChange,
 }: {
   hue: number;
   chroma: number;
   lightness: number;
   harmony: HarmonyMode;
   onHueChange: (hue: number) => void;
+  onHarmonyChange: (mode: HarmonyMode) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragging = useRef(false);
+  const [harmonyOpen, setHarmonyOpen] = useState(false);
 
   const hues = getHarmonyHues(hue, harmony);
 
@@ -194,10 +195,13 @@ function ColorWheel({
   const onPointerUp = () => { dragging.current = false; };
 
   // Generate conic gradient stops for the wheel
-  const wheelSegments = Array.from({ length: 36 }, (_, i) => {
-    const deg = i * 10;
-    return `oklch(0.7 0.08 ${deg}) ${deg}deg`;
-  }).join(', ');
+  const wheelSegments = [
+    ...Array.from({ length: 36 }, (_, i) => {
+      const deg = i * 10;
+      return `oklch(0.7 0.08 ${deg}) ${deg}deg`;
+    }),
+    'oklch(0.7 0.08 0) 360deg',
+  ].join(', ');
 
   return (
     <svg
@@ -214,10 +218,12 @@ function ColorWheel({
         <clipPath id="wheel-ring">
           <path d={`
             M ${WHEEL_CENTER} ${WHEEL_CENTER - WHEEL_RADIUS}
-            A ${WHEEL_RADIUS} ${WHEEL_RADIUS} 0 1 1 ${WHEEL_CENTER - 0.001} ${WHEEL_CENTER - WHEEL_RADIUS}
+            A ${WHEEL_RADIUS} ${WHEEL_RADIUS} 0 1 1 ${WHEEL_CENTER} ${WHEEL_CENTER + WHEEL_RADIUS}
+            A ${WHEEL_RADIUS} ${WHEEL_RADIUS} 0 1 1 ${WHEEL_CENTER} ${WHEEL_CENTER - WHEEL_RADIUS}
             Z
             M ${WHEEL_CENTER} ${WHEEL_CENTER - INNER_RADIUS}
-            A ${INNER_RADIUS} ${INNER_RADIUS} 0 1 0 ${WHEEL_CENTER - 0.001} ${WHEEL_CENTER - INNER_RADIUS}
+            A ${INNER_RADIUS} ${INNER_RADIUS} 0 1 0 ${WHEEL_CENTER} ${WHEEL_CENTER + INNER_RADIUS}
+            A ${INNER_RADIUS} ${INNER_RADIUS} 0 1 0 ${WHEEL_CENTER} ${WHEEL_CENTER - INNER_RADIUS}
             Z
           `} fillRule="evenodd" />
         </clipPath>
@@ -266,7 +272,7 @@ function ColorWheel({
         );
       })}
 
-      {/* Center preview */}
+      {/* Center preview + harmony dropdown */}
       <circle
         cx={WHEEL_CENTER}
         cy={WHEEL_CENTER}
@@ -275,22 +281,45 @@ function ColorWheel({
       />
       <text
         x={WHEEL_CENTER}
-        y={WHEEL_CENTER - 6}
+        y={WHEEL_CENTER - 8}
         textAnchor="middle"
         className="fill-white text-[11px] font-bold"
         style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}
       >
         {Math.round(hue)}°
       </text>
-      <text
-        x={WHEEL_CENTER}
-        y={WHEEL_CENTER + 10}
-        textAnchor="middle"
-        className="fill-white/70 text-[9px]"
-        style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}
+      <foreignObject
+        x={WHEEL_CENTER - 50}
+        y={WHEEL_CENTER - 2}
+        width={100}
+        height={28}
+        onPointerDown={(e) => e.stopPropagation()}
       >
-        {harmony}
-      </text>
+        <Popover open={harmonyOpen} onOpenChange={setHarmonyOpen}>
+          <PopoverTrigger
+            className="flex w-full cursor-pointer items-center justify-center gap-0.5 bg-transparent text-[10px] text-white/80 outline-none"
+            style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+          >
+            {HARMONY_MODES.find((m) => m.value === harmony)?.label}
+            <ChevronDown className="size-2.5" />
+          </PopoverTrigger>
+          <PopoverContent className="w-auto min-w-0 gap-0 p-1" sideOffset={8}>
+            {HARMONY_MODES.map((m) => (
+              <button
+                key={m.value}
+                onClick={() => { onHarmonyChange(m.value); setHarmonyOpen(false); }}
+                className={`w-full rounded px-3 py-1 text-left text-xs transition-colors ${
+                  harmony === m.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      </foreignObject>
     </svg>
   );
 }
@@ -356,48 +385,29 @@ export default function PaletteEditor({ open, onOpenChange }: PaletteEditorProps
     clearPalette();
   };
 
-  const harmonyHues = getHarmonyHues(hue, harmony);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Theme Palette</DialogTitle>
-          <DialogDescription>Pick a base hue on the wheel and a color harmony mode.</DialogDescription>
+          <DialogTitle>Theme</DialogTitle>
+          <DialogDescription className="sr-only">Customize the color theme</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Color wheel */}
+        <div className="space-y-3">
+          {/* Color wheel with embedded harmony selector */}
           <ColorWheel
             hue={hue}
             chroma={chroma}
             lightness={lightness}
             harmony={harmony}
             onHueChange={setHue}
+            onHarmonyChange={setHarmony}
           />
 
-          {/* Harmony mode selector */}
-          <div>
-            <Label className="mb-2 block text-xs">Harmony</Label>
-            <ToggleGroup
-              value={[harmony]}
-              onValueChange={(v) => { if (v.length > 0) setHarmony(v[v.length - 1] as HarmonyMode); }}
-              variant="outline"
-              size="sm"
-            >
-              {HARMONY_MODES.map((m) => (
-                <ToggleGroupItem key={m.value} value={m.value}>
-                  <span className="mr-1">{m.shape}</span>
-                  {m.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </div>
-
-          {/* Saturation + Lightness */}
+          {/* Sliders */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="mb-2 block text-xs">Saturation</Label>
+              <span className="mb-1.5 block text-xs text-muted-foreground">Saturation</span>
               <Slider
                 value={[chroma]}
                 onValueChange={(v) => setChroma(Array.isArray(v) ? v[0] : v)}
@@ -407,7 +417,7 @@ export default function PaletteEditor({ open, onOpenChange }: PaletteEditorProps
               />
             </div>
             <div>
-              <Label className="mb-2 block text-xs">Lightness</Label>
+              <span className="mb-1.5 block text-xs text-muted-foreground">Lightness</span>
               <Slider
                 value={[lightness]}
                 onValueChange={(v) => setLightness(Array.isArray(v) ? v[0] : v)}
@@ -418,32 +428,6 @@ export default function PaletteEditor({ open, onOpenChange }: PaletteEditorProps
             </div>
           </div>
 
-          {/* Harmony swatches */}
-          <div>
-            <Label className="mb-2 block text-xs">Palette</Label>
-            <div className="flex gap-2">
-              {harmonyHues.map((h, i) => (
-                <div key={i} className="flex flex-col items-center gap-1">
-                  <div
-                    className="size-8 rounded-lg ring-1 ring-border"
-                    style={{ backgroundColor: `oklch(${lightness} ${chroma} ${h})` }}
-                  />
-                  <span className="text-[10px] text-muted-foreground">{Math.round(h)}°</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Live preview */}
-          <div>
-            <Label className="mb-2 block text-xs">Preview</Label>
-            <div className="flex gap-2">
-              <Badge>Primary</Badge>
-              <Badge variant="secondary">Secondary</Badge>
-              <Badge variant="destructive">Destructive</Badge>
-              <Badge variant="outline">Outline</Badge>
-            </div>
-          </div>
         </div>
 
         <DialogFooter className="flex-row gap-2">
@@ -452,9 +436,6 @@ export default function PaletteEditor({ open, onOpenChange }: PaletteEditorProps
             Reset
           </Button>
           <div className="flex-1" />
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
           <Button size="sm" onClick={handleSave}>
             Save
           </Button>

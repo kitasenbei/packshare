@@ -47,7 +47,9 @@ import {
   Menu,
   Moon,
   Sun,
+  Palette,
 } from 'lucide-react';
+import PaletteEditor from '../features/dashboard/components/PaletteEditor';
 import type { User, AuthMode } from '../features/auth/api/auth';
 import { getLoginUrl } from '../features/auth/api/auth';
 
@@ -73,6 +75,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
   const [keyError, setKeyError] = useState('');
   const [keyLoading, setKeyLoading] = useState(false);
   const [mobileDrawer, setMobileDrawer] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const isKey = authMode === 'key';
 
@@ -186,6 +189,10 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
             Access Keys
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onClick={() => setPaletteOpen(true)}>
+          <Palette className="size-4" />
+          Theme
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
           Sign Out
@@ -450,6 +457,7 @@ export default function Sidebar({ user, authMode, keyName, permissions, onLogout
       </div>
 
       {keyDialog}
+      <PaletteEditor open={paletteOpen} onOpenChange={setPaletteOpen} />
     </>
   );
 }

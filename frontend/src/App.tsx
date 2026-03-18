@@ -176,7 +176,7 @@ function App() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex flex-1 px-2 py-4 md:px-4">
+                    <div className="flex flex-1">
                       <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} onOpenCreatePack={() => setCreatePackOpen(true)} />
                     </div>
                   </>
