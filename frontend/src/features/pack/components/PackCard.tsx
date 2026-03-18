@@ -4,6 +4,7 @@ import { Card, CardHeader, CardContent, CardDescription, CardTitle, CardFooter }
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Music, Eye, ArrowRight } from 'lucide-react';
+import { getStarRatingColor } from '@/shared/utils/starRating';
 
 interface PackCardPack {
   id: number;
@@ -17,6 +18,7 @@ interface PackCardPack {
   };
   beatmap_count: number;
   beatmapset_ids: number[];
+  star_ratings?: number[];
   created_at: string;
 }
 
@@ -142,6 +144,34 @@ function GridCard({ pack }: { pack: PackCardPack }) {
   );
 }
 
+const MAX_BARS = 5;
+
+/** Pick evenly spaced indices from an array of length n, returning up to MAX_BARS items */
+function sampleIndices(n: number): number[] {
+  if (n <= MAX_BARS) return Array.from({ length: n }, (_, i) => i);
+  return Array.from({ length: MAX_BARS }, (_, i) =>
+    Math.round((i * (n - 1)) / (MAX_BARS - 1))
+  );
+}
+
+function DifficultyBars({ ratings }: { ratings: number[] }) {
+  const sorted = [...ratings].sort((a, b) => a - b);
+  const sampled = sampleIndices(sorted.length).map((i) => sorted[i]);
+  const totalSlots = Math.max(MAX_BARS, sampled.length);
+
+  return (
+    <div className="ml-1 flex items-center gap-0.5">
+      {Array.from({ length: totalSlots }, (_, i) => {
+        if (i < sampled.length) {
+          const { bg } = getStarRatingColor(sampled[i]);
+          return <div key={i} className={`h-3 w-1.5 rounded-sm ${bg}`} title={`${sampled[i].toFixed(2)}★`} />;
+        }
+        return <div key={i} className="h-3 w-1.5 rounded-sm bg-muted" />;
+      })}
+    </div>
+  );
+}
+
 function CompactCard({ pack }: { pack: PackCardPack }) {
   return (
     <Card className="overflow-hidden transition-colors hover:border-primary">
@@ -163,20 +193,9 @@ function CompactCard({ pack }: { pack: PackCardPack }) {
                 <Eye className="size-3" />
                 {pack.views.toLocaleString()} views
               </Badge>
-              {/* Stacked thumbnails */}
-              {pack.beatmapset_ids && pack.beatmapset_ids.length > 0 && (
-                <div className="relative ml-1 h-5">
-                  {pack.beatmapset_ids.slice(0, 6).map((id, idx) => (
-                    <img
-                      key={id}
-                      src={`https://assets.ppy.sh/beatmaps/${id}/covers/list.jpg`}
-                      alt=""
-                      className="absolute h-5 w-7 rounded border border-background object-cover shadow-sm"
-                      style={{ left: idx * 12 }}
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  ))}
-                </div>
+              {/* Difficulty bars */}
+              {pack.star_ratings && pack.star_ratings.length > 0 && (
+                <DifficultyBars ratings={pack.star_ratings} />
               )}
             </div>
           </div>

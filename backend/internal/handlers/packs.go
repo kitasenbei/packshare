@@ -610,8 +610,12 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 	result := make([]fiber.Map, len(packs))
 	for i, pack := range packs {
 		beatmapsetIDs := make([]int64, len(pack.Beatmaps))
+		starRatings := make([]float64, 0, len(pack.Beatmaps))
 		for j, bm := range pack.Beatmaps {
 			beatmapsetIDs[j] = bm.BeatmapID
+			if bm.StarRating != nil {
+				starRatings = append(starRatings, *bm.StarRating)
+			}
 		}
 
 		result[i] = fiber.Map{
@@ -629,6 +633,7 @@ func (h *PackHandler) BrowsePacks(c *fiber.Ctx) error {
 			},
 			"beatmap_count":  len(pack.Beatmaps),
 			"beatmapset_ids": beatmapsetIDs,
+			"star_ratings":   starRatings,
 			"created_at":     pack.CreatedAt,
 		}
 	}

@@ -153,6 +153,7 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
       user: pack.user ?? { username: user.username, avatar_url: user.avatar_url },
       beatmap_count: pack.beatmaps.length,
       beatmapset_ids: pack.beatmaps.map((b: Pack['beatmaps'][0]) => b.beatmapset_id),
+      star_ratings: pack.beatmaps.map((b: Pack['beatmaps'][0]) => b.star_rating).filter((sr): sr is number => sr != null),
     },
   });
 

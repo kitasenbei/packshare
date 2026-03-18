@@ -87,6 +87,7 @@ export interface BrowsePacksResult {
     };
     beatmap_count: number;
     beatmapset_ids: number[];
+    star_ratings: number[];
     created_at: string;
   }[];
   total: number;
