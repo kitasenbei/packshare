@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -154,6 +154,8 @@ function ColorWheel({
   harmony,
   onHueChange,
   onHarmonyChange,
+  onInteractStart,
+  onInteractEnd,
 }: {
   hue: number;
   chroma: number;
@@ -161,6 +163,8 @@ function ColorWheel({
   harmony: HarmonyMode;
   onHueChange: (hue: number) => void;
   onHarmonyChange: (mode: HarmonyMode) => void;
+  onInteractStart?: () => void;
+  onInteractEnd?: () => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragging = useRef(false);
@@ -188,19 +192,20 @@ function ColorWheel({
     dragging.current = true;
     (e.target as SVGElement).setPointerCapture(e.pointerId);
     handlePointer(e);
+    onInteractStart?.();
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (dragging.current) handlePointer(e);
   };
-  const onPointerUp = () => { dragging.current = false; };
+  const onPointerUp = () => { dragging.current = false; onInteractEnd?.(); };
 
-  // Generate conic gradient stops for the wheel
+  // Generate conic gradient stops for the wheel, reflecting current chroma/lightness
   const wheelSegments = [
     ...Array.from({ length: 36 }, (_, i) => {
       const deg = i * 10;
-      return `oklch(0.7 0.08 ${deg}) ${deg}deg`;
+      return `oklch(${lightnessVal} ${chromaVal} ${deg}) ${deg}deg`;
     }),
-    'oklch(0.7 0.08 0) 360deg',
+    `oklch(${lightnessVal} ${chromaVal} 0) 360deg`,
   ].join(', ');
 
   return (
@@ -347,6 +352,7 @@ export default function PaletteEditor({ open, onOpenChange }: PaletteEditorProps
   const [chroma, setChroma] = useState(DEFAULT_CHROMA);
   const [lightness, setLightness] = useState(DEFAULT_LIGHTNESS);
   const [harmony, setHarmony] = useState<HarmonyMode>('monochromatic');
+  const [interacting, setInteracting] = useState(false);
 
   useEffect(() => {
     try {
@@ -387,60 +393,69 @@ export default function PaletteEditor({ open, onOpenChange }: PaletteEditorProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Theme</DialogTitle>
-          <DialogDescription className="sr-only">Customize the color theme</DialogDescription>
-        </DialogHeader>
+      <DialogPortal>
+        <DialogOverlay style={interacting ? { background: 'transparent', backdropFilter: 'none' } : undefined} />
+        <DialogContent showOverlay={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Theme</DialogTitle>
+            <DialogDescription className="sr-only">Customize the color theme</DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-3">
-          {/* Color wheel with embedded harmony selector */}
-          <ColorWheel
-            hue={hue}
-            chroma={chroma}
-            lightness={lightness}
-            harmony={harmony}
-            onHueChange={setHue}
-            onHarmonyChange={setHarmony}
-          />
+          <div className="space-y-3">
+            {/* Color wheel with embedded harmony selector */}
+            <ColorWheel
+              hue={hue}
+              chroma={chroma}
+              lightness={lightness}
+              harmony={harmony}
+              onHueChange={setHue}
+              onHarmonyChange={setHarmony}
+              onInteractStart={() => setInteracting(true)}
+              onInteractEnd={() => setInteracting(false)}
+            />
 
-          {/* Sliders */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <span className="mb-1.5 block text-xs text-muted-foreground">Saturation</span>
-              <Slider
-                value={[chroma]}
-                onValueChange={(v) => setChroma(Array.isArray(v) ? v[0] : v)}
-                min={0.01}
-                max={0.15}
-                step={0.001}
-              />
+            {/* Sliders */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="mb-1.5 block text-xs text-muted-foreground">Saturation</span>
+                <Slider
+                  value={[chroma]}
+                  onValueChange={(v) => setChroma(Array.isArray(v) ? v[0] : v)}
+                  onPointerDown={() => setInteracting(true)}
+                  onPointerUp={() => setInteracting(false)}
+                  min={0.01}
+                  max={0.15}
+                  step={0.001}
+                />
+              </div>
+              <div>
+                <span className="mb-1.5 block text-xs text-muted-foreground">Lightness</span>
+                <Slider
+                  value={[lightness]}
+                  onValueChange={(v) => setLightness(Array.isArray(v) ? v[0] : v)}
+                  onPointerDown={() => setInteracting(true)}
+                  onPointerUp={() => setInteracting(false)}
+                  min={0.3}
+                  max={0.85}
+                  step={0.01}
+                />
+              </div>
             </div>
-            <div>
-              <span className="mb-1.5 block text-xs text-muted-foreground">Lightness</span>
-              <Slider
-                value={[lightness]}
-                onValueChange={(v) => setLightness(Array.isArray(v) ? v[0] : v)}
-                min={0.3}
-                max={0.85}
-                step={0.01}
-              />
-            </div>
+
           </div>
 
-        </div>
-
-        <DialogFooter className="flex-row gap-2">
-          <Button variant="outline" size="sm" onClick={handleReset}>
-            <RotateCcw className="size-3.5" />
-            Reset
-          </Button>
-          <div className="flex-1" />
-          <Button size="sm" onClick={handleSave}>
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+          <DialogFooter className="flex-row gap-2">
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              <RotateCcw className="size-3.5" />
+              Reset
+            </Button>
+            <div className="flex-1" />
+            <Button size="sm" onClick={handleSave}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 }
