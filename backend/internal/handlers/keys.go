@@ -88,7 +88,9 @@ func (h *AccessKeyHandler) CreateKey(c *fiber.Ctx) error {
 
 	// Check key limit
 	var count int64
-	h.db.Model(&models.AccessKey{}).Where("user_id = ?", user.ID).Count(&count)
+	if err := h.db.Model(&models.AccessKey{}).Where("user_id = ?", user.ID).Count(&count).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
 	if count >= maxKeysPerUser {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "maximum number of access keys reached"})
 	}

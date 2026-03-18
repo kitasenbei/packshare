@@ -423,22 +423,34 @@ func (h *TournamentHandler) AddStage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "stage name is required"})
 	}
 
-	var maxSort int
-	h.db.Model(&models.TournamentStage{}).Where("tournament_id = ?", tournament.ID).Select("COALESCE(MAX(sort_order), -1)").Scan(&maxSort)
+	var stage models.TournamentStage
+	txErr := h.db.Transaction(func(tx *gorm.DB) error {
+		var stageCount int64
+		if err := tx.Model(&models.TournamentStage{}).Where("tournament_id = ?", tournament.ID).Count(&stageCount).Error; err != nil {
+			return err
+		}
+		if stageCount >= int64(maxStagesPerTourney) {
+			return fmt.Errorf("maximum %d stages", maxStagesPerTourney)
+		}
 
-	var stageCount int64
-	h.db.Model(&models.TournamentStage{}).Where("tournament_id = ?", tournament.ID).Count(&stageCount)
-	if stageCount >= int64(maxStagesPerTourney) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("maximum %d stages", maxStagesPerTourney)})
-	}
+		var maxSort int
+		if err := tx.Model(&models.TournamentStage{}).Where("tournament_id = ?", tournament.ID).Select("COALESCE(MAX(sort_order), -1)").Scan(&maxSort).Error; err != nil {
+			return err
+		}
 
-	stage := models.TournamentStage{
-		TournamentID: tournament.ID,
-		Name:         name,
-		SortOrder:    maxSort + 1,
-	}
+		stage = models.TournamentStage{
+			TournamentID: tournament.ID,
+			Name:         name,
+			SortOrder:    maxSort + 1,
+		}
 
-	if err := h.db.Create(&stage).Error; err != nil {
+		return tx.Create(&stage).Error
+	})
+
+	if txErr != nil {
+		if txErr.Error() == fmt.Sprintf("maximum %d stages", maxStagesPerTourney) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": txErr.Error()})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create stage"})
 	}
 
@@ -589,15 +601,19 @@ func (h *TournamentHandler) AddMapToStage(c *fiber.Ctx) error {
 
 	// Check map count for this stage
 	var mapCount int64
-	h.db.Model(&models.TournamentMap{}).Where("stage_id = ?", stageID).Count(&mapCount)
+	if err := h.db.Model(&models.TournamentMap{}).Where("stage_id = ?", stageID).Count(&mapCount).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
 	if mapCount >= int64(maxMapsPerStage) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("maximum %d maps per stage", maxMapsPerStage)})
 	}
 
 	// Auto-calculate slot number
 	var maxSlotNum int
-	h.db.Model(&models.TournamentMap{}).Where("stage_id = ? AND slot_type = ?", stageID, req.SlotType).
-		Select("COALESCE(MAX(slot_number), 0)").Scan(&maxSlotNum)
+	if err := h.db.Model(&models.TournamentMap{}).Where("stage_id = ? AND slot_type = ?", stageID, req.SlotType).
+		Select("COALESCE(MAX(slot_number), 0)").Scan(&maxSlotNum).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
 
 	tournamentMap := models.TournamentMap{
 		StageID:        uint(stageID),
@@ -670,8 +686,10 @@ func (h *TournamentHandler) RemoveMapFromStage(c *fiber.Ctx) error {
 
 		// Renumber remaining maps of same slot type in this stage
 		var remaining []models.TournamentMap
-		tx.Where("stage_id = ? AND slot_type = ?", stageID, slotType).
-			Order("slot_number ASC").Find(&remaining)
+		if err := tx.Where("stage_id = ? AND slot_type = ?", stageID, slotType).
+			Order("slot_number ASC").Find(&remaining).Error; err != nil {
+			return err
+		}
 
 		for i, m := range remaining {
 			if m.SlotNumber != i+1 {
@@ -738,6 +756,7 @@ func (h *TournamentHandler) UpdateMap(c *fiber.Ctx) error {
 	}
 
 	updates := map[string]interface{}{}
+	needsSlotReassign := false
 
 	if req.SlotType != "" {
 		req.SlotType = strings.TrimSpace(req.SlotType)
@@ -745,11 +764,8 @@ func (h *TournamentHandler) UpdateMap(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "slot_type must be under 20 characters"})
 		}
 		if req.SlotType != tournamentMap.SlotType {
-			var maxSlotNum int
-			h.db.Model(&models.TournamentMap{}).Where("stage_id = ? AND slot_type = ?", tournamentMap.StageID, req.SlotType).
-				Select("COALESCE(MAX(slot_number), 0)").Scan(&maxSlotNum)
+			needsSlotReassign = true
 			updates["slot_type"] = req.SlotType
-			updates["slot_number"] = maxSlotNum + 1
 		}
 	}
 
@@ -764,11 +780,28 @@ func (h *TournamentHandler) UpdateMap(c *fiber.Ctx) error {
 		return c.JSON(tournamentMap)
 	}
 
-	if err := h.db.Model(&tournamentMap).Updates(updates).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update map"})
+	if needsSlotReassign {
+		txErr := h.db.Transaction(func(tx *gorm.DB) error {
+			var maxSlotNum int
+			if err := tx.Model(&models.TournamentMap{}).Where("stage_id = ? AND slot_type = ?", tournamentMap.StageID, req.SlotType).
+				Select("COALESCE(MAX(slot_number), 0)").Scan(&maxSlotNum).Error; err != nil {
+				return err
+			}
+			updates["slot_number"] = maxSlotNum + 1
+			return tx.Model(&tournamentMap).Updates(updates).Error
+		})
+		if txErr != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update map"})
+		}
+	} else {
+		if err := h.db.Model(&tournamentMap).Updates(updates).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update map"})
+		}
 	}
 
-	h.db.First(&tournamentMap, mapID)
+	if err := h.db.First(&tournamentMap, mapID).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
 	return c.JSON(tournamentMap)
 }
 
@@ -822,29 +855,44 @@ func (h *TournamentHandler) AddPlayer(c *fiber.Ctx) error {
 		name = fmt.Sprintf("Player %d", req.OsuID)
 	}
 
-	// Check duplicate
-	var count int64
-	h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ? AND osu_id = ?", tournament.ID, req.OsuID).Count(&count)
-	if count > 0 {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "player already in roster"})
-	}
+	var player models.TournamentPlayer
+	txErr := h.db.Transaction(func(tx *gorm.DB) error {
+		// Check duplicate
+		var count int64
+		if err := tx.Model(&models.TournamentPlayer{}).Where("tournament_id = ? AND osu_id = ?", tournament.ID, req.OsuID).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			return fmt.Errorf("player already in roster")
+		}
 
-	// Check limit
-	var total int64
-	h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Count(&total)
-	if total >= maxPlayersPerTourney {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("maximum %d players", maxPlayersPerTourney)})
-	}
+		// Check limit
+		var total int64
+		if err := tx.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Count(&total).Error; err != nil {
+			return err
+		}
+		if total >= maxPlayersPerTourney {
+			return fmt.Errorf("maximum %d players", maxPlayersPerTourney)
+		}
 
-	player := models.TournamentPlayer{
-		TournamentID: tournament.ID,
-		OsuID:        req.OsuID,
-		Name:         truncate(name, maxFieldLength),
-		Seed:         int(total) + 1,
-		Discord:      truncate(strings.TrimSpace(req.Discord), maxFieldLength),
-	}
+		player = models.TournamentPlayer{
+			TournamentID: tournament.ID,
+			OsuID:        req.OsuID,
+			Name:         truncate(name, maxFieldLength),
+			Seed:         int(total) + 1,
+			Discord:      truncate(strings.TrimSpace(req.Discord), maxFieldLength),
+		}
 
-	if err := h.db.Create(&player).Error; err != nil {
+		return tx.Create(&player).Error
+	})
+
+	if txErr != nil {
+		if txErr.Error() == "player already in roster" {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": txErr.Error()})
+		}
+		if txErr.Error() == fmt.Sprintf("maximum %d players", maxPlayersPerTourney) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": txErr.Error()})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add player"})
 	}
 
@@ -880,7 +928,9 @@ func (h *TournamentHandler) BulkAddPlayers(c *fiber.Ctx) error {
 	}
 
 	var existing int64
-	h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Count(&existing)
+	if err := h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Count(&existing).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
 
 	if existing+int64(len(req.Players)) > maxPlayersPerTourney {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("would exceed maximum %d players", maxPlayersPerTourney)})
@@ -888,7 +938,9 @@ func (h *TournamentHandler) BulkAddPlayers(c *fiber.Ctx) error {
 
 	// Get existing osu IDs to skip duplicates
 	var existingIDs []int64
-	h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Pluck("osu_id", &existingIDs)
+	if err := h.db.Model(&models.TournamentPlayer{}).Where("tournament_id = ?", tournament.ID).Pluck("osu_id", &existingIDs).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
 	existingSet := make(map[int64]bool, len(existingIDs))
 	for _, id := range existingIDs {
 		existingSet[id] = true
@@ -1010,10 +1062,14 @@ func (h *TournamentHandler) RemovePlayer(c *fiber.Ctx) error {
 		}
 		// Renumber seeds
 		var remaining []models.TournamentPlayer
-		tx.Where("tournament_id = ?", tournament.ID).Order("seed ASC").Find(&remaining)
+		if err := tx.Where("tournament_id = ?", tournament.ID).Order("seed ASC").Find(&remaining).Error; err != nil {
+			return err
+		}
 		for i, p := range remaining {
 			if p.Seed != i+1 {
-				tx.Model(&p).Update("seed", i+1)
+				if err := tx.Model(&p).Update("seed", i+1).Error; err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -1202,7 +1258,9 @@ func (h *TournamentHandler) CreateAnnouncement(c *fiber.Ctx) error {
 	}
 
 	var count int64
-	h.db.Model(&models.TournamentAnnouncement{}).Where("tournament_id = ?", tournament.ID).Count(&count)
+	if err := h.db.Model(&models.TournamentAnnouncement{}).Where("tournament_id = ?", tournament.ID).Count(&count).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+	}
 	if count >= maxAnnouncementsPerTourney {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("maximum %d announcements", maxAnnouncementsPerTourney)})
 	}

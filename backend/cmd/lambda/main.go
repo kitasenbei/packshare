@@ -124,7 +124,7 @@ func buildDatabaseURL(creds DBCredentials) string {
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	// Fix IPv6 addresses — the Fiber adapter needs [ip]:port format for IPv6
 	if ip := req.RequestContext.HTTP.SourceIP; ip != "" && strings.Contains(ip, ":") && !strings.HasPrefix(ip, "[") {
-		req.RequestContext.HTTP.SourceIP = "[" + ip + "]:80"
+		req.RequestContext.HTTP.SourceIP = "[" + ip + "]:443"
 	}
 	return fiberLambda.ProxyWithContextV2(ctx, req)
 }

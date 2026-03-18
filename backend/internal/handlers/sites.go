@@ -156,7 +156,9 @@ func (h *SiteHandler) SaveSite(c *fiber.Ctx) error {
 
 		// Check uniqueness (excluding this tournament's site)
 		var count int64
-		h.db.Model(&models.TournamentSite{}).Where("subdomain = ? AND tournament_id != ?", subdomain, tournament.ID).Count(&count)
+		if err := h.db.Model(&models.TournamentSite{}).Where("subdomain = ? AND tournament_id != ?", subdomain, tournament.ID).Count(&count).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+		}
 		if count > 0 {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "subdomain already taken"})
 		}
