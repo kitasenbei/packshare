@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import PackViewer from './features/pack/components/PackViewer';
 import PackCreator from './features/pack/components/PackCreator';
+import TournamentCreator from './features/tournament/components/TournamentCreator';
 import SharedPack from './features/pack/components/SharedPack';
 import MyPacks from './features/pack/components/MyPacks';
 import Home from './pages/Home';
@@ -86,6 +87,7 @@ function App() {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [createPackOpen, setCreatePackOpen] = useState(false);
+  const [createTournamentOpen, setCreateTournamentOpen] = useState(false);
 
   const toggleDarkMode = () => {
     setDarkMode((prev) => {
@@ -177,7 +179,7 @@ function App() {
                       </div>
                     </div>
                     <div className="flex flex-1">
-                      <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} onOpenCreatePack={() => setCreatePackOpen(true)} />
+                      <Dashboard user={user} permissions={permissions} isKeySession={authMode === 'key'} onOpenCreatePack={() => setCreatePackOpen(true)} onOpenCreateTournament={() => setCreateTournamentOpen(true)} />
                     </div>
                   </>
                 } />
@@ -206,6 +208,10 @@ function App() {
         user={user}
         permissions={permissions}
         isKeySession={authMode === 'key'}
+      />
+      <TournamentCreator
+        open={createTournamentOpen}
+        onOpenChange={setCreateTournamentOpen}
       />
       <Toaster richColors position="top-center" />
     </BrowserRouter>

@@ -80,13 +80,14 @@ interface DashboardProps {
   permissions?: string[];
   isKeySession?: boolean;
   onOpenCreatePack: () => void;
+  onOpenCreateTournament?: () => void;
 }
 
 type PackCardPropsFactory = (pack: Pack) => React.ComponentProps<typeof PackCard>;
 
 const MAPS_PER_PAGE = 10;
 
-export default function Dashboard({ user, permissions = [], isKeySession = false, onOpenCreatePack }: DashboardProps) {
+export default function Dashboard({ user, permissions = [], isKeySession = false, onOpenCreatePack, onOpenCreateTournament }: DashboardProps) {
   const navigate = useNavigate();
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,11 +204,9 @@ export default function Dashboard({ user, permissions = [], isKeySession = false
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-              {user.username === 'Kaiinu' && (
+              {onOpenCreateTournament && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => { setSection('tournaments'); setSelectedPack(null); setEditing(false); setTournamentView('create'); setSelectedTournament(null); }}
-                  >
+                  <SidebarMenuButton onClick={onOpenCreateTournament}>
                     <Trophy />
                     <span>New Tournament</span>
                   </SidebarMenuButton>
